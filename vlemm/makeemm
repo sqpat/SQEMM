@@ -1,11 +1,11 @@
 CCOPTS = -zp1 -oaxet -oi -zq -j -mm -0 -s -zdp -d__COMPILER_WATCOM
 
 GLOBOBJS = &
- vlemmmin.obj
+ vlemm.obj
 
 emm.exe : $(GLOBOBJS)
  wlink @emm.lnk
- copy vlemmmin.exe emm.exe
+ copy vlemm.exe emm.exe
  wstrip emm.exe
  exe2bin emm.exe
  move emm.bin emm.sys /Y

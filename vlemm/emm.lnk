@@ -5,8 +5,8 @@ debug all
 libpath %WATCOM%\lib286
 libpath %WATCOM%\lib286\dos
 format dos
-name vlemmmin
+name vlemm
 
  
-file vlemmmin.obj
+file vlemm.obj
  
