@@ -1,0 +1,22 @@
+CCOPTS = -zp1 -oaxet -oi -zq -j -mm -0 -s -zdp -d__COMPILER_WATCOM
+
+GLOBOBJS = &
+ vlemmmin.obj
+
+emm.exe : $(GLOBOBJS)
+ wlink @emm.lnk
+ copy vlemmmin.exe emm.exe
+ wstrip emm.exe
+ exe2bin emm.exe
+ move emm.bin emm.sys /Y
+
+.c.obj :
+ wcc $(CCOPTS) $[*
+
+.asm.obj :
+ tasm /m4 $[*
+
+clean : .SYMBOLIC
+ del *.obj
+ del *.err
+ del emm.sys
