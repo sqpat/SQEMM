@@ -26,22 +26,22 @@ dw OFFSET EMS_DRIVER_CALL
 db 'EMMXXXX0 DTK VL82C311 Expended Memory Manager V 1.03  06/29/92'
 
 ;00048h
-pointer_to_ems_init dw 3F57h
+pointer_to_ems_init dw OFFSET DRIVER_INIT
 
 ;0004Ah various pointers to various possible entry points - most go to "unrecognized command"
-dw 00A5h 
-dw 00A5h 
-dw 00A5h 
-dw 00A5h 
-dw 00A5h 
+dw OFFSET RETURN_UNRECOGNIZED_COMMAND 
+dw OFFSET RETURN_UNRECOGNIZED_COMMAND 
+dw OFFSET RETURN_UNRECOGNIZED_COMMAND 
+dw OFFSET RETURN_UNRECOGNIZED_COMMAND 
+dw OFFSET RETURN_UNRECOGNIZED_COMMAND 
 ;00054h Seems to be the pointer used in ems_driver_call?
-dw 00A5h 
-dw 00A5h 
-dw 00A5h 
-dw 00A5h 
-dw 009Fh 
-dw 00A5h 
-dw 00A5h
+dw OFFSET RETURN_UNRECOGNIZED_COMMAND 
+dw OFFSET RETURN_UNRECOGNIZED_COMMAND 
+dw OFFSET RETURN_UNRECOGNIZED_COMMAND 
+dw OFFSET RETURN_UNRECOGNIZED_COMMAND 
+dw OFFSET RETURN_SUCCESS 
+dw OFFSET RETURN_UNRECOGNIZED_COMMAND 
+dw OFFSET RETURN_UNRECOGNIZED_COMMAND
 
 
 ; 00062h
@@ -84,8 +84,12 @@ pop  bx
 pop  cx
 pop  dx
 retf 
+;0009Fh
+RETURN_SUCCESS:
 mov  word ptr [bx + 3], 0100h
 ret  
+;000a5h
+
 RETURN_UNRECOGNIZED_COMMAND:
 mov  word ptr [bx + 3], 08103h
 ret  
