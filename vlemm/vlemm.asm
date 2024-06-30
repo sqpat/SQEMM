@@ -3108,7 +3108,7 @@ skip_testing_memory db 00h
 DRIVER_INIT:
 mov        ax, cs
 mov        ds, ax
-mov        word ptr [pointer_to_ems_init], 0a5h     ; overwrite pointer to this init function with pointer to "failed to install" (03fa5h)
+mov        word ptr [pointer_to_ems_init], OFFSET RETURN_UNRECOGNIZED_COMMAND     ; overwrite pointer to this init function with pointer to "failed to install" (03fa5h)
 NOSMART
 lea        dx, [string_main_header]
 SMART
