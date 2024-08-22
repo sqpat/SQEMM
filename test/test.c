@@ -25,6 +25,7 @@
 #include <stdlib.h>
 
 
+int16_t emshandle;
 
 
 #define BYTES_TO_ALLOCATE (4*1024*1024)
@@ -238,7 +239,7 @@ char EMSExists(void){
 
 
 // CleanUp() tries to deallocate our EMS allocation
-void FreeEMS(int emshandle)
+void FreeEMS()
 {
    regs.h.ah=0x45;
    regs.w.dx=emshandle;
@@ -247,7 +248,6 @@ void FreeEMS(int emshandle)
    if (regs.h.ah!=0) printf("Deallocation failed!\n");
 }
  
-int16_t emshandle;
 int16_t errorreg;
 int16_t numentries;
 
@@ -273,7 +273,7 @@ void mapA() {
 	errorreg = regs.h.ah;
 	numentries = regs.w.cx;
 	if (errorreg != 0) {
-		I_Error("Call 0x5000 failed with value %i!\n", errorreg);
+		I_Error("Call 0x5000 failed with value %x!\n", errorreg);
 	}
 }
 
@@ -299,7 +299,7 @@ void mapB() {
 	errorreg = regs.h.ah;
 	numentries = regs.w.cx;
 	if (errorreg != 0) {
-		I_Error("Call 0x5000 failed with value %i!\n", errorreg);
+		I_Error("Call 0x5000 failed with value %x!\n", errorreg);
 	}
 
 
@@ -312,7 +312,7 @@ int I_InitEMS(void)
 	// todo check for device...
 
 
-	int16_t numPagesToAllocate = 512; // 4MB
+	int16_t numPagesToAllocate = 256; // 4MB
 	int16_t pagestotal, pagesavail;
 	uint8_t vernum;
 	int16_t i, j;
@@ -329,7 +329,7 @@ int I_InitEMS(void)
 	int86(EMS_INT, &regs, &regs);
 	errorreg = regs.h.ah;
 	if (errorreg) {
-		I_Error("Couldn't init EMS, error %d", errorreg);
+		I_Error("Couldn't init EMS, error %x", errorreg);
 	}
 
 	printf("EMS exists...\n");
@@ -340,7 +340,7 @@ int I_InitEMS(void)
 	intx86(EMS_INT, &regs, &regs);
 	errorreg = regs.h.ah;
 	if (errorreg) {
-		I_Error("ems nonfunctional??? status %i\n", errorreg);
+		I_Error("ems nonfunctional??? status %x\n", errorreg);
 	}
 
 	printf("EMS functional...\n");
@@ -354,7 +354,7 @@ int I_InitEMS(void)
 		I_Error("Get EMS Version failed!");
 	}
 	//vernum = 10*(vernum >> 4) + (vernum&0xF);
-	I_Error("EMS Version was %i\n", vernum);
+	I_Error("EMS Version was %x\n", vernum);
 	if (vernum < 32) {
 		printf("Warning! EMS Version too low! Expected 3.2, found %i", vernum);
 		//Applications like dosbox may support EMS but not report a proper version #?
@@ -371,7 +371,7 @@ int I_InitEMS(void)
 		I_Error("Could not get page frame!");
 	}
 
-	printf("Page frame was %u\n", pageframebase);
+	printf("Page frame was %x\n", pageframebase);
 	printf("Checking pages available\n");
 
 
@@ -382,8 +382,8 @@ int I_InitEMS(void)
 	printf("%i pages total, %i pages available\n", pagestotal, pagesavail);
 
 	if (pagesavail < numPagesToAllocate) {
-		printf("Warning: %i pages of memory recommended, only %i available.", numPagesToAllocate, pagesavail);
-		printf("TODO In the future quit here unless a command line arg is supplied.");
+		//printf("Warning: %i pages of memory recommended, only %i available.", numPagesToAllocate, pagesavail);
+		//printf("TODO In the future quit here unless a command line arg is supplied.");
 		//I_Error("Quitting now...");
 	}
 
@@ -398,8 +398,10 @@ int I_InitEMS(void)
 		// Error 137 = 0x89 = zero pages
 		// Error 136 = 0x88 = OUT_OF_LOG
 
-		I_Error("Couldn't allocate %d EMS Pages, error %d", numPagesToAllocate, regs.h.ah);
+		I_Error("Couldn't allocate %d EMS Pages, error %x", numPagesToAllocate, regs.h.ah);
 	}
+
+	printf("found handle %i", emshandle);
 
 
 	// do initial page remapping
@@ -411,8 +413,9 @@ int I_InitEMS(void)
 		regs.w.dx = emshandle; // handle
 		regs.h.ah = 0x44;
 		intx86(EMS_INT, &regs, &regs);
-		if (regs.h.ah != 0) {
-			I_Error("Mapping failed on page %i!\n", j);
+		errorreg = regs.h.ah;
+		if (errorreg != 0) {
+			I_Error("Mapping failed (%x) on page %i ! ", errorreg ,j);
 		}
 	}
 
@@ -423,7 +426,7 @@ int I_InitEMS(void)
 	errorreg = regs.h.ah;
 	numentries = regs.w.cx;
 	if (errorreg != 0) {
-		I_Error("Call 5801 failed with value %i!\n", errorreg);
+		I_Error("Call 5801 failed with value %x!\n", errorreg);
 	}
 	printf("Call 5801 found: %i\n", numentries);
 
@@ -435,9 +438,9 @@ int I_InitEMS(void)
 	errorreg = regs.h.ah;
 	//pagedata = MK_FP(sregs.es, regs.w.di);
 	if (errorreg != 0) {
-		I_Error("Call 25 failed with value %i!\n", errorreg);
+		I_Error("Call 25 failed with value %x!\n", errorreg);
 	}
-	printf("Call 25 found:\n%x %x %x %x %x %x %x %x\n%x %x %x %x %x %x %x %x\n%x %x %x %x %x %x %x %x\n%x %x %x %x %x %x %x %x\n%x %x %x %x %x %x %x %x\n%x %x %x %x %x %x %x %x\n%x %x %x %x %x %x %x %x\n",
+	printf("Call 25 found:\n%x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x\n%x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x\n%x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x\n%x %x %x %x %x %x %x %x\n",
 		pagedata[0], pagedata[1], pagedata[2], pagedata[3], pagedata[4],
 		pagedata[5], pagedata[6], pagedata[7], pagedata[8], pagedata[9],
 		pagedata[10], pagedata[11], pagedata[12], pagedata[13], pagedata[14],
@@ -463,7 +466,7 @@ int I_InitEMS(void)
 		}
 	}
 
-	printf("\nPagenum for 0x9000 NOT FOUND!\n\n");
+	printf("\nPagenum for 0x9000 NOT FOUND!");
 
 	found:
 
