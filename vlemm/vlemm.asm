@@ -175,7 +175,7 @@ db 'P_PAGE_END'
 ; 027bfh 
 ; Two-word pairs. first word is page frame (04000h, 04400h... etc) up to f000.  
 ;                 second word its physical ems index port
-; 156 bytes long? enough for 39 registers. too much? chipset max is 36.
+; 144 bytes long
 ; i think a clone of the above struct in practice except pre-formatted for return in function 5800h (2nd arg a word, ordered lowest segment first)
 mappable_phys_page_struct:
 dw 0000h, 0000h, 0000h, 0000h, 0000h, 0000h
