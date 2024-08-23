@@ -415,20 +415,20 @@ ret
 ; read from chipset register AL into AL
 READCHIPSETREG:
 out        0ech, al
-jmp        NOP_A
-NOP_A:
-jmp        NOP_B
-NOP_B:
+xchg ax, ax
+xchg ax, ax
+xchg ax, ax
+xchg ax, ax
 in         al, 0edh
 ret      
 
 ; WRITE AH TO chipset register AL
 WRITECHIPSETREG:
 out        0ech, al
-jmp        NOP_C
-NOP_C:
-jmp        NOP_D
-NOP_D:
+xchg ax, ax
+xchg ax, ax
+xchg ax, ax
+xchg ax, ax
 xchg       al, ah
 out        0edh, al
 xchg       al, ah
@@ -437,20 +437,20 @@ ret
 ; READ from EMS index port AL  into AX
 READEMSPORT:
 out        0e8h, al
-jmp        NOP_E
-NOP_E:
-jmp        NOP_F
-NOP_F:
+xchg ax, ax
+xchg ax, ax
+xchg ax, ax
+xchg ax, ax
 in         ax, 0eah
 ret        
 
 ; WRITE AL to ems index port DX to port EA/EAB
 WRITEEMSPORT:
 out        0e8h, al
-jmp        NOP_G
-NOP_G:
-jmp        NOP_H
-NOP_H:
+xchg ax, ax
+xchg ax, ax
+xchg ax, ax
+xchg ax, ax
 push       ax
 mov        ax, dx
 out        0eah, ax
@@ -772,9 +772,6 @@ mov        si, word ptr [handle_table_pointer]
 
 jmp         FOUND_PAGES_FOR_ALLOCATION
 
-mov        dx, 0
-pop        bx
-jmp        RETURNINTERRUPTRESULT_80
 NO_HANDLES_LEFT:
 mov        dx, 0
 pop        bx
@@ -788,7 +785,7 @@ mov        dx, 0
 pop        bx
 jmp        RETURNINTERRUPTRESULT_89
 ARG_BX_ABOVE_PAGE_COUNT:
-mov        dx, 0
+mov        dx, 1
 pop        bx
 jmp        RETURNINTERRUPTRESULT_87
 
@@ -799,6 +796,8 @@ sub word ptr [unallocated_page_count], bx
 
 dec word ptr [handle_count]
 pop        bx
+mov        dx, 0001h   ; force handle 1.
+
 jmp        RETURNINTERRUPTRESULT0
 
 ;          5  Map/Unmap Handle Page                          44h      
@@ -819,12 +818,8 @@ jmp        RETURNINTERRUPTRESULT0
 ;          DX = emm_handle
 
 EMS_FUNCTION_044h:
-push       cs
-pop        ds
-push       bx
-push       dx
 xor        ah, ah
-mov        di, ax
+;mov        di, ax
 cmp        ax, word ptr cs:[number_ems_pages]
 jb         ENOUGH_PAGES
 jmp        RETURN_RESULT_8B
@@ -832,56 +827,82 @@ jmp        RETURN_RESULT_8B
 ENOUGH_PAGES:
 cmp        dx,  1
 jne        RETURN_RESULT_83
-nop        
-FOUND_EMM_HANDLE:
-call       TURN_OFF_EMS_PAGE
-cmp        bx, -1
-je         RETURN_RESULT_00
 
-; bx is logical page number...
-cmp        bx, word ptr [si]
-jb         FOUND_VALID_EMM_HANDLE_POINTER
-jmp        RETURN_RESULT_8A
-nop        
-FOUND_VALID_EMM_HANDLE_POINTER:
-mov        si, word ptr [si + 0ah]
-mov        cx, bx
-jcxz       CX_IS_ZERO               ; jump if cx is 0
-LOOP_ADD_TO_SI:
-mov        si, word ptr [si + 2]
-loop       LOOP_ADD_TO_SI
-CX_IS_ZERO:
-cmp        si, word ptr [end_of_page_linked_list]
-jae        PAGE_OVERFLOW_3
-cmp        si, word ptr [page_linked_list_pointer]
-jb         PAGE_UNDERFLOW_3
-mov        bx, word ptr [si]
-mov        ax, di
-call       TURN_ON_EMS_PAGE
+
+;cmp        bx, word ptr [si] ; check to see if this page is owned by this process
+; TODO actually check if page is owned by process
+;jmp        FOUND_VALID_EMM_HANDLE_POINTER
+
+;jb         FOUND_VALID_EMM_HANDLE_POINTER
+;jmp        RETURN_RESULT_8A
+;nop        
+;FOUND_VALID_EMM_HANDLE_POINTER:
+;mov        si, word ptr [si + 0ah]
+;mov        cx, bx
+;jcxz       CX_IS_ZERO               ; jump if cx is 0
+;LOOP_ADD_TO_SI:
+;mov        si, word ptr [si + 2]
+;loop       LOOP_ADD_TO_SI
+;CX_IS_ZERO:
+;cmp        si, word ptr [end_of_page_linked_list]
+;jae        PAGE_OVERFLOW_3
+;cmp        si, word ptr [page_linked_list_pointer]
+;jb         PAGE_UNDERFLOW_3
+;mov        bx, word ptr [si]
+;mov        ax, di
+
+; call TURN_OFF_EMS_PAGE
+; al and bx are still the args
+
+; dumb hack. internally c000 - ec00 are pages 0-11 in order.
+; but if you want d000 to be page frame, outwardly we must expose it as 0-4.
+; so we are assuming 0-4 and adding by 4 to get the real internal offset
+; and assume 4-12 not used.
+add ax, 4
+
+
+
+
+; al = page register number 
+; bx is value to write to that port
+; then we turn enable that page as ems enabled.
+; note: does not preserve al because who cares.
+
+
+; write ems port... select chipset register
+
+;xchg dx, bx
+;call WRITEEMSPORT
+;xchg dx, bx
+
+out        0E8h, al   ; select EMS page
+xchg ax, ax  ; nop delays
+xchg ax, ax
+xchg ax, ax
+mov  ax, bx
+
+mov  ah, 1    ; this feels jank, needs to happen on 86box, must confirm on real hardware
+out  0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
+
+
 RETURN_RESULT_00:
-pop        dx
-pop        bx
+
 jmp        RETURNINTERRUPTRESULT0
 PAGE_OVERFLOW_3:
 PAGE_UNDERFLOW_3:
-pop        dx
-pop        bx
+
 jmp        RETURNINTERRUPTRESULT_80
 
 ; The memory manager couldn't find the EMM handle your program specified.
 RETURN_RESULT_83:
-pop        dx
-pop        bx
 jmp        RETURNINTERRUPTRESULT_83
 
 RETURN_RESULT_8A:
-pop        dx
-pop        bx
+
 jmp        RETURNINTERRUPTRESULT_8A
 
 RETURN_RESULT_8B:
-pop        dx
-pop        bx
+
 jmp        RETURNINTERRUPTRESULT_8B
 
 ;         6  Deallocate Pages                               45h       
@@ -893,12 +914,13 @@ push       bx
 push       dx
 
 
-cmp bx, 1
+cmp dx, 1
 jne  NO_EMM_HANDLE_FOUND
 
 GOOD_EMM_HANDLE:
+mov        dx, word ptr [total_page_count]
 
-add        word ptr [unallocated_page_count], bx
+add        word ptr [unallocated_page_count], dx
 inc        word ptr [handle_count]  ; handle freed, increment handle count
 
 pop        dx
@@ -1809,9 +1831,9 @@ DRIVER_INIT:
 mov        ax, cs
 mov        ds, ax
 mov        word ptr [pointer_to_ems_init], OFFSET RETURN_UNRECOGNIZED_COMMAND     ; overwrite pointer to this init function with pointer to "failed to install" (03fa5h)
-NOSMART
+
 lea        dx, [string_main_header]
-SMART
+
 call       PRINT_STRING
 ; get interrupt vector. check it's header/string
 mov        ax, 03567h
@@ -1823,9 +1845,9 @@ rep cmpsb
  
 jne        EMS_INTERRUPT_FREE
 ; an ems driver is already installed
-NOSMART
+
 lea        dx, [string_driver_exists]
-SMART
+
 jmp        DRIVER_NOT_INSTALLED_2
 
 EMS_INTERRUPT_FREE:
@@ -1850,6 +1872,31 @@ mov        word ptr [handle_count], 01h
 lea        si, handle_table
 mov        word ptr [handle_table_pointer], si
 
+; enable d000 register and backfill
+
+mov        al, 0Bh
+out        0ECh, al
+xchg ax, ax
+xchg ax, ax
+xchg ax, ax
+xchg ax, ax
+mov        al, 0A0h   ; turn on ems 
+;mov        al, 0E0h   ; turn on ems, backfill
+out        0EDh, al
+
+
+mov        al, 0Ch
+out        0ECh, al
+xchg ax, ax
+xchg ax, ax
+xchg ax, ax
+xchg ax, ax
+mov        al, 0F0h  ; turn on d000 as page frame
+out        0EDh, al
+
+
+
+
 
 
 ; generate OS rights password
@@ -1864,17 +1911,17 @@ mov        cx, dx
 mov        word ptr [os_password_high], cx
 
 ; set interrupt vector  067h
-NOSMART
+
 lea        dx, MAIN_EMS_INTERRUPT_VECTOR
-SMART
+
 mov        al, 067h
 mov        ah, 025h
 int        021h
 
 DRIVER_INSTALLED:
-NOSMART
+
 lea        dx, [string_driver_successfully_installed]
-SMART
+
 call       PRINT_STRING
 les        bx, [driver_arguments]
 mov        word ptr es:[bx + 3], 0100h
@@ -1888,9 +1935,9 @@ ret
 ; preloaded with string 'reason' for the print string
 DRIVER_NOT_INSTALLED:
 call       PRINT_STRING 
-NOSMART
+
 lea        dx, [string_driver_failed_installing]
-SMART
+
 ; todo whats this
 DRIVER_NOT_INSTALLED_2:
 call       PRINT_STRING
