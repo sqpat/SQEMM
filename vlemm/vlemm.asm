@@ -3009,6 +3009,8 @@ db 'DATATECH EMM PROGRAM END'
 ; 03ab5h: 3 byte structs, 0Eh of them.
 ;010004 020006 030008 040008 050010 060018 070020 080020 09803F 0A0020 0B803F 0C000C 0D0014 0E0030
 memory_configs: 
+; byte 1 is RAMMAP0-3
+; byte 2-3 is total memory for this configuration, shifted by 10  (0Ah). so 0x3000 is a 12 MB config
 
 db 01h, 00h, 04h
 db 02h, 00h, 06h
@@ -3133,39 +3135,42 @@ mov        al, 3           ; register 03h  DRAM Map Register
 call       READCHIPSETREG
 mov        ah, al
 and        al, 0fh
-cmp        al, 0
+cmp        al, 0      ; how does this happen? we just anded by 0fh?
 jb         INIT_ERROR_RAM
 cmp        al, 0fh
-jge        INIT_ERROR_RAM  ; 00fh (1111) is an invalid value for MEMAP0-3
+jge        INIT_ERROR_RAM  ; how does this happen? we just anded by 0fh?
 
 ; use 3ab5 lookup table to find this configuration value
-; it's a preconfigured lookup table
-; 01 0004 fail
-; 02 0006 fail
-; 03 0008 ok
-; 04 0008 ok
-; 05 0010 ok
-; 06 0018 fail
-; 07 0020 fail
-; 08 0020 fail
-; 09 803F fail
-; 0A 0020 fail
-; 0B 803F fail
-; 0C 000C ok
-; 0D 0014 fail
-; 0E 0030 fail
+; it's a preconfigured lookup table based on MEMMAP (vlsi scamp chipset reg 03h bits 0-4)
+; 00 ---- fail    0.5 MB System Memory  - this is not in memory_configs array 
+
+; 01 0004 fail    1.0 MB
+; 02 0006 fail    1.5
+; 03 0008 ok      2.0 
+; 04 0008 ok      2.0 
+; 05 0010 ok      4.0
+; 06 0018 fail    6.0
+; 07 0020 fail    8.0
+; 08 0020 fail    8.0
+; 09 803F fail    16.0
+; 0A 0020 fail    8.0
+; 0B 803F fail    16.0
+; 0C 000C ok      3.0
+; 0D 0014 fail    5.0
+; 0E 0030 fail    12.0
 ; 3 4 5 c ok
 
 mov        cx, 0eh
 NOSMART
 lea        si, memory_configs
 SMART
-CHECK_NEXT_STRUCT:
+CHECK_NEXT_RAMMAP:
 cmp        byte ptr [si], al
 je         FOUND_RAM_CONFIG
 add        si, 3
-loop       CHECK_NEXT_STRUCT
+loop       CHECK_NEXT_RAMMAP
 
+; this fallthru happens if RAMMAP0-3 is 0 
 ; "System ram specified error"
 INIT_ERROR_RAM:
 NOSMART
@@ -3176,18 +3181,18 @@ jmp        DRIVER_NOT_INSTALLED
 
 FOUND_RAM_CONFIG:
 ; ah = RAMMAP register
-test       ah, 010h
-je         FOUND_REMAP_384K
-cmp        word ptr [si + 1], 0800h
+test       ah, 010h                 ; test for remap 384k bit
+je         NO_REMAP_384K         
+cmp        word ptr [si + 1], 0800h ; test for 2 MB
 je         FOUND_COMPATIBLEMEMMAP
-cmp        word ptr [si + 1], 0c00h
+cmp        word ptr [si + 1], 0c00h ; test for 3 MB
 je         FOUND_COMPATIBLEMEMMAP
-cmp        word ptr [si + 1], 01000h
+cmp        word ptr [si + 1], 01000h ; test for 4 MB
 je         FOUND_COMPATIBLEMEMMAP
 jmp        INIT_ERROR_RAM
 
-; REMP384 is set. 384k is remapped. This might be incompatible with many ems features?
-FOUND_REMAP_384K:
+; REMP384 is not set. 384k is remapped. This might be incompatible with many ems features?
+NO_REMAP_384K:
 mov        word ptr [mappable_384K_conventional], 0
 jmp        NO_384k
 nop        
