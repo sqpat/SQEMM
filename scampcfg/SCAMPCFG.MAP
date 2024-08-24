@@ -1,6 +1,6 @@
 Open Watcom Linker Version 1.9
 Portions Copyright (c) 1985-2002 Sybase, Inc. All Rights Reserved.
-Created on:       24/08/24 13:12:11
+Created on:       24/08/24 13:45:32
 Executable Image: scampcfg.exe
 creating a DOS executable
 
@@ -12,7 +12,7 @@ creating a DOS executable
 Group                           Address              Size
 =====                           =======              ====
 
-DGROUP                          0784:0000            00002310
+DGROUP                          079c:0000            00002390
 
 
 
@@ -23,29 +23,29 @@ DGROUP                          0784:0000            00002310
 Segment                Class          Group          Address         Size
 =======                =====          =====          =======         ====
 
-scampcfg_TEXT          CODE           AUTO           0000:0000       0000094c
-_TEXT                  CODE           AUTO           0000:0950       00002e5e
-GRAPH_TEXT             CODE           AUTO           0000:37ae       00001bab
-scampcfg13_DATA        FAR_DATA       AUTO           0536:0000       00000004
-FAR_DATA               FAR_DATA       AUTO           0536:0004       00000000
-StdFont_DATA           FONT_DATA      AUTO           0537:0000       00000a26
-Font8x8_DATA           FONT_DATA      AUTO           0537:0a30       00000c98
-HercFont_DATA          FONT_DATA      AUTO           0537:16d0       00000e00
-_NULL                  BEGDATA        DGROUP         0784:0000       00000020
-_AFTERNULL             BEGDATA        DGROUP         0786:0000       00000002
-CONST                  DATA           DGROUP         0786:0002       00000b4c
-CONST2                 DATA           DGROUP         083a:000e       00000000
-_DATA                  DATA           DGROUP         083b:0000       000005c6
-XIB                    DATA           DGROUP         0897:0006       00000000
-XI                     DATA           DGROUP         0897:0006       00000012
-XIE                    DATA           DGROUP         0898:0008       00000000
-YIB                    DATA           DGROUP         0898:0008       00000000
-YI                     DATA           DGROUP         0898:0008       00000006
-YIE                    DATA           DGROUP         0898:000e       00000000
-STRINGS                DATA           DGROUP         0898:000e       00000000
-DATA                   DATA           DGROUP         0898:000e       00000000
-_BSS                   BSS            DGROUP         0898:000e       000001b6
-STACK                  STACK          DGROUP         08b5:0000       00001000
+scampcfg_TEXT          CODE           AUTO           0000:0000       00000a98
+_TEXT                  CODE           AUTO           0000:0aa0       00002e8e
+GRAPH_TEXT             CODE           AUTO           0000:392e       00001bac
+scampcfg13_DATA        FAR_DATA       AUTO           054e:0000       00000004
+FAR_DATA               FAR_DATA       AUTO           054e:0004       00000000
+StdFont_DATA           FONT_DATA      AUTO           054f:0000       00000a26
+Font8x8_DATA           FONT_DATA      AUTO           054f:0a30       00000c98
+HercFont_DATA          FONT_DATA      AUTO           054f:16d0       00000e00
+_NULL                  BEGDATA        DGROUP         079c:0000       00000020
+_AFTERNULL             BEGDATA        DGROUP         079e:0000       00000002
+CONST                  DATA           DGROUP         079e:0002       00000bc2
+CONST2                 DATA           DGROUP         085a:0004       00000000
+_DATA                  DATA           DGROUP         085b:0000       000005c6
+XIB                    DATA           DGROUP         08b7:0006       00000000
+XI                     DATA           DGROUP         08b7:0006       00000012
+XIE                    DATA           DGROUP         08b8:0008       00000000
+YIB                    DATA           DGROUP         08b8:0008       00000000
+YI                     DATA           DGROUP         08b8:0008       00000006
+YIE                    DATA           DGROUP         08b8:000e       00000000
+STRINGS                DATA           DGROUP         08b8:000e       00000000
+DATA                   DATA           DGROUP         08b8:000e       00000000
+_BSS                   BSS            DGROUP         08b8:000e       000001b6
+STACK                  STACK          DGROUP         08d5:0000       00001000
 
 
                         +----------------+
@@ -59,11 +59,12 @@ Address        Symbol
 =======        ======
 
 Module: scampcfg.obj(C:\EMS\SCAMPCFG\scampcfg.c)
-0784:114e+     _pagedata2
-0784:115e+     _sregs
-0784:1166+     _regs
-0784:1174+     _pagenum9000
-0784:1176+     _numentries
+079c:11ce+     _pagedata2
+079c:11de+     _sregs
+079c:11e6+     _regs
+079c:11f4+     _errorreg
+079c:11f6+     _pagenum9000
+079c:11f8+     _numentries
 0000:0000+     EMSExists_
 0000:0006+     FreeEMS_
 0000:0046+     mapAOld_
@@ -72,381 +73,390 @@ Module: scampcfg.obj(C:\EMS\SCAMPCFG\scampcfg.c)
 0000:0244+     mapB_
 0000:02e6+     I_InitEMS_
 0000:07a0+     printchar_
-0000:07be      main_
-0784:0b70+     _pageframe
-0784:0b7b+     _config_regs
-0784:0b8c+     _config_names
-0784:0bd0+     _setting_names
-0784:0c14+     _setting_names_detailed
-0784:117a+     _emshandle
-0784:117c+     _errorreg
-0536:0000+     _pointervalue2
+0000:07ce+     printstatus_
+0000:093e+     addkeystroke_
+0000:0976      main_
+079c:0bf0+     _pageframe
+079c:0bfb+     _config_regs
+079c:0c0c+     _config_names
+079c:0c50+     _setting_names
+079c:0c94+     _setting_names_detailed
+079c:11fc+     _emshandle
+054e:0000+     _pointervalue2
 Module: C:\WATCOM\lib286\dos\clibl.lib(intx086.c)
-0000:0950+     int86x_
-0000:09e9      int86_
+0000:0aa0+     int86x_
+0000:0b39      int86_
 Module: C:\WATCOM\lib286\dos\clibl.lib(printf.c)
-0000:0a16      printf_
-Module: C:\WATCOM\lib286\dos\graph.lib(outtext)
-0000:37ae+     _CharLen_
-0000:3921      _outtext_
-0000:3956*     _outmem_
-0000:3976*     _scrolltextwindow_
-0000:39bb*     _gettextcursor_
-0000:39c9*     _settextcursor_
+0000:0b66      printf_
 Module: C:\WATCOM\lib286\dos\graph.lib(textcol)
-0000:3a02+     _gettextcolor_
-0000:3a30      _settextcolor_
+0000:392e+     _gettextcolor_
+0000:395c      _settextcolor_
+Module: C:\WATCOM\lib286\dos\graph.lib(outtext)
+0000:39aa+     _CharLen_
+0000:3b1d      _outtext_
+0000:3b52*     _outmem_
+0000:3b72*     _scrolltextwindow_
+0000:3bb7*     _gettextcursor_
+0000:3bc5*     _settextcursor_
 Module: C:\WATCOM\lib286\dos\clibl.lib(sprintf.c)
-0000:0a45      sprintf_
+0000:0b95      sprintf_
+Module: C:\WATCOM\lib286\dos\clibl.lib(bioskeyb.c)
+0000:0bc4      _bios_keybrd_
 Module: C:\WATCOM\lib286\dos\clibl.lib(cstart)
-0784:0000*     __nullarea
-0784:0e34*     __ovlflag
-0784:0e35*     __intno
-0784:0e36*     __ovlvec
-0000:0a74      _cstart_
-0000:0b47*     _Not_Enough_Memory_
-0000:0c7b      __exit_
-0000:0c9a      __do_exit_with_msg__
-0000:0cf8      __GETDS
+079c:0000*     __nullarea
+079c:0eb4*     __ovlflag
+079c:0eb5*     __intno
+079c:0eb6*     __ovlvec
+0000:0bca      _cstart_
+0000:0c9d*     _Not_Enough_Memory_
+0000:0dd1      __exit_
+0000:0df0      __do_exit_with_msg__
+0000:0e4e      __GETDS
 Module: C:\WATCOM\lib286\dos\clibl.lib(cmodel)
-0000:0d02      _big_code_
-0000:0d02*     CodeModelMismatch
+0000:0e58      _big_code_
+0000:0e58*     CodeModelMismatch
 Module: C:\WATCOM\lib286\dos\clibl.lib(intr.c)
-0000:0d02      intr_
+0000:0e58      intr_
 Module: C:\WATCOM\lib286\dos\clibl.lib(segread.c)
-0000:0d16      segread_
+0000:0e6c      segread_
 Module: C:\WATCOM\lib286\dos\clibl.lib(iob.c)
-0784:0e3a      ___iob
-0784:0fa2*     __fmode
-0784:117e      ___OpenStreams
-0784:1182      ___ClosedStreams
+079c:0eba      ___iob
+079c:1022*     __fmode
+079c:11fe      ___OpenStreams
+079c:1202      ___ClosedStreams
 Module: C:\WATCOM\lib286\dos\clibl.lib(fprtf.c)
-0000:0d50      __fprtf_
+0000:0ea6      __fprtf_
 Module: C:\WATCOM\lib286\dos\graph.lib(global)
-0784:1186*     __SetVGAPage
-0784:118a      __TextPos
-0784:118e      __ConfigBuffer
-0784:11c4      __Screen
-0784:11ce      __DBCSPairs
-0784:11d8      __StackSeg
-0784:11da*     __VGAStride
-0784:11dc      __SVGAType
-0784:11de      __DefMode
-0784:11e0      __CursorShape
-0784:11e2      __DefTextRows
-0784:11e4      __Tx_Col_Min
-0784:11e6      __Tx_Row_Max
-0784:0fa4      __StartUp
-0784:0fa5      __GrMode
-0784:0fa6      __ErrorStatus
-0784:0fa8*     __CurrPos
-0784:0fac      __LogOrg
-0784:0fb0*     __Clipping
-0784:0fb1      __CharAttr
-0784:0fb2      __Wrap
-0784:0fb4      __CursState
-0784:0fb6      __GrCursor
-0784:0fb8      __CurrActivePage
-0784:0fba*     __CurrVisualPage
-0784:0fbc*     __CurrBkColor
-0784:0fc0      __CurrColor
-0784:0fc2*     __Palette
-0784:0fc4      __FillMask
-0784:0fcc      __DefMask
-0784:0fd4      __HaveMask
-0784:0fd5*     __Transparent
-0784:0fd7      __PaRf_x
-0784:0fd9      __PaRf_y
-0784:0fdb      __LineStyle
-0784:0fdd*     __StyleWrap
-0784:0fdf      __PlotAct
-0784:0fe1*     __TextSettings
-0784:0ff1*     __CurrFont
-0784:0ff5*     __ArcInfo
-0784:1013*     __CurrPos_w
-0784:1023*     __Window
-0784:1035      __BiosSeg
-0784:1037      __MonoSeg
-0784:1039      __CgaSeg
-0784:103b*     __EgaSeg
-0784:103d      __RomSeg
-0784:103f      __BiosOff
-0784:1041      __MonoOff
-0784:1043      __CgaOff
-0784:1045*     __EgaOff
-0784:1047      __RomOff
-0784:1049*     __CurrState
-0784:11e8      __Tx_Col_Max
-0784:11ea      __Tx_Row_Min
-0784:11ec      __IsDBCS
-0784:11ed*     __VGAPage
-0784:11ee*     __VGAGran
-Module: C:\WATCOM\lib286\dos\graph.lib(scrollw)
-0000:3c20      _ScrollWindow_
-Module: C:\WATCOM\lib286\dos\graph.lib(putchar)
-0000:3d57      _PutChar_
-Module: C:\WATCOM\lib286\dos\graph.lib(getconf)
-0000:3f74*     _getvideoconfig_
-0000:3f99+     _CalcNumPages_
-0000:3fea+     _GetState_
-0000:40b5      _InitState_
-0000:4109*     _GrInit_
+079c:1206*     __SetVGAPage
+079c:120a      __TextPos
+079c:120e      __ConfigBuffer
+079c:1244      __Screen
+079c:124e      __DBCSPairs
+079c:1258      __StackSeg
+079c:125a*     __VGAStride
+079c:125c      __SVGAType
+079c:125e      __DefMode
+079c:1260      __CursorShape
+079c:1262      __DefTextRows
+079c:1264      __Tx_Col_Min
+079c:1266      __Tx_Row_Max
+079c:1024      __StartUp
+079c:1025      __GrMode
+079c:1026      __ErrorStatus
+079c:1028*     __CurrPos
+079c:102c      __LogOrg
+079c:1030*     __Clipping
+079c:1031      __CharAttr
+079c:1032      __Wrap
+079c:1034      __CursState
+079c:1036      __GrCursor
+079c:1038      __CurrActivePage
+079c:103a*     __CurrVisualPage
+079c:103c*     __CurrBkColor
+079c:1040      __CurrColor
+079c:1042*     __Palette
+079c:1044      __FillMask
+079c:104c      __DefMask
+079c:1054      __HaveMask
+079c:1055*     __Transparent
+079c:1057      __PaRf_x
+079c:1059      __PaRf_y
+079c:105b      __LineStyle
+079c:105d*     __StyleWrap
+079c:105f      __PlotAct
+079c:1061*     __TextSettings
+079c:1071*     __CurrFont
+079c:1075*     __ArcInfo
+079c:1093*     __CurrPos_w
+079c:10a3*     __Window
+079c:10b5      __BiosSeg
+079c:10b7      __MonoSeg
+079c:10b9      __CgaSeg
+079c:10bb*     __EgaSeg
+079c:10bd      __RomSeg
+079c:10bf      __BiosOff
+079c:10c1      __MonoOff
+079c:10c3      __CgaOff
+079c:10c5*     __EgaOff
+079c:10c7      __RomOff
+079c:10c9*     __CurrState
+079c:1268      __Tx_Col_Max
+079c:126a      __Tx_Row_Min
+079c:126c      __IsDBCS
+079c:126d*     __VGAPage
+079c:126e*     __VGAGran
 Module: C:\WATCOM\lib286\dos\graph.lib(cursor)
-0000:4164      _CursorOn_
-0000:4184      _CursorOff_
+0000:3bfe      _CursorOn_
+0000:3c1e      _CursorOff_
 Module: C:\WATCOM\lib286\dos\graph.lib(devutils)
-0000:424f      _GraphMode_
-0000:4267*     _GrProlog_
-0000:4280      _GrEpilog_
-0000:428a*     _InitDevice_
-0000:4293*     _FiniDevice_
-0000:429d      _StartDevice_
-0000:42a7      _ResetDevice_
+0000:3ce9      _GraphMode_
+0000:3d01*     _GrProlog_
+0000:3d1a      _GrEpilog_
+0000:3d24*     _InitDevice_
+0000:3d2d*     _FiniDevice_
+0000:3d37      _StartDevice_
+0000:3d41      _ResetDevice_
+Module: C:\WATCOM\lib286\dos\graph.lib(scrollw)
+0000:3eed      _ScrollWindow_
+Module: C:\WATCOM\lib286\dos\graph.lib(putchar)
+0000:4024      _PutChar_
+Module: C:\WATCOM\lib286\dos\graph.lib(getconf)
+0000:4241*     _getvideoconfig_
+0000:4266+     _CalcNumPages_
+0000:42b7+     _GetState_
+0000:4382      _InitState_
+0000:43d6*     _GrInit_
 Module: C:\WATCOM\lib286\dos\clibl.lib(vsprintf.c)
-0000:0e34      vsprintf_
+0000:0f8a      vsprintf_
+Module: C:\WATCOM\lib286\dos\clibl.lib(biosfunc)
+0000:0fb6*     __ibm_bios_equiplist_
+0000:0fb9      __ibm_bios_keybrd_
+0000:0fce*     __ibm_bios_memsize_
+0000:0fd1*     __ibm_bios_printer_
+0000:0fdc*     __ibm_bios_serialcom_
 Module: C:\WATCOM\lib286\dos\clibl.lib(xmsg.c)
-0000:0e5f*     __exit_with_msg_
-0000:0e64      __fatal_runtime_error_
+0000:0fe3*     __exit_with_msg_
+0000:0fe8      __fatal_runtime_error_
 Module: C:\WATCOM\lib286\dos\clibl.lib(cmain086.c)
-0000:0e82      __CMain
+0000:1006      __CMain
 Module: C:\WATCOM\lib286\dos\clibl.lib(initrtns.c)
-0000:0ee8      __InitRtns
-0000:0ee8*     __FInitRtns
-0000:0f43      __FiniRtns
-0000:0f43*     __FFiniRtns
+0000:106c      __InitRtns
+0000:106c*     __FInitRtns
+0000:10c7      __FiniRtns
+0000:10c7*     __FFiniRtns
 Module: C:\WATCOM\lib286\dos\clibl.lib(crwdata)
-0784:10a4      __curbrk
-0784:10ac      __STACKLOW
-0784:10ae      __STACKTOP
-0784:10b0      __cbyte
-0784:10b2      __child
-0784:10b4      __no87
-0784:10c2      ___FPE_handler
-0784:10a6      __psp
-0784:10b6      __get_ovl_stack
-0784:10ba      __restore_ovl_stack
-0784:10be      __close_ovl_file
-0784:10c6      __LpCmdLine
-0784:10ca      __LpPgmName
-0784:10a8      __osmajor
-0784:10a9      __osminor
-0784:10aa      __osmode
-0784:10ab      __HShift
+079c:1124      __curbrk
+079c:112c      __STACKLOW
+079c:112e      __STACKTOP
+079c:1130      __cbyte
+079c:1132      __child
+079c:1134      __no87
+079c:1142      ___FPE_handler
+079c:1126      __psp
+079c:1136      __get_ovl_stack
+079c:113a      __restore_ovl_stack
+079c:113e      __close_ovl_file
+079c:1146      __LpCmdLine
+079c:114a      __LpPgmName
+079c:1128      __osmajor
+079c:1129      __osminor
+079c:112a      __osmode
+079c:112b      __HShift
 Module: C:\WATCOM\lib286\dos\clibl.lib(uselfn.c)
-0784:10ce      ___uselfn
+079c:114e      ___uselfn
 Module: C:\WATCOM\lib286\dos\clibl.lib(dosseg)
-0000:0fa8      __DOSseg__
+0000:112c      __DOSseg__
 Module: C:\WATCOM\lib286\dos\clibl.lib(dointr)
-0000:0faa      _DoINTR_
+0000:112e      _DoINTR_
 Module: C:\WATCOM\lib286\dos\clibl.lib(initfile.c)
-0000:1323      __InitFiles_
+0000:14a7      __InitFiles_
 Module: C:\WATCOM\lib286\dos\clibl.lib(ioexit.c)
-0000:1471*     fcloseall_
-0000:1478      __full_io_exit_
+0000:15f5*     fcloseall_
+0000:15fc      __full_io_exit_
 Module: C:\WATCOM\lib286\dos\clibl.lib(fputc.c)
-0000:1482      fputc_
+0000:1606      fputc_
 Module: C:\WATCOM\lib286\dos\clibl.lib(ioalloc.c)
-0000:1552      __ioalloc_
+0000:16d6      __ioalloc_
 Module: C:\WATCOM\lib286\dos\clibl.lib(prtf.c)
-0000:15ec      __prtf_
+0000:1770      __prtf_
 Module: C:\WATCOM\lib286\dos\clibl.lib(flush.c)
-0000:23ba      __flush_
+0000:253e      __flush_
 Module: C:\WATCOM\lib286\dos\graph.lib(std)
-0537:0000      __StdFont
-Module: C:\WATCOM\lib286\dos\graph.lib(imagesiz)
-0000:42b2*     _imagesize_
-0000:42e1+     _L2imagesize_
-0000:4314      _RowLen_
-Module: C:\WATCOM\lib286\dos\graph.lib(gstklow)
-0000:4343      _GetStackLow_
+054f:0000      __StdFont
 Module: C:\WATCOM\lib286\dos\graph.lib(plotactn)
-0000:4347+     _getplotaction_
-0000:4374      _setplotaction_
-Module: C:\WATCOM\lib286\dos\graph.lib(clearscr)
-0000:43bb+     _L2clearscreen_
-0000:4435*     _clearscreen_
-0000:449d      _GrClear_
-0000:44f9      _TxtClear_
-Module: C:\WATCOM\lib286\dos\graph.lib(font8x8)
-0537:1630*     __8x8Font
-0537:0a30      __8x8BitMap
-Module: C:\WATCOM\lib286\dos\graph.lib(hercfont)
-0537:16d0      __HercFont
-Module: C:\WATCOM\lib286\dos\graph.lib(sysmtype)
-0000:4582      _SysMonType_
-Module: C:\WATCOM\lib286\dos\graph.lib(seginit)
-0000:4776      _InitSegments_
+0000:4432+     _getplotaction_
+0000:445f      _setplotaction_
 Module: C:\WATCOM\lib286\dos\graph.lib(l1line)
-0000:47d6      _L1SLine_
-0000:480b*     _L1Line_
+0000:44a6      _L1SLine_
+0000:44db*     _L1Line_
 Module: C:\WATCOM\lib286\dos\graph.lib(color)
-0000:4933      _getcolor_
-0000:493e      _setcolor_
-0000:495f+     _L2setcolor_
+0000:4603      _getcolor_
+0000:460e      _setcolor_
+0000:462f+     _L2setcolor_
+Module: C:\WATCOM\lib286\dos\graph.lib(imagesiz)
+0000:4644*     _imagesize_
+0000:4673+     _L2imagesize_
+0000:46a6      _RowLen_
+Module: C:\WATCOM\lib286\dos\graph.lib(gstklow)
+0000:46d5      _GetStackLow_
+Module: C:\WATCOM\lib286\dos\graph.lib(clearscr)
+0000:46d9+     _L2clearscreen_
+0000:4753*     _clearscreen_
+0000:47bb      _GrClear_
+0000:4817      _TxtClear_
+Module: C:\WATCOM\lib286\dos\graph.lib(font8x8)
+054f:1630*     __8x8Font
+054f:0a30      __8x8BitMap
+Module: C:\WATCOM\lib286\dos\graph.lib(hercfont)
+054f:16d0      __HercFont
+Module: C:\WATCOM\lib286\dos\graph.lib(sysmtype)
+0000:48a0      _SysMonType_
+Module: C:\WATCOM\lib286\dos\graph.lib(seginit)
+0000:4a94      _InitSegments_
 Module: C:\WATCOM\lib286\dos\clibl.lib(enterdb.c)
-0000:24ed      __EnterWVIDEO_
-0784:10d0+     ___WD_Present
+0000:2671      __EnterWVIDEO_
+079c:1150+     ___WD_Present
 Module: C:\WATCOM\lib286\dos\clibl.lib(___argc.c)
-0784:11f0      ____Argv
-0784:11f4      ____Argc
+079c:1270      ____Argv
+079c:1274      ____Argc
 Module: C:\WATCOM\lib286\dos\clibl.lib(amblksiz.c)
-0784:10d2      __amblksiz
+079c:1152      __amblksiz
 Module: C:\WATCOM\lib286\dos\clibl.lib(exit.c)
-0000:2511+     __null_int23_exit_
-0000:2512      exit_
-0000:2543*     _exit_
-0784:10d4+     ___int23_exit
-0784:10d8+     ___FPE_handler_exit
+0000:2695+     __null_int23_exit_
+0000:2696      exit_
+0000:26c7*     _exit_
+079c:1154+     ___int23_exit
+079c:1158+     ___FPE_handler_exit
 Module: C:\WATCOM\lib286\dos\clibl.lib(sgdef086)
-0784:1136      __Start_XI
-0784:1148      __End_XI
-0784:1148      __Start_YI
-0784:114e      __End_YI
+079c:11b6      __Start_XI
+079c:11c8      __End_XI
+079c:11c8      __Start_YI
+079c:11ce      __End_YI
 Module: C:\WATCOM\lib286\dos\clibl.lib(nmalloc.c)
-0000:255c      _nmalloc_
-0784:10dc      ___nheapbeg
-0784:10de      ___MiniHeapRover
-0784:10e0      ___LargestSizeB4MiniHeapRover
+0000:26e0      _nmalloc_
+079c:115c      ___nheapbeg
+079c:115e      ___MiniHeapRover
+079c:1160      ___LargestSizeB4MiniHeapRover
 Module: C:\WATCOM\lib286\dos\clibl.lib(fmalloc.c)
-0000:2636*     _fmalloc_
-0000:2636      malloc_
-0784:10e2+     ___fheap
-0784:10e4      ___fheapRover
-0784:10e6      ___LargestSizeB4Rover
+0000:27ba*     _fmalloc_
+0000:27ba      malloc_
+079c:1162+     ___fheap
+079c:1164      ___fheapRover
+079c:1166      ___LargestSizeB4Rover
 Module: C:\WATCOM\lib286\dos\clibl.lib(fclose.c)
-0000:2743+     __doclose_
-0000:27f4      __shutdown_stream_
-0000:280e*     fclose_
-0784:11f6+     ___RmTmpFileFn
+0000:28c7+     __doclose_
+0000:2978      __shutdown_stream_
+0000:2992*     fclose_
+079c:1276+     ___RmTmpFileFn
 Module: C:\WATCOM\lib286\dos\clibl.lib(freefp.c)
-0000:2859      __freefp_
-0000:28d4      __purgefp_
+0000:29dd      __freefp_
+0000:2a58      __purgefp_
 Module: C:\WATCOM\lib286\dos\clibl.lib(seterrno.c)
-0000:2915      __set_errno_
-0000:2929*     __set_EDOM_
-0000:293b*     __set_ERANGE_
-0000:294d*     __set_EINVAL_
-0000:2962      __set_doserrno_
+0000:2a99      __set_errno_
+0000:2aad*     __set_EDOM_
+0000:2abf*     __set_ERANGE_
+0000:2ad1*     __set_EINVAL_
+0000:2ae6      __set_doserrno_
 Module: C:\WATCOM\lib286\dos\clibl.lib(chktty.c)
-0000:296e      __chktty_
+0000:2af2      __chktty_
 Module: C:\WATCOM\lib286\dos\clibl.lib(wctomb.c)
-0000:2999      wctomb_
+0000:2b1d      wctomb_
 Module: C:\WATCOM\lib286\dos\clibl.lib(itoa.c)
-0000:29c2+     utoa_
-0000:2a1f      itoa_
+0000:2b46+     utoa_
+0000:2ba3      itoa_
 Module: C:\WATCOM\lib286\dos\clibl.lib(i4m)
-0000:2a44*     __I4M
-0000:2a44      __U4M
+0000:2bc8*     __I4M
+0000:2bc8      __U4M
 Module: C:\WATCOM\lib286\dos\clibl.lib(strupr.c)
-0000:2a5c      strupr_
+0000:2be0      strupr_
 Module: C:\WATCOM\lib286\dos\clibl.lib(noefgfmt.c)
-0784:10e8      ___EFG_printf
-0784:10ec*     ___EFG_scanf
+079c:1168      ___EFG_printf
+079c:116c*     ___EFG_scanf
 Module: C:\WATCOM\lib286\dos\clibl.lib(mbisdbcs.c)
-0784:11fa      ___IsDBCS
+079c:127a      ___IsDBCS
 Module: C:\WATCOM\lib286\dos\clibl.lib(mbislead.c)
-0000:2a91*     _ismbblead_
-0784:11fc      ___MBCSIsTable
+0000:2c15*     _ismbblead_
+079c:127c      ___MBCSIsTable
 Module: C:\WATCOM\lib286\dos\clibl.lib(lltoa.c)
-0000:2aad      ulltoa_
-0000:2b92*     lltoa_
+0000:2c31      ulltoa_
+0000:2d16*     lltoa_
 Module: C:\WATCOM\lib286\dos\clibl.lib(ltoa.c)
-0000:2bf4      ultoa_
-0000:2c63*     ltoa_
+0000:2d78      ultoa_
+0000:2de7*     ltoa_
 Module: C:\WATCOM\lib286\dos\clibl.lib(__lseek.c)
-0000:2c92      __lseek_
+0000:2e16      __lseek_
 Module: C:\WATCOM\lib286\dos\clibl.lib(qwrit.c)
-0000:2ccc      __qwrite_
+0000:2e50      __qwrite_
 Module: C:\WATCOM\lib286\dos\clibl.lib(fsync.c)
-0000:2d29      fsync_
-Module: C:\WATCOM\lib286\dos\graph.lib(i4m)
-0000:4974      _GR__I4M
-0000:4974*     _GR__U4M
-Module: C:\WATCOM\lib286\dos\graph.lib(textpos)
-0000:498c+     _gettextposition_
-0000:49a8      _settextposition_
-Module: C:\WATCOM\lib286\dos\graph.lib(fillmask)
-0000:4a1d      _getfillmask_
-0000:4a61      _setfillmask_
-Module: C:\WATCOM\lib286\dos\graph.lib(l1block)
-0000:4ad2      _L1Block_
-Module: C:\WATCOM\lib286\dos\graph.lib(svgainfo)
-0000:4b57      _SuperVGAType_
-0000:4e0e*     _SetSVGAType_
+0000:2ead      fsync_
 Module: C:\WATCOM\lib286\dos\graph.lib(l1clip)
-0000:4e12+     _L1OutCode_
-0000:4ecd      _L0LineClip_
-0000:501b*     _L0BlockClip_
+0000:4af4+     _L1OutCode_
+0000:4baf      _L0LineClip_
+0000:4cfd*     _L0BlockClip_
 Module: C:\WATCOM\lib286\dos\graph.lib(l0drwlin)
-0000:5089      _L0DrawLine_
+0000:4d6b      _L0DrawLine_
+Module: C:\WATCOM\lib286\dos\graph.lib(i4m)
+0000:4eb8      _GR__I4M
+0000:4eb8*     _GR__U4M
+Module: C:\WATCOM\lib286\dos\graph.lib(textpos)
+0000:4ed0+     _gettextposition_
+0000:4eec      _settextposition_
+Module: C:\WATCOM\lib286\dos\graph.lib(fillmask)
+0000:4f61      _getfillmask_
+0000:4fa5      _setfillmask_
+Module: C:\WATCOM\lib286\dos\graph.lib(l1block)
+0000:5016      _L1Block_
+Module: C:\WATCOM\lib286\dos\graph.lib(svgainfo)
+0000:509b      _SuperVGAType_
+0000:5352*     _SetSVGAType_
 Module: C:\WATCOM\lib286\dos\clibl.lib(nmemneed.c)
-0000:2d2e      __nmemneed_
+0000:2eb2      __nmemneed_
 Module: C:\WATCOM\lib286\dos\clibl.lib(mem.c)
-0000:2d40      __MemAllocator
-0000:2e0a      __MemFree
+0000:2ec0      __MemAllocator
+0000:2f8a      __MemFree
 Module: C:\WATCOM\lib286\dos\clibl.lib(grownear.c)
-0000:2fec      __LastFree_
-0000:3066      __ExpandDGROUP_
+0000:316c      __LastFree_
+0000:31e6      __ExpandDGROUP_
 Module: C:\WATCOM\lib286\dos\clibl.lib(hpgrw086.c)
-0000:3177      __CMain_nheapgrow_
+0000:32f7      __CMain_nheapgrow_
 Module: C:\WATCOM\lib286\dos\clibl.lib(growseg.c)
-0000:317c      __GrowSeg_
+0000:32fc      __GrowSeg_
 Module: C:\WATCOM\lib286\dos\clibl.lib(allocseg.c)
-0000:326e      __AllocSeg_
+0000:33ee      __AllocSeg_
 Module: C:\WATCOM\lib286\dos\clibl.lib(fmemneed.c)
-0000:3305      __fmemneed_
+0000:3485      __fmemneed_
 Module: C:\WATCOM\lib286\dos\clibl.lib(_clse.c)
-0000:3308      __close_
+0000:3488      __close_
 Module: C:\WATCOM\lib286\dos\clibl.lib(ffree.c)
-0000:333b*     _ffree_
-0000:333b      free_
+0000:34bb*     _ffree_
+0000:34bb      free_
 Module: C:\WATCOM\lib286\dos\clibl.lib(errno.c)
-0000:3381      __get_errno_ptr_
-0000:3388      __get_doserrno_ptr_
-0784:12fe+     _errno
-0784:1300+     __doserrno
+0000:3501      __get_errno_ptr_
+0000:3508      __get_doserrno_ptr_
+079c:137e+     _errno
+079c:1380+     __doserrno
 Module: C:\WATCOM\lib286\dos\clibl.lib(isatt.c)
-0000:338f      isatty_
+0000:350f      isatty_
 Module: C:\WATCOM\lib286\dos\clibl.lib(alphabet.c)
-0784:0b48      ___Alphabet
+079c:0bbe      ___Alphabet
 Module: C:\WATCOM\lib286\dos\clibl.lib(mbinit.c)
-0000:33e9      __mbinit_
-0784:10f0+     ___MBCodePage
+0000:3569      __mbinit_
+079c:1170+     ___MBCodePage
 Module: C:\WATCOM\lib286\dos\clibl.lib(dosret.c)
-0000:34c4*     _dosretax_
-0000:34c9*     _dosret0_
-0000:34d0      __set_errno_dos_
-0000:352e*     __set_errno_dos_reterr_
+0000:3644*     _dosretax_
+0000:3649*     _dosret0_
+0000:3650      __set_errno_dos_
+0000:36ae*     __set_errno_dos_reterr_
 Module: C:\WATCOM\lib286\dos\clibl.lib(iomode.c)
-0000:3539      __GetIOMode_
-0000:355e      __SetIOMode_nogrow_
-0784:1106+     ___NFiles
-0784:1108+     ___init_mode
-0784:1130+     ___io_mode
+0000:36b9      __GetIOMode_
+0000:36de      __SetIOMode_nogrow_
+079c:1186+     ___NFiles
+079c:1188+     ___init_mode
+079c:11b0+     ___io_mode
 Module: C:\WATCOM\lib286\dos\clibl.lib(filedos.c)
-0000:3581*     _dos_close_
-0000:358f      _dos_commit_
-Module: C:\WATCOM\lib286\dos\graph.lib(l1fill)
-0000:51d5      _L1Fill_
-0000:525e*     _L1ClipFill_
+0000:3701*     _dos_close_
+0000:370f      _dos_commit_
 Module: C:\WATCOM\lib286\dos\graph.lib(i4d)
-0000:528c      _GR__I4D
-0000:52d5*     _GR__U4D
+0000:5356      _GR__I4D
+0000:539f*     _GR__U4D
+Module: C:\WATCOM\lib286\dos\graph.lib(l1fill)
+0000:5423      _L1Fill_
+0000:54ac*     _L1ClipFill_
 Module: C:\WATCOM\lib286\dos\clibl.lib(heapen.c)
-0000:359f*     _heapenable_
-0784:1134      ___heap_enabled
+0000:371f*     _heapenable_
+079c:11b4      ___heap_enabled
 Module: C:\WATCOM\lib286\dos\clibl.lib(sbrk.c)
-0000:35b0*     sbrk_
-0000:35c0      __brk_
+0000:3730*     sbrk_
+0000:3740      __brk_
 Module: C:\WATCOM\lib286\dos\clibl.lib(nfree.c)
-0000:362a      _nfree_
-0784:1302+     ___MiniHeapFreeRover
+0000:37aa      _nfree_
+079c:1382+     ___MiniHeapFreeRover
 Module: C:\WATCOM\lib286\dos\clibl.lib(heapgrow.c)
-0000:3725*     _heapgrow_
-0000:3725*     _fheapgrow_
-0000:3726      _nheapgrow_
+0000:38a5*     _heapgrow_
+0000:38a5*     _fheapgrow_
+0000:38a6      _nheapgrow_
 Module: C:\WATCOM\lib286\dos\clibl.lib(doserror)
-0000:37a0      __doserror_
+0000:3920      __doserror_
 
 
                         +--------------------+
@@ -462,6 +472,6 @@ C:\WATCOM\lib286\dos\clibl.lib
                         +-----------------------+
 
 Stack size:  1000 (4096.)
-Memory size:  9b50 (39760.)
-Entry point address: 0000:0a74
-Link time: 00:01.53
+Memory size:  9d50 (40272.)
+Entry point address: 0000:0bca
+Link time: 00:00.30

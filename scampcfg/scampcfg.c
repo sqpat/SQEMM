@@ -20,6 +20,7 @@
 //#define USE_USRHOOKS
 
 #include <dos.h>
+#include <bios.h>
 #include <conio.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -705,18 +706,19 @@ void printchar(byte a){
 	char bytes[2];
 	bytes[0] = a;
 	bytes[1] = '\0';
+	_settextcolor(15);
 	_outtext(bytes);
+	_settextcolor(7);
 }
 
-int main(void)
-  {
+void printstatus(){
+
 		byte value;
 		int16_t i, j;
 		byte bit;
 		char bigstring[60];
-		_outtext ("VLSI SCAMP configuration viewer/editor\n");
-		_outtext ("Basic configuration registers: \n");
-		_outtext ("Addr Name Value  Bit 7  Bit 6  Bit 5  Bit 4  Bit 3  Bit 2  Bit 1  Bit 0 \n");
+
+		_outtext ("Ad Name  Value Bit 7   Bit 6   Bit 5   Bit 4   Bit 3   Bit 2   Bit 1   Bit 0 \n");
 
 		for (i = 0; i < NUM_REGS; i++){
 			outp(0xec, config_regs[i]);
@@ -744,7 +746,6 @@ int main(void)
 				
 				if (j > 0){
 					if (setting_names_detailed[i * 8 + j][0] != '@'){
-						_settextcolor(7);
 						printchar(179);
 					}
 				}
@@ -771,8 +772,95 @@ int main(void)
 
 			_outtext("\n");
 		}
+}
+
+byte addkeystroke(byte initialvalue, byte keychar){
+	byte usednibble = 0;
+	if (keychar >= 'a'){
+		usednibble = 0xA + keychar - 'a';
+	} else if (keychar >= 'A'){
+		usednibble = 0xA + keychar - 'A';
+	} else if (keychar >= '0'){
+		usednibble = keychar - '0';
+	}
+	initialvalue <<= 4;
+	initialvalue += usednibble;
+	return initialvalue;
+
+}
+
+int main(void)
+  {
+		byte keychar;
+		byte modifyvalue;
+		byte modifyport;
+		byte step;
+		char bigstring[60];
+		_outtext ("VLSI SCAMP configuration viewer/editor\n");
+		//_outtext ("Basic configuration registers: \n");
+		restart:
+
+		printstatus();
+		_outtext ("\nUsage: M or m to modify, followed by port addr byte in hex, followed by value byte in hex. Any other key to quit.\n");
  
 
+ 		keychar = _bios_keybrd(_KEYBRD_READ);
+		if (keychar == 'm' || keychar == 'M'){
+			byte printed[3];
+			
+			// print "m " to screen
+			printed[0] = keychar;
+			printed[1] = ' ';
+			printed[2] = '\0';
+			_outtext(printed);
+			
+			// initialize these
+			modifyvalue = 0;
+			modifyport = 0;
+	 		step = 0;
+			// we'll just loop and use step 0-3 to keep track of our current place in this. 
+			while (true){
+				keychar = _bios_keybrd(_KEYBRD_READ);
+				if ((keychar >= '0' && keychar <= '9') ||
+					(keychar >= 'a' && keychar <= 'f')||
+					(keychar >= 'A' && keychar <= 'F')){
+						
+						printed[0] = keychar;  // print typed char to screen
+						printed[1] = '\0';
+						_outtext(printed);
+
+				
+
+						if (step == 0){
+							modifyport = addkeystroke(modifyport, keychar);
+						} else if (step == 1){
+							printed[0] = ' ';  // throw in another space
+							_outtext(printed);
+
+							modifyport = addkeystroke(modifyport, keychar);
+						} else if (step == 2){
+							modifyvalue = addkeystroke(modifyvalue, keychar);
+						} else if (step == 3){
+							modifyvalue = addkeystroke(modifyvalue, keychar);
+
+							outp(0xec, modifyport);
+							outp(0xed, modifyvalue);
+							sprintf (bigstring,"\nWrote value %2X to port %2X\n", modifyvalue, modifyport);
+							_outtext(bigstring);
+							goto restart;
+
+						}
+						
+						step++;
+					}
+					 else {
+						break;
+					}
+			}
+
+		}
+
+		
 
         return 0;
 }
