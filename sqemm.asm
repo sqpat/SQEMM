@@ -696,19 +696,96 @@ pop        ax
 ret   
 
 MAIN_EMS_INTERRUPT_VECTOR:
+
+cmp       ah, 044h
+jne       NOT_FUNC_5
+
+; inline the only function(s) that are called 99% of the time
+; and matter for performance. If not one of these functions,
+; then we will use the jump lookup table
+
+EMS_FUNCTION_044h:
+xor        ah, ah
+cmp        ax, word ptr cs:[number_ems_pages]
+jb         ENOUGH_PAGES
+jmp        RETURN_RESULT_8B
+
+ENOUGH_PAGES:
+cmp        dx,  1
+jne        RETURN_RESULT_83
+
+; al and bx are still the args
+
+; dumb hack. internally c000 - ec00 are pages 0-11 in order.
+; but if you want d000 to be page frame, outwardly we must expose it as 0-4.
+; so we are assuming 0-4 and adding by 4 to get the real internal offset
+; and assume 4-12 not used.
+add ax, 4
+
+
+; al = page register number 
+; bx is value to write to that port
+; then we turn enable that page as ems enabled.
+; note: does not preserve al because who cares.
+
+
+; write ems port... select chipset register
+
+
+out        0E8h, al   ; select EMS page
+xchg ax, ax  ; nop delays
+xchg ax, ax
+xchg ax, ax
+mov  ax, bx
+
+; mov  ah, 1    ; this feels jank, needs to happen on 86box, must confirm on real hardware
+out  0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
+
+
+RETURN_RESULT_00:
+
+mov ah, 00h
+iret
+
+PAGE_OVERFLOW_3:
+PAGE_UNDERFLOW_3:
+
+mov ah, 080h
+iret
+
+; The memory manager couldn't find the EMM handle your program specified.
+RETURN_RESULT_83:
+mov ah, 083h
+iret
+
+RETURN_RESULT_8A:
+
+;mov ah, 08Ah
+;iret
+
+RETURN_RESULT_8B:
+mov ah, 08Bh
+iret
+
+
+
+NOT_FUNC_5:
+
 push       cx
 push       ds
 cld        
 
 ; don't support OS function types
-cmp        ah, 05dh
-ja         RETURN_RESULT_84
+;cmp        ah, 05dh
+;ja         RETURN_RESULT_84
 
 ; don't support 'GET STATUS' call
-cmp        ah, 040h
-jb         RETURN_RESULT_84
+;cmp        ah, 040h
+;jb         RETURN_RESULT_84
 
 ; subtract 040h - things are now 040h indexed..
+
+; todo prioritize oft used functions in special case like 17, 5
 
 sub        ah, 040h
 push       bx
@@ -805,93 +882,8 @@ jmp        RETURNINTERRUPTRESULT_87
 ;                     (be made inaccessible for reading or writing).
 ;          DX = emm_handle
 
-EMS_FUNCTION_044h:
-xor        ah, ah
-;mov        di, ax
-cmp        ax, word ptr cs:[number_ems_pages]
-jb         ENOUGH_PAGES
-jmp        RETURN_RESULT_8B
+; HANDLED INLINE ABOVE
 
-ENOUGH_PAGES:
-cmp        dx,  1
-jne        RETURN_RESULT_83
-
-
-;cmp        bx, word ptr [si] ; check to see if this page is owned by this process
-; TODO actually check if page is owned by process
-;jmp        FOUND_VALID_EMM_HANDLE_POINTER
-
-;jb         FOUND_VALID_EMM_HANDLE_POINTER
-;jmp        RETURN_RESULT_8A
-;nop        
-;FOUND_VALID_EMM_HANDLE_POINTER:
-;mov        si, word ptr [si + 0ah]
-;mov        cx, bx
-;jcxz       CX_IS_ZERO               ; jump if cx is 0
-;LOOP_ADD_TO_SI:
-;mov        si, word ptr [si + 2]
-;loop       LOOP_ADD_TO_SI
-;CX_IS_ZERO:
-;cmp        si, word ptr [end_of_page_linked_list]
-;jae        PAGE_OVERFLOW_3
-;cmp        si, word ptr [page_linked_list_pointer]
-;jb         PAGE_UNDERFLOW_3
-;mov        bx, word ptr [si]
-;mov        ax, di
-
-; call TURN_OFF_EMS_PAGE
-; al and bx are still the args
-
-; dumb hack. internally c000 - ec00 are pages 0-11 in order.
-; but if you want d000 to be page frame, outwardly we must expose it as 0-4.
-; so we are assuming 0-4 and adding by 4 to get the real internal offset
-; and assume 4-12 not used.
-add ax, 4
-
-
-
-
-; al = page register number 
-; bx is value to write to that port
-; then we turn enable that page as ems enabled.
-; note: does not preserve al because who cares.
-
-
-; write ems port... select chipset register
-
-;xchg dx, bx
-;call WRITEEMSPORT
-;xchg dx, bx
-
-out        0E8h, al   ; select EMS page
-xchg ax, ax  ; nop delays
-xchg ax, ax
-xchg ax, ax
-mov  ax, bx
-
-; mov  ah, 1    ; this feels jank, needs to happen on 86box, must confirm on real hardware
-out  0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
-
-
-RETURN_RESULT_00:
-
-jmp        RETURNINTERRUPTRESULT0
-PAGE_OVERFLOW_3:
-PAGE_UNDERFLOW_3:
-
-jmp        RETURNINTERRUPTRESULT_80
-
-; The memory manager couldn't find the EMM handle your program specified.
-RETURN_RESULT_83:
-jmp        RETURNINTERRUPTRESULT_83
-
-RETURN_RESULT_8A:
-
-jmp        RETURNINTERRUPTRESULT_8A
-
-RETURN_RESULT_8B:
-
-jmp        RETURNINTERRUPTRESULT_8B
 
 ;         6  Deallocate Pages                               45h       
 
