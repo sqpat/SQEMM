@@ -59,6 +59,7 @@ push si
 push di
 push ds
 push es
+push bp
 push cs
 pop  ds 
 mov  bx, ds:word ptr [driver_arguments]
@@ -73,6 +74,7 @@ shl  ax, 1
 mov  si, OFFSET pointer_to_ems_init
 add  si, ax
 call word ptr [si]
+pop  bp
 pop  es
 pop  ds
 pop  di
@@ -697,12 +699,8 @@ ret
 
 MAIN_EMS_INTERRUPT_VECTOR:
 
-cmp       ah, 044h
-jne       NOT_FUNC_5
-
-; inline the only function(s) that are called 99% of the time
-; and matter for performance. If not one of these functions,
-; then we will use the jump lookup table
+cmp      ah, 044h
+jne      NOT_FUNC_44h
 
 EMS_FUNCTION_044h:
 xor        ah, ah
@@ -713,7 +711,8 @@ jmp        RETURN_RESULT_8B
 ENOUGH_PAGES:
 cmp        dx,  1
 jne        RETURN_RESULT_83
-
+ 
+; call TURN_OFF_EMS_PAGE
 ; al and bx are still the args
 
 ; dumb hack. internally c000 - ec00 are pages 0-11 in order.
@@ -722,13 +721,7 @@ jne        RETURN_RESULT_83
 ; and assume 4-12 not used.
 add ax, 4
 
-
-; al = page register number 
-; bx is value to write to that port
-; then we turn enable that page as ems enabled.
-; note: does not preserve al because who cares.
-
-
+ 
 ; write ems port... select chipset register
 
 
@@ -738,54 +731,60 @@ xchg ax, ax
 xchg ax, ax
 mov  ax, bx
 
-; mov  ah, 1    ; this feels jank, needs to happen on 86box, must confirm on real hardware
+mov  ah, 1    ; must be on in 86box. take this out on real hardware
+
 out  0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
 
 
 RETURN_RESULT_00:
 
-mov ah, 00h
+mov        ah, 000h
 iret
-
 PAGE_OVERFLOW_3:
 PAGE_UNDERFLOW_3:
 
-mov ah, 080h
+mov        ah, 080h
 iret
 
 ; The memory manager couldn't find the EMM handle your program specified.
 RETURN_RESULT_83:
-mov ah, 083h
+mov        ah, 083h
 iret
 
 RETURN_RESULT_8A:
 
-;mov ah, 08Ah
-;iret
+mov        ah, 08Ah
+iret
+
 
 RETURN_RESULT_8B:
-mov ah, 08Bh
+
+mov        ah, 08Bh
 iret
 
 
 
-NOT_FUNC_5:
+NOT_FUNC_44h:
+
+
 
 push       cx
+push       si
+push       di
+push       bp
 push       ds
+push       es
 cld        
 
 ; don't support OS function types
-;cmp        ah, 05dh
-;ja         RETURN_RESULT_84
+cmp        ah, 05dh
+ja         RETURN_RESULT_84
 
 ; don't support 'GET STATUS' call
-;cmp        ah, 040h
-;jb         RETURN_RESULT_84
+cmp        ah, 040h
+jb         RETURN_RESULT_84
 
 ; subtract 040h - things are now 040h indexed..
-
-; todo prioritize oft used functions in special case like 17, 5
 
 sub        ah, 040h
 push       bx
@@ -825,16 +824,13 @@ jmp        RETURNINTERRUPTRESULT0
 ;          4  Allocate Pages                                 43h      
 ;           BX = num_of_pages_to_alloc
 
-ARG_BX_IS_0:
-mov        dx, 0
-jmp        RETURNINTERRUPTRESULT_89
-
 EMS_FUNCTION_043h:
 push       cs
 pop        ds
+push       bx
 cmp        bx, 0
 je         ARG_BX_IS_0
- 
+
 cmp        bx, word ptr [unallocated_page_count]
 ja         ARG_BX_ABOVE_PAGE_COUNT
 cmp        bx, word ptr [total_page_count]
@@ -842,28 +838,37 @@ ja         ARG_BX_ABOVE_TOTAL_PAGE_COUNT
 
 cmp        word ptr [handle_count], 0
 je         NO_HANDLES_LEFT
-push       si
 mov        si, word ptr [handle_table_pointer]
 
-pop si
+jmp         FOUND_PAGES_FOR_ALLOCATION
 
-sub word ptr [unallocated_page_count], bx
-
-dec word ptr [handle_count]
-mov        dx, 0001h   ; force handle 1.
-
-jmp        RETURNINTERRUPTRESULT0
 NO_HANDLES_LEFT:
 mov        dx, 0
+pop        bx
 jmp        RETURNINTERRUPTRESULT_85
 ARG_BX_ABOVE_TOTAL_PAGE_COUNT:
 mov        dx, 0
+pop        bx
 jmp        RETURNINTERRUPTRESULT_88
+ARG_BX_IS_0:
+mov        dx, 0
+pop        bx
+jmp        RETURNINTERRUPTRESULT_89
 ARG_BX_ABOVE_PAGE_COUNT:
 mov        dx, 1
+pop        bx
 jmp        RETURNINTERRUPTRESULT_87
 
+FOUND_PAGES_FOR_ALLOCATION:
 
+ALLOCATE_SUCCESS:
+sub word ptr [unallocated_page_count], bx
+
+dec word ptr [handle_count]
+pop        bx
+mov        dx, 0001h   ; force handle 1.
+
+jmp        RETURNINTERRUPTRESULT0
 
 ;          5  Map/Unmap Handle Page                          44h      
 
@@ -882,7 +887,6 @@ jmp        RETURNINTERRUPTRESULT_87
 ;                     (be made inaccessible for reading or writing).
 ;          DX = emm_handle
 
-; HANDLED INLINE ABOVE
 
 
 ;         6  Deallocate Pages                               45h       
@@ -890,6 +894,7 @@ jmp        RETURNINTERRUPTRESULT_87
 EMS_FUNCTION_045h:
 push       cs
 pop        ds
+push       bx
 push       dx
 
 
@@ -903,15 +908,19 @@ add        word ptr [unallocated_page_count], dx
 inc        word ptr [handle_count]  ; handle freed, increment handle count
 
 pop        dx
+pop        bx
 jmp        RETURNINTERRUPTRESULT0
 
 pop        dx
+pop        bx
 jmp        RETURNINTERRUPTRESULT_80
 NO_EMM_HANDLE_FOUND:
 pop        dx
+pop        bx
 jmp        RETURNINTERRUPTRESULT_83
 COULD_NOT_FIND_EMM_HANDLE_SPECIFIED:
 pop        dx
+pop        bx
 jmp        RETURNINTERRUPTRESULT_86
 
 ;          7  Get Version                                    46h       
@@ -926,32 +935,28 @@ jmp        RETURNINTERRUPTRESULT0
 EMS_FUNCTION_047h:
 push       cs
 pop        ds
+push       bx
 push       dx
-push       si
 call       GET_EMM_HANDLE
 jb         NO_EMM_HANDLE_FOUND
 mov        si, word ptr [get_emm_handle_result_pointer]
 cmp        byte ptr [si + 0ch], 0ffh
 je         STATE_ALREADY_EXISTS
 mov        byte ptr [si + 0ch], 0ffh
-push       di
 mov        di, si
 add        di, 0dh
 mov        ax, cs
-push       es
 mov        es, ax
 push       cx
 mov        cx, 4
 call       GET_EMS_REGISTER_DATA
 pop        cx
-pop        es
-pop        di
-pop        si
 pop        dx
+pop        bx
 jmp        RETURNINTERRUPTRESULT0
 STATE_ALREADY_EXISTS:
-pop        si
 pop        dx
+pop        bx
 jmp        RETURNINTERRUPTRESULT_8D
 
 ;          9  Restore Page Map                               48h       
@@ -959,6 +964,7 @@ jmp        RETURNINTERRUPTRESULT_8D
 EMS_FUNCTION_048h:
 push       cs
 pop        ds
+push       bx
 push       dx
 call       GET_EMM_HANDLE
 jb         NO_EMM_HANDLE_FOUND
@@ -972,11 +978,14 @@ mov        cx, 4
 call       WRITE_PAGE_MAP
 pop        cx
 pop        dx
+pop        bx
 jmp        RETURNINTERRUPTRESULT0
 pop        dx
+pop        bx
 jmp        RETURNINTERRUPTRESULT_80
 STATE_DOESNT_EXIST:
 pop        dx
+pop        bx
 jmp        RETURNINTERRUPTRESULT_8E
 
 ;          10 Reserved                                       49h       
@@ -1071,7 +1080,8 @@ je         EMS_FUNCTION_04F00h
 jmp        CHECK_FUNCTION_TYPE_04Fh
 nop        
 EMS_FUNCTION_04F00h:
-push       di
+push       bx
+push       dx
 mov        bp, di
 cld        
 lodsw
@@ -1089,14 +1099,17 @@ call       READEMSPORT
 stosw
 loop       GET_NEXT_PARAM
 RESULT_OK:
-pop        bp
+pop        dx
+pop        bx
 jmp        RETURNINTERRUPTRESULT0
+pop        dx
+pop        bx
 mov        word ptr es:[bp], 0
-pop        bp
 jmp        RETURNINTERRUPTRESULT_8B
 TOO_MANY_PAGES:
+pop        dx
+pop        bx
 mov        word ptr es:[bp], 0
-pop        bp
 jmp        RETURNINTERRUPTRESULT_A3
 CHECK_FUNCTION_TYPE_04Fh:
 cmp        al, 1
@@ -1105,6 +1118,7 @@ jmp        EMS_FUNCTION_04F02h
 nop        
 
 EMS_FUNCTION_04F01h:
+push       bx
 push       dx
 cld        
 lodsw
@@ -1121,15 +1135,19 @@ call       TURN_ON_EMS_PAGE
 loop       SET_NEXT_PAGE
 RESULT_OK_2:
 pop        dx
+pop        bx
 jmp        RETURNINTERRUPTRESULT0
 ; unused
 pop        dx
+pop        bx
 jmp        RETURNINTERRUPTRESULT_80
 CORRUPTED_SOURCE_ARRAY:
 pop        dx
+pop        bx
 jmp        RETURNINTERRUPTRESULT_A3
 ; unused
 pop        dx
+pop        bx
 jmp        RETURNINTERRUPTRESULT_9C
 EMS_FUNCTION_04F02h:
 
@@ -1157,6 +1175,7 @@ jne        VALID_SUBFUNCTION_PARAMETER
 ; invalid subfunction parameter
 jmp        RETURN_BAD_SUBFUNCTION_PARAMETER
 VALID_SUBFUNCTION_PARAMETER:
+push       bx
 push       dx
 xor        ah, ah
 mov        word ptr cs:[stored_ax], ax
@@ -1178,6 +1197,7 @@ loop       DO_NEXT_PAGE
 ; exits if we fall thru loop with no error
 END_LOOP:
 pop        dx
+pop        bx
 jmp        RETURNINTERRUPTRESULT
 
 
@@ -1261,6 +1281,17 @@ ret
 
 
 
+
+COULD_NOT_FIND_EMM_HANDLE_SPECIFIED_3:
+pop        dx
+mov        di, word ptr [get_emm_handle_result_pointer]
+mov        bx, word ptr [di]
+jmp        RETURNINTERRUPTRESULT_83
+INSUFFICIENT_PAGES:
+pop        dx
+mov        di, word ptr [get_emm_handle_result_pointer]
+mov        bx, word ptr [di]
+jmp        RETURNINTERRUPTRESULT_87
 
 
 
@@ -1380,6 +1411,8 @@ EMS_FUNCTION_05800h:
 push       ds
 push       es
 push       si
+push       di
+push       bx
 push       cs
 pop        ds
 mov        si, OFFSET mappable_phys_page_struct
@@ -1393,6 +1426,8 @@ add        si, 4
 loop       LOOP_05800h
 mov        cx, word ptr cs:[number_ems_pages]
 mov        ah, 0
+pop        bx
+pop        di
 pop        si
 pop        es
 pop        ds
@@ -1664,7 +1699,11 @@ nop
 RETURNINTERRUPTRESULT0:
 mov        ah, 0
 RETURNINTERRUPTRESULT:
+pop        es
 pop        ds
+pop        bp
+pop        di
+pop        si
 pop        cx
 iret
 
@@ -1803,9 +1842,9 @@ EMS_INTERRUPT_FREE:
 ; hard coded to d000 for now
 mov        word ptr [page_frame_segment], 0D000h
 
-; 128 pages hardcoded for now
-mov        word ptr [unallocated_page_count], 128
-mov        word ptr [total_page_count], 128
+; 256 pages hardcoded for now
+mov        word ptr [unallocated_page_count], 256
+mov        word ptr [total_page_count], 256
 
 ; ok?
 mov        word ptr [number_ems_pages], 36
