@@ -24,6 +24,7 @@
 #include <conio.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <strings.h>
 
 
 int16_t emshandle;
@@ -275,6 +276,7 @@ void mapAOld() {
 		}
 
 		outp(0xe8, i + 4);
+
 		j = inp(0xea);
 		k = inp(0xeb);
 		printf("%i %x %x:", i, j, k);
@@ -722,7 +724,6 @@ void printstatus(){
 
 		for (i = 0; i < NUM_REGS; i++){
 			outp(0xec, config_regs[i]);
-			value = inp (0xed);
 //			printf ("%02X %s " BYTE_TO_BINARY_PATTERN" %s\n", config_regs[i], config_names[i], BYTE_TO_BINARY(value), setting_names[i]);
 //			sprintf (bigstring,"%02X %s " BYTE_TO_BINARY_PATTERN"\0", config_regs[i], config_names[i], BYTE_TO_BINARY(value));
 
@@ -733,6 +734,7 @@ void printstatus(){
 			sprintf (bigstring,"%s\0", config_names[i]);
 			_outtext(bigstring);
 			printchar(179);
+			value = inp (0xed);
 
 //			sprintf (bigstring,BYTE_TO_BINARY_PATTERN"\0", BYTE_TO_BINARY(value));
 			sprintf (bigstring,"%02X\0", (value));
@@ -789,16 +791,114 @@ byte addkeystroke(byte initialvalue, byte keychar){
 
 }
 
-int main(void)
-  {
+
+int16_t		myargc;
+int8_t**		myargv;
+
+ 
+
+int16_t  checkparm (int8_t *check)
+{
+    int16_t		i;
+
+    for (i = 1;i<myargc;i++)
+    {
+	if ( !strcasecmp(check, myargv[i]) )
+	    return i;
+    }
+
+    return 0;
+}
+
+void printemsregisterdata(){
+		byte value1;
+		int16_t value2;
+		int16_t fullvalue;
+		int16_t i, j;
+		byte bit;
+		char bigstring[60];
+
+		_outtext ("Ad   0xEB     0XEA   Ad   0xEB     0XEA        \n");
+
+
+		for (i = 0; i < 18; i++){
+
+			outp(0xe8, i);
+			sprintf (bigstring,"%02X\0", i);
+			_outtext(bigstring);
+
+			value1 = inp(0xea);
+			printchar(179);
+			value2 = inp(0xeb);
+
+			fullvalue = (value2 << 8) + value1;
+
+			sprintf (bigstring,BYTE_TO_BINARY_PATTERN"\0", BYTE_TO_BINARY(value2));
+			_outtext(bigstring);
+			printchar(179);
+			sprintf (bigstring,BYTE_TO_BINARY_PATTERN"\0", BYTE_TO_BINARY(value1));
+			_outtext(bigstring);
+			printchar(179);
+			
+
+// 2nd half
+
+			outp(0xe8, i+18);
+			sprintf (bigstring,"%02X\0", i+18);
+			_outtext(bigstring);
+
+			value1 = inp(0xea);
+			printchar(179);
+			value2 = inp(0xeb);
+
+			fullvalue = (value2 << 8) + value1;
+
+			sprintf (bigstring,BYTE_TO_BINARY_PATTERN"\0", BYTE_TO_BINARY(value2));
+			_outtext(bigstring);
+			printchar(179);
+			sprintf (bigstring,BYTE_TO_BINARY_PATTERN"\0", BYTE_TO_BINARY(value1));
+			_outtext(bigstring);
+			printchar(179);
+			
+			
+			sprintf (bigstring,"\n\0");
+			_outtext(bigstring);
+
+
+
+
+		}
+
+
+}
+
+int16_t
+main
+( int16_t		argc,
+  int8_t**	argv ) 
+{ 
 		byte keychar;
 		byte modifyvalue;
 		byte modifyport;
 		byte step;
+		int16_t delay;
 		char bigstring[60];
+
+		myargc = argc;
+		myargv = argv;
+
 		_outtext ("VLSI SCAMP configuration viewer/editor\n");
 		//_outtext ("Basic configuration registers: \n");
 		restart:
+
+
+		if (checkparm("-ems")){
+			printemsregisterdata();
+			
+			return 0;
+		} 
+		
+		// todo cleanup and put in own function?
 
 		printstatus();
 		_outtext ("\nUsage: M or m to modify, followed by port addr byte in hex, followed by value byte in hex. Any other key to quit.\n");
@@ -844,6 +944,7 @@ int main(void)
 							modifyvalue = addkeystroke(modifyvalue, keychar);
 
 							outp(0xec, modifyport);
+							delay = 325 * (keychar * keychar); // forced delay to prevent chipset crash
 							outp(0xed, modifyvalue);
 							sprintf (bigstring,"\nWrote value %2X to port %2X\n", modifyvalue, modifyport);
 							_outtext(bigstring);
