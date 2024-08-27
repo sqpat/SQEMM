@@ -1,0 +1,12 @@
+option quiet
+option map
+option stack=2536
+debug all
+libpath %WATCOM%\lib286
+libpath %WATCOM%\lib286\dos
+format dos
+name scamphi
+
+ 
+file scamphi.obj
+ 
