@@ -1,0 +1,23 @@
+scampcfg.c(806): Warning! E1181: Parameter 1, sign specifier mismatch
+scampcfg.c(806): Note! I2003: source conversion type is 'signed char *'
+scampcfg.c(806): Note! I2004: target conversion type is 'char const *'
+scampcfg.c(806): Warning! E1181: Parameter 2, sign specifier mismatch
+scampcfg.c(806): Note! I2003: source conversion type is 'signed char *'
+scampcfg.c(806): Note! I2004: target conversion type is 'char const *'
+scampcfg.c(806): Note! I2002: 'strcasecmp' defined in: C:\WATCOM\H\strings.h(61)
+scampcfg.c(895): Warning! E1181: Parameter 1, sign specifier mismatch
+scampcfg.c(895): Note! I2003: source conversion type is 'char *'
+scampcfg.c(895): Note! I2004: target conversion type is 'signed char *'
+scampcfg.c(895): Note! I2002: 'checkparm' defined in: scampcfg.c(800)
+scampcfg.c(901): Warning! E1181: Parameter 1, sign specifier mismatch
+scampcfg.c(901): Note! I2003: source conversion type is 'char *'
+scampcfg.c(901): Note! I2004: target conversion type is 'signed char *'
+scampcfg.c(901): Note! I2002: 'checkparm' defined in: scampcfg.c(800)
+scampcfg.c(915): Warning! E1181: Parameter 1, sign specifier mismatch
+scampcfg.c(915): Note! I2003: source conversion type is 'char *'
+scampcfg.c(915): Note! I2004: target conversion type is 'signed char *'
+scampcfg.c(915): Note! I2002: 'checkparm' defined in: scampcfg.c(800)
+scampcfg.c(925): Warning! E1181: Parameter 1, sign specifier mismatch
+scampcfg.c(925): Note! I2003: source conversion type is 'char *'
+scampcfg.c(925): Note! I2004: target conversion type is 'signed char *'
+scampcfg.c(925): Note! I2002: 'checkparm' defined in: scampcfg.c(800)

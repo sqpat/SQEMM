@@ -683,7 +683,7 @@ char * setting_names[NUM_REGS] = {
 // if it starts with a space, continuation from the last
 
 char * setting_names_detailed[NUM_REGS * 8] = {
-	"    1  ","   1   ","   0   ","   1   ","   0   ","   0   ","   0   ","  1",
+	"    1  ","   1   ","   0   ","   1   ","   0   ","   1   ","   1   ","  0",
 	"  A23  ","  A22  ","  A21  ","  A20  ","  A19  ","  A18  ","  A17  ","  A26",
 	"    1  ","ROMMOV1,","@ROMMOV0","REMP384","MEMAP3 ","MEMAP2 ","MEMAP1 ","MEMAP0",
 	"    1  ","   1   ","   1   ","DRAMWS ","-FASTSX","-PGMD  ","-ENPAR ","RASOFF",
@@ -818,7 +818,7 @@ void printemsregisterdata(){
 		byte bit;
 		char bigstring[60];
 
-		_outtext ("Ad   0xEB     0XEA   Ad   0xEB     0XEA        \n");
+		_outtext ("Ad   0xEB     0xEA   Ad   0xEB     0xEA        \n");
 
 
 		for (i = 0; i < 18; i++){
@@ -897,7 +897,54 @@ main
 			
 			return 0;
 		} 
+
+		if (checkparm("-resetems")){
+			int16_t i;
+			int16_t baseoffset;
+			for (i = 12; i < 36; i++){
+				outp(0xE8, i);
+				baseoffset = i * i; // delay for outp
+				outp(0xEA, 0xFF);
+				baseoffset = i * i; // delay for outp
+				outp(0xEB, 0xFF);
+			}
+			return 0;
+		}
 		
+
+		if (checkparm("-set4000")){
+			int16_t i;
+			int16_t baseoffset;
+			for (i = 0; i < 24; i++){
+				byte __far *loc = MK_FP(0x4000 + i * 0x400, 0);
+				*loc = (i+1) * 2;
+			}
+			return 0;
+		}
+
+		if (checkparm("-set4000g")){
+			int16_t i;
+			int16_t baseoffset;
+
+			outp(0xFB, 0x00);
+			
+			outp(0xEC, 0x0B);
+			outp(0xED, 0xE0); // enable global
+
+
+			for (i = 0; i < 24; i++){
+				byte __far *loc = MK_FP(0x4000 + i * 0x400, 2);
+				*loc = (0x40 + (i+1) * 2);
+			}
+			return 0;
+
+			outp(0xEC, 0x0B);
+			outp(0xED, 0xA0); // disable global
+
+			// dummy write to disable config registers in scamp
+			//outp(0xF9, 0x00);
+		}
+
 		// todo cleanup and put in own function?
 
 		printstatus();
