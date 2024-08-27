@@ -218,7 +218,89 @@ MAIN_EMS_INTERRUPT_VECTOR:
 
 ; inline the main function(s) here.
 
+cmp      ah, 050h
+jne      NOT_FUNC_50h
+EMS_FUNCTION_050h:
+push cx
+push bx
+push si
 
+;cmp        cx, 0
+;jne        VALID_SUBFUNCTION_PARAMETER
+; invalid subfunction parameter
+;jmp        RETURN_BAD_SUBFUNCTION_PARAMETER
+;VALID_SUBFUNCTION_PARAMETER:
+;push       bx
+;xor        ah, ah
+;cmp        ah, 1
+;je         EMS_FUNCTION_05001h
+
+; physical page number mode
+DO_NEXT_PAGE_5000:
+; next page in ax....
+lodsw
+mov        bx, ax
+lodsw
+; read two words - bx and ax
+
+cmp ax, 12
+jae NOT_CONVENTIONAL_REGISTER_5000
+add ax, 4 ; need to add 4 for d000 case for scamp...  c000, e000  not supported
+out        0E8h, al   ; select EMS page
+sub ax, 4
+xchg  ax, bx
+cmp   ax, 0FFFFh   ; -1 check
+je    handle_default_page
+add   ax, 028h   ; offset by default starting page
+mov   ah, 1      ; still dont understand why this is necessary 
+out   0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
+
+loop       DO_NEXT_PAGE_5000
+
+; exits if we fall thru loop with no error
+xor        ax, ax
+pop si
+pop bx
+pop cx
+iret
+
+NOT_CONVENTIONAL_REGISTER_5000:
+ 
+out        0E8h, al   ; select EMS page
+
+xchg  ax, bx
+cmp   ax, 0FFFFh   ; -1 check
+je    handle_default_page
+add   ax, 028h   ; offset by default starting page
+mov   ah, 1      ; still dont understand why this is necessary 
+out   0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
+
+
+loop       DO_NEXT_PAGE_5000
+
+; exits if we fall thru loop with no error
+xor        ax, ax
+pop si
+pop bx
+pop cx
+iret
+
+handle_default_page:
+; mapping to page -1
+mov  ax,   bx   ; retrieve page number
+add  ax,   4
+mov  ah,   1    ; still dont understand why this is necessary 
+out  0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
+loop       DO_NEXT_PAGE_5000
+; fall thru if done..
+
+xor        ax, ax
+pop si
+pop bx
+pop cx
+iret
+
+NOT_FUNC_50h:
 cmp      ah, 044h
 jne      NOT_FUNC_44h
 
@@ -535,73 +617,7 @@ EMS_FUNCTION_04Fh:
 ;             (Physical page number mode)                    5000h     
 ;             (Segment address mode)                         5001h     
 
-EMS_FUNCTION_050h:
-cmp        cx, 0
-jne        VALID_SUBFUNCTION_PARAMETER
-; invalid subfunction parameter
-jmp        RETURN_BAD_SUBFUNCTION_PARAMETER
-VALID_SUBFUNCTION_PARAMETER:
-push       bx
-xor        ah, ah
-cmp        ah, 1
-je         EMS_FUNCTION_05001h
-; physical page number mode
-DO_NEXT_PAGE_5000:
-; next page in ax....
-lodsw
-mov        bx, ax
-lodsw
-; read two words - bx and ax
-
-cmp ax, 12
-jae NOT_CONVENTIONAL_REGISTER_5000
-add ax, 4 ; need to add 4 for d000 case for scamp...  c000, e000  not supported
-out        0E8h, al   ; select EMS page
-sub ax, 4
-xchg  ax, bx
-cmp   ax, 0FFFFh   ; -1 check
-je    handle_default_page
-add   ax, 028h   ; offset by default starting page
-mov   ah, 1      ; still dont understand why this is necessary 
-out   0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
-
-
-loop       DO_NEXT_PAGE_5000
-
-; exits if we fall thru loop with no error
-pop        bx
-xor        ax, ax
-jmp        RETURNINTERRUPTRESULT
-
-NOT_CONVENTIONAL_REGISTER_5000:
- 
-out        0E8h, al   ; select EMS page
-done_with_out_e8:
-xchg  ax, bx
-cmp   ax, 0FFFFh   ; -1 check
-je    handle_default_page
-add   ax, 028h   ; offset by default starting page
-mov   ah, 1      ; still dont understand why this is necessary 
-out   0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
-
-
-loop       DO_NEXT_PAGE_5000
-
-; exits if we fall thru loop with no error
-pop        bx
-xor        ax, ax
-jmp        RETURNINTERRUPTRESULT
-handle_default_page:
-; mapping to page -1
-mov  ax,   bx   ; retrieve page number
-add  ax, 4
-mov  ah, 1      ; still dont understand why this is necessary 
-out  0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
-loop       DO_NEXT_PAGE_5000
-; fall thru if done..
-pop        bx
-xor        ax, ax
-jmp        RETURNINTERRUPTRESULT
+;EMS_FUNCTION_050h:
 
 
 
