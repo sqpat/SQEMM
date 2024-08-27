@@ -702,6 +702,8 @@ MAIN_EMS_INTERRUPT_VECTOR:
 cmp      ah, 044h
 jne      NOT_FUNC_44h
 
+; inline the main function(s) here.
+
 EMS_FUNCTION_044h:
 xor        ah, ah
 cmp        ax, word ptr cs:[number_ems_pages]
@@ -731,7 +733,8 @@ xchg ax, ax
 xchg ax, ax
 mov  ax, bx
 
-mov  ah, 1    ; must be on in 86box. take this out on real hardware
+; ??? seems this must be on, not sure why actually...
+mov  ah, 1    
 
 out  0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
 
@@ -752,13 +755,10 @@ mov        ah, 083h
 iret
 
 RETURN_RESULT_8A:
-
 mov        ah, 08Ah
 iret
 
-
 RETURN_RESULT_8B:
-
 mov        ah, 08Bh
 iret
 
@@ -888,6 +888,7 @@ jmp        RETURNINTERRUPTRESULT0
 ;          DX = emm_handle
 
 
+; INLINED UP ABOVE
 
 ;         6  Deallocate Pages                               45h       
 
@@ -1176,27 +1177,74 @@ jne        VALID_SUBFUNCTION_PARAMETER
 jmp        RETURN_BAD_SUBFUNCTION_PARAMETER
 VALID_SUBFUNCTION_PARAMETER:
 push       bx
-push       dx
 xor        ah, ah
-mov        word ptr cs:[stored_ax], ax
-DO_NEXT_PAGE:
+cmp        ah, 1
+je         EMS_FUNCTION_05001h
+; physical page number mode
+DO_NEXT_PAGE_5800:
+; next page in ax....
 lodsw
 mov        bx, ax
 lodsw
 ; read two words - bx and ax
-cmp        word ptr cs:[stored_ax], 0
-je         PHYSICAL_PAGE_NUMBER_MODE
-; look up physical page number from segment address i guess
-call       FIND_PAGE_REGISTER_BY_INDEX
-PHYSICAL_PAGE_NUMBER_MODE:
-; no need to find param 0, i guess it's 0
-call       REMAP_PAGE
-or         ah, ah     ; test nobzero error/result
-jne        END_LOOP     ; leave with error
-loop       DO_NEXT_PAGE
+
+cmp ax, 12
+jae NOT_CONVENTIONAL_REGISTER_5800
+add ax, 4 ; need to add 4 for d000 case for scamp...  c000, e000  not supported
+NOT_CONVENTIONAL_REGISTER_5800:
+ 
+out        0E8h, al   ; select EMS page
+xchg ax, ax  ; nop delays
+xchg ax, ax
+xchg ax, ax
+mov  ax, bx
+
+; ??? seems this must be on, not sure why actually...
+mov  ah, 1    
+
+out  0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
+
+
+
+
+loop       DO_NEXT_PAGE_5800
+
 ; exits if we fall thru loop with no error
-END_LOOP:
-pop        dx
+pop        bx
+xor        ax, ax
+jmp        RETURNINTERRUPTRESULT
+
+; note: not really implemented yet
+EMS_FUNCTION_05001h:
+
+DO_NEXT_PAGE_5801:
+; next page in ax....
+lodsw
+mov        bx, ax
+lodsw
+; read two words - bx and ax
+
+cmp ax, 12
+jae NOT_CONVENTIONAL_REGISTER_5801
+add ax, 4 ; need to add 4 for d000 case for scamp...  c000, e000  not supported
+NOT_CONVENTIONAL_REGISTER_5801:
+ 
+out        0E8h, al   ; select EMS page
+xchg ax, ax  ; nop delays
+xchg ax, ax
+xchg ax, ax
+mov  ax, bx
+
+; ??? seems this must be on, not sure why actually...
+mov  ah, 1    
+
+out  0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
+
+
+
+
+loop       DO_NEXT_PAGE_5801
+xor        ax, ax
 pop        bx
 jmp        RETURNINTERRUPTRESULT
 
