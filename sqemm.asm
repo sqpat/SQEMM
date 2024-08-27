@@ -721,28 +721,56 @@ jne        RETURN_RESULT_83
 ; but if you want d000 to be page frame, outwardly we must expose it as 0-4.
 ; so we are assuming 0-4 and adding by 4 to get the real internal offset
 ; and assume 4-12 not used.
-add ax, 4
 
- 
+cmp   ax, 12
+jae   NOT_CONVENTIONAL_REGISTER
+add   ax, 4 ; need to add 4 for d000 case for scamp...  we do this branch knowing it may need to undone eventually
+out   0E8h, al   ; select EMS page
+sub   ax, 4      ; subtract because we may need this later for handle default page (TODO only do this then)
+xchg  ax, bx
+cmp   ax, 0FFFFh   ; -1 check
+je    handle_default_page_44h
+mov   bx, ax     ; restore bx for return
+add   ax, 028h   ; offset by default starting page
+mov   ah, 1      ; still dont understand why this is necessary 
+out   0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
+mov   ah, 000h
+iret
+
+NOT_CONVENTIONAL_REGISTER:
+
+
 ; write ems port... select chipset register
+out   0E8h, al   ; select EMS page
+xchg  ax, bx
+cmp   ax, 0FFFFh   ; -1 check
+je    handle_default_page_44h
+mov   bx, ax     ; restore bx for return
+add   ax, 028h   ; offset by default starting page
 
+mov   ah, 1      ; still dont understand why this is necessary 
 
-out        0E8h, al   ; select EMS page
-xchg ax, ax  ; nop delays
-xchg ax, ax
-xchg ax, ax
-mov  ax, bx
-
-; ??? seems this must be on, not sure why actually...
-mov  ah, 1    
-
-out  0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
+out   0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
 
 
 RETURN_RESULT_00:
 
 mov        ah, 000h
 iret
+
+handle_default_page_44h:
+; mapping to page -1
+xchg  ax,   bx   ; retrieve page number, restore bx at same time
+; add four to get the default page value for the page 
+add   ax, 4
+mov   ah, 1      ; still dont understand why this is necessary 
+out   0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
+mov   ah, 000h
+iret
+
+
+
+
 PAGE_OVERFLOW_3:
 PAGE_UNDERFLOW_3:
 
@@ -1191,20 +1219,19 @@ lodsw
 cmp ax, 12
 jae NOT_CONVENTIONAL_REGISTER_5800
 add ax, 4 ; need to add 4 for d000 case for scamp...  c000, e000  not supported
+out        0E8h, al   ; select EMS page
+sub ax, 4
+jmp done_with_out_e8
 NOT_CONVENTIONAL_REGISTER_5800:
  
 out        0E8h, al   ; select EMS page
-xchg ax, ax  ; nop delays
-xchg ax, ax
-xchg ax, ax
-mov  ax, bx
-
-; ??? seems this must be on, not sure why actually...
-mov  ah, 1    
-
-out  0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
-
-
+done_with_out_e8:
+xchg  ax, bx
+cmp   ax, 0FFFFh   ; -1 check
+je    handle_default_page
+add   ax, 028h   ; offset by default starting page
+mov   ah, 1      ; still dont understand why this is necessary 
+out   0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
 
 
 loop       DO_NEXT_PAGE_5800
@@ -1213,6 +1240,19 @@ loop       DO_NEXT_PAGE_5800
 pop        bx
 xor        ax, ax
 jmp        RETURNINTERRUPTRESULT
+handle_default_page:
+; mapping to page -1
+mov  ax,   bx   ; retrieve page number
+add  ax, 4
+mov  ah, 1      ; still dont understand why this is necessary 
+out  0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
+loop       DO_NEXT_PAGE_5800
+; fall thru if done..
+pop        bx
+xor        ax, ax
+jmp        RETURNINTERRUPTRESULT
+
+
 
 ; note: not really implemented yet
 EMS_FUNCTION_05001h:
@@ -1912,8 +1952,8 @@ xchg ax, ax
 xchg ax, ax
 xchg ax, ax
 xchg ax, ax
-mov        al, 0A0h   ; turn on ems 
-;mov        al, 0E0h   ; turn on ems, backfill
+;mov        al, 0A0h   ; turn on ems 
+mov        al, 0E0h   ; turn on ems, backfill
 out        0EDh, al
 
 
@@ -1925,6 +1965,44 @@ xchg ax, ax
 xchg ax, ax
 mov        al, 0F0h  ; turn on d000 as page frame
 out        0EDh, al
+
+; set first four page registers for d000
+xor   cx, cx
+mov   cl, 3h  ; 24 registers, 0C to 23
+mov   ax, 4
+
+enablepageloop:
+out   0E8h, al
+sub   ax, 4
+xchg  ax, ax
+xchg  ax, ax
+out   0EAh, ax
+add   ax, 5         ; inc included..
+loop enablepageloop
+
+
+; NOTE: If we enable backfill, we must initialize page registers for backfill region
+;  4-28 to be 4-28
+
+mov   ax, 0Ch
+mov   cl, 18h  ; 24 registers, 0C to 23
+
+; 0c maps to 10, 
+; 0d maps to 11, 
+; ...
+; 23 maps to 27
+
+enablebackfillloop:
+out   0E8h, al
+add   ax, 4
+xchg  ax, ax
+xchg  ax, ax
+out   0EAh, ax
+sub   ax, 3       ; inc included..
+loop enablebackfillloop
+
+; note: we must treat 'set page to default/-1' case as these values
+; and we must offset every page set offset by 28h otherwise to avoid these defaults.
 
 
 
