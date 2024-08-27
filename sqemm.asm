@@ -93,84 +93,11 @@ ret
 RETURN_UNRECOGNIZED_COMMAND:
 mov  word ptr [bx + 3], 08103h
 ret  
-
  
-;000abh
-db 'HANDLE_TABLE_START'
-
-CONST_HANDLE_TABLE_STRUCT_SIZE = 017h
 CONST_HANDLE_TABLE_LENGTH = 0FFh
 
-STRUCT_23_BYTES MACRO 
-  db 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
-ENDM
 
-;000bdh 23 byte struct, apparently up to 255 in length. (5865, 016E9h)
-; a handle contains the information on an allocation  
-; word 0         number of pages to this handle
-; bytes 02-09h   8 bytes, name?
-; word 0ah is count of pages in the handle. 0 means a freed handle
-; byte 0ch 0 or ffh, related to saving/restoring page map
-; 0dh-16h is used to store 10 bytes of data when storing/restoring page map
-;   - its the page frame's four registers's words worth of ems index port data (read from ports EAh/EBh)
-;   - followed by 0Bh/0Ch chipset data bytes
-handle_table:
-
-REPT CONST_HANDLE_TABLE_LENGTH
-    STRUCT_23_BYTES
-endm
-
-
-;017A6h seems to contain number of pages that dont include ROM fragments
-upper_C000toEC00_non_rom_pages dw 0000h
-
-;017A8h
-db 'FRAME_USEABLE'
-
-;017B5h 
-; ff byte if theres a BIOS in this 0400h eligible page frame from c000 to ec00.
-bios_in_upper_pages dw 0000h, 0000h, 0000h, 0000h, 0000h, 0000h
-
-;017C1h
-db 'L_PAGE_START'
-
-;017CDh - 4 byte struct array  24 (018h) in length.
- ; word 0: page register index pointer to previous entry in list.
- ; word 1: the pointer to the next page (in this struct) in this segment. 0FFFFh if the end
-
- ; not sure - this might be related to keeping track of free pages internally(??) so when pages get deallocated, reallocated,
- ; you need to be able to find those gaps and free physical page frame indices... seems to get modified a lot in reallocate pages
  
-page_linked_list:
-
-STRUCT_4_BYTES MACRO 
-  dw 0000h, 0000h
-ENDM
-
-REPT 36
-    STRUCT_4_BYTES
-endm
-
-REPT 952
-    STRUCT_4_BYTES
-endm
-
-; there's a ton of extra unused space here for some reason. page_linked_list should only be 144 or 0x90 bytes?
-
-
-
-;0273Dh
-db 'P_PAGE_START'
-;02749h 108 bytes
-;02749h  3 byte struct arrary related to the ems page registers. 36 page registers in length
- ; byte 0-1: page frame segment
- ; byte 2: ems register
-page_frame_segment_to_ems_index_port_map_byte:
-db 00h, 00h, 00h,  00h, 00h, 00h,  00h, 00h, 00h,  00h, 00h, 00h,  00h, 00h, 00h,  00h, 00h, 00h,  00h, 00h, 00h,  00h, 00h, 00h,  00h, 00h, 00h,  00h, 00h, 00h,  00h, 00h, 00h,  00h, 00h, 00h
-db 00h, 00h, 00h,  00h, 00h, 00h,  00h, 00h, 00h,  00h, 00h, 00h,  00h, 00h, 00h,  00h, 00h, 00h,  00h, 00h, 00h,  00h, 00h, 00h,  00h, 00h, 00h,  00h, 00h, 00h,  00h, 00h, 00h,  00h, 00h, 00h
-db 00h, 00h, 00h,  00h, 00h, 00h,  00h, 00h, 00h,  00h, 00h, 00h,  00h, 00h, 00h,  00h, 00h, 00h,  00h, 00h, 00h,  00h, 00h, 00h,  00h, 00h, 00h,  00h, 00h, 00h,  00h, 00h, 00h,  00h, 00h, 00h
-
-db 'P_PAGE_END'
 
 ; 027bfh 
 ; Two-word pairs. first word is page frame (04000h, 04400h... etc) up to f000.  
@@ -194,39 +121,12 @@ dw 0C000h, 0008h, 0C400h, 0009h, 0C800h, 000Ah, 0CC00h, 000Bh
 ;0284Fh
 db 'MAP_PAGE_END'
 
-;0285bh  page frame values
-page_frame_segment_values:
-dw 0C000h
-dw 0C400h 
-dw 0C800h 
-dw 0CC00h 
-dw 0D000h 
-dw 0D400h 
-dw 0D800h 
-dw 0DC00h 
-dw 0E000h
 
-dw 0000h
-dw 0000h
 
 ; 02871h: 32-bit pointer to arguments to driver
 driver_arguments dd 00000000h 
 
-;02875h some key used for access rights to OS level calls, generated from sys clock + some algo
-os_password_low dw 0000h
-;02877h initailization clock time 
-os_password_high dw 0000h
 
-;02879h: 
-  ;holds pointer to 000bdh or the start of handle_table
-handle_table_pointer dw 0000h 
-;0287bh:
-dw 0000h
-
-; 0287dh pointer to page_linked_list
-page_linked_list_pointer dw 0000h
-; 0287fh pointer to end of page_linked_list
-end_of_page_linked_list dw 0000h
 
 
 
@@ -258,88 +158,10 @@ unallocated_page_count dw 0000h;
 db 'P_Page_num'
 ;028a1h
 number_ems_pages dw 0000h
-;028a3h
-page_map_call_stored_ax dw 0000h 
-;028a5h
-stored_ax dw 0000h
-;028a7h
-dw 0000h
-;028a9h
-page_map_call_stored_dx dw 0000h 
-;028abh
-page_map_call_stored_ds dw 0000h 
-;028adh
-page_map_call_stored_si dw 0000h 
-;028afh
-dw 0000h
-;028b1h
-page_map_call_stack_pointer dw 0000h 
-;028b3h mystery bytes
-func_24_temp_storage_5 dw 0000h
-;028b5h mystery bytes
-func_24_temp_storage_6 dw 0000h
-;028b7h mystery bytes
-func_24_temp_storage_3 dw 0000h
-;028b9h mystery bytes
-func_24_temp_storage_4 dw 0000h
-;028bbh func 24 arguments, 18 bytes copied here at start of func_24
-func_24_region_length_low_word dw 0000h
-;028bdh 
-func_24_region_length_high_word dw 0000h
-;028bfh 
-func_24_source_memory_type db 00h
-;028c0h 
-func_24_source_handle dw 0000h
-;028c2h 
-func_24_source_initial_offset dw 0000h
-;028c4h 
-func_24_source_initial_seg_page dw 0000h
-;028c6h 
-func_24_dest_memory_type db 00h
-;028c7h 
-func_24_dest_handle dw 0000h
-;028c9h 
-func_24_dest_initial_offset dw 0000h
-;028cbh 
-func_24_dest_initial_seg_page dw 0000h
-;028cdh  unused?
-func_24_emm_handle_result_pointer dw 0000h
-;028cfh  unused
-func_24_emm_handle_result_pointer_2 dw 0000h
-;028d1h holds ff or 0. 
-func_24_overlapping_emm_handle db 00h
-;028d2h seems to hold 0 or 1 but never read
-func_24_temp_storage_18 db 00h
-;028d3h seems to hold copy byte amount for the current page
-func_24_temp_storage_19 dw 0000h
-;028d5h something related to how much to copy
-func_24_temp_storage_20 dw 0000h
-;028d7h something related to how much to copy
-func_24_temp_storage_21 dw 0000h
-;028d9h something related to how much to copy
-func_24_temp_storage_22 dw 0000h
-;028dbh may be the direction of the copy
-func_24_temp_storage_23 dw 0000h
-; 028ddh
-ose_function_set_enabled_1 db 0FFh
-; 028deh
-ose_function_set_enabled_2 db 00h
-; 028dfh  32 bit pointer
-stored_es dw 0000h
-; 028e1h  32 bit pointer
-stored_di dw 0000h
-; 028e3h some complicated 10 byte return result from function 5900h/5901h
-hardware_configuration_array dw 0400h, 0000h, 0000h, 0000h, 0000h
 
-; 028edh Backfill enabled flag
-backfill_enabled db 00h
-
-; 028eeh this doesnt fit in 16 bits. need to fix.
-backfill_register_flags dw 0000h
-; 028F0h  8 bytes used during warmboot function
-warmboot_data dw 2020h, 2020h, 2020h, 2020h
 
 ; 028F8h: EMS Function pointer table
+EMS_FUNCTION_POINTERS:
 dw  OFFSET EMS_FUNCTION_040h
 dw  OFFSET EMS_FUNCTION_041h
 dw  OFFSET EMS_FUNCTION_042h
@@ -374,335 +196,33 @@ dw  OFFSET EMS_FUNCTION_05dh
 
 
 ; BEEP function. unused?
-BEEP:
-push ax
-mov  ax, 0e07h
-int  010h
-pop  ax
-ret  
+;BEEP:
+;push ax
+;mov  ax, 0e07h
+;int  010h
+;pop  ax
+;ret  
+
+ 
+       
+   
+
+ 
+  
 
 
-; look up emm handle. if cant find it return 0 in carry flag. otherwise carry flag = 1 result in get_emm_handle_result_pointer
-; not sure yet whats going on here.
-; dx is a page frame number?  ax and bx unused?
-; if byte 0Ah of 23 byte structure is 0, return 0.
-GET_EMM_HANDLE:
-push       ax
-push       bx
-push       dx
-cmp        dx, CONST_HANDLE_TABLE_LENGTH
-ja         RETURN_CARRY_FLAG                  ; no error? weird.
-mov        ax, CONST_HANDLE_TABLE_STRUCT_SIZE
-mul        dx
-add        ax, word ptr cs:[handle_table_pointer]
-mov        bx, ax
-mov        bx, word ptr cs:[bx + 0ah]
-cmp        bx, 0
-je         RETURN_CARRY_FLAG
-mov        word ptr cs:[get_emm_handle_result_pointer], ax
-RETURN_NO_CARRY_FLAG:
-clc        
-jmp        RETURN_WITH_RESULT
-nop        
-RETURN_CARRY_FLAG:
-stc        
-RETURN_WITH_RESULT:
-pop        dx
-pop        bx
-pop        ax
-ret        
+ 
 
-; read from chipset register AL into AL
-READCHIPSETREG:
-out        0ech, al
-xchg ax, ax
-xchg ax, ax
-xchg ax, ax
-xchg ax, ax
-in         al, 0edh
-ret      
-
-; WRITE AH TO chipset register AL
-WRITECHIPSETREG:
-out        0ech, al
-xchg ax, ax
-xchg ax, ax
-xchg ax, ax
-xchg ax, ax
-xchg       al, ah
-out        0edh, al
-xchg       al, ah
-ret        
-
-; READ from EMS index port AL  into AX
-READEMSPORT:
-out        0e8h, al
-xchg ax, ax
-xchg ax, ax
-xchg ax, ax
-xchg ax, ax
-in         ax, 0eah
-ret        
-
-; WRITE AL to ems index port DX to port EA/EAB
-WRITEEMSPORT:
-out        0e8h, al
-xchg ax, ax
-xchg ax, ax
-xchg ax, ax
-xchg ax, ax
-push       ax
-mov        ax, dx
-out        0eah, ax
-pop        ax
-ret
-        
-
-; al = page register number 
-; bx is value to write to that port
-; then we turn enable that page as ems enabled.
-
-TURN_ON_EMS_PAGE:
-push       ax
-push       bx
-push       cx
-push       dx
-call       GET_PAGE_FRAME_REGISTER_FOR_INDEX
-cmp        al, 023h
-ja         EXIT_FUNCTION  ; exit if al > 35 or 023h. 023h is the maximum page frame register 
-mov        dx, bx
-call       WRITEEMSPORT
-cmp        al, 0bh       ; if page register was > 0Bh - which means its backfill
-
-; routines to get bit number [al] turned on
-ja         HANDLE_BACKFILL_REGISTER
-cmp        al, 7
-ja         HANDLE_8_TO_12_REGISTER
-; 0-7 case: just shift 01 left that many times
-mov        ah, 1
-mov        cl, al
-shl        ah, cl
-mov        al, 0ch           ; read EMS configuration register 02 which has the ON bits for pages 00-07
-call       READCHIPSETREG
-or         al, ah
-mov        ah, al
-mov        al, 0ch           ; 
-call       WRITECHIPSETREG
-jmp        EXIT_FUNCTION
-nop        
-HANDLE_8_TO_12_REGISTER:
-sub        al, 8
-mov        ah, 1
-mov        cl, al
-shl        ah, cl
-mov        al, 0bh       ; read EMS configuration register 01 which has the ON bits for pages 08-0b
-call       READCHIPSETREG
-or         al, ah
-mov        ah, al
-mov        al, 0bh
-call       WRITECHIPSETREG
-jmp        EXIT_FUNCTION
-nop        
-
-HANDLE_BACKFILL_REGISTER:
-cmp        byte ptr [backfill_enabled], 0
-je         EXIT_FUNCTION
-
-; backfill enabled
-; BUG: this is not doing anything right. shifts too much. does not update right registers.
-sub        al, 0ch      ; get backfill index
-mov        cl, al       ; in theory this ranges from 0 to 018h
-mov        ax, 1
-shl        ax, cl
-mov        bx, word ptr cs:[backfill_register_flags]
-or         bx, ax
-mov        word ptr cs:[backfill_register_flags], bx
-mov        al, 0bh
-call       READCHIPSETREG
-or         al, 040h
-mov        ah, al
-mov        al, 0bh
-call       WRITECHIPSETREG
-EXIT_FUNCTION:
-pop        dx
-pop        cx
-pop        bx
-pop        ax
-ret        
-
-
-; called with AL = page register
-; turns off a register
-TURN_OFF_EMS_PAGE:
-push       ax
-push       bx
-push       cx
-push       dx
-call       GET_PAGE_FRAME_REGISTER_FOR_INDEX
-cmp        al, 023h
-ja         EXIT_FUNCTION_C
-cmp        al, 0bh
-ja         HANDLE_BACKFILL_REGISTER_B
-cmp        al, 7
-ja         HANDLE_8_TO_12_REGISTER_B
-; 0-7 case here
-mov        ah, 1
-mov        cl, al
-shl        ah, cl
-not        ah
-mov        al, 0ch
-call       READCHIPSETREG
-and        al, ah
-mov        ah, al
-mov        al, 0ch
-call       WRITECHIPSETREG
-jmp        EXIT_FUNCTION_C
-nop        
-HANDLE_8_TO_12_REGISTER_B:
-sub        al, 8
-mov        ah, 1
-mov        cl, al
-shl        ah, cl
-not        ah
-mov        al, 0bh
-call       READCHIPSETREG
-and        al, ah
-mov        ah, al
-mov        al, 0bh
-call       WRITECHIPSETREG
-jmp        EXIT_FUNCTION_C
-nop        
-HANDLE_BACKFILL_REGISTER_B:
-mov        dx, 010h
-mov        ah, al
-sub        ah, 0ch
-add        dl, ah
-call       WRITEEMSPORT
-sub        al, 0ch
-mov        cl, al
-mov        ax, 1
-shl        ax, cl
-not        ax
-mov        bx, word ptr cs:[backfill_register_flags]
-and        bx, ax
-mov        word ptr cs:[backfill_register_flags], bx ; check to see if the flag is enabled??
-cmp        bx, 0
-jne        EXIT_FUNCTION_C
-mov        al, 0bh
-call       READCHIPSETREG ; update ems page to enable it too
-and        al, 0bfh
-mov        ah, al
-mov        al, 0bh
-call       WRITECHIPSETREG
-EXIT_FUNCTION_C:
-pop        dx
-pop        cx
-pop        bx
-pop        ax
-ret
-
-; gets page frame index for page al
-; read byte at page_frame_segment_to_ems_index_port_map_byte + [al * 3] + 2;
-
-GET_PAGE_FRAME_REGISTER_FOR_INDEX:
-push       si
-push       cx
-mov        si, OFFSET page_frame_segment_to_ems_index_port_map_byte
-xor        ah, ah
-mov        cl, 3
-mul        cl
-add        si, ax
-mov        al, byte ptr cs:[si + 2]
-pop        cx
-pop        si
-ret
-
-
-; read byte at page_frame_segment_to_ems_index_port_map_byte + [al * 3] + 2;
-; get byte at 28a1
-; if ax == byte at 2749 return bl
-; else 
-; finds the index of the 3 byte mystery struct with first byte == ax
-
-FIND_PAGE_REGISTER_BY_INDEX:
-push       si
-push       bx
-push       cx
-mov        bl, 0
-mov        si, OFFSET page_frame_segment_to_ems_index_port_map_byte
-mov        cx, word ptr cs:[number_ems_pages]
-CHECK_NEXT_PAGE_REGISTER_DATA_2:
-cmp        word ptr cs:[si], ax
-je         FOUND_PAGE_REGISTER_DATA_2
-inc        bl
-add        si, 3
-loop       CHECK_NEXT_PAGE_REGISTER_DATA_2
-FOUND_PAGE_REGISTER_DATA_2:
-mov        al, bl
-pop        cx
-pop        bx
-pop        si
-ret
-
-; reads and writes out first CX pages' EMS register data from page map to ES:DI as words, followed by contents of chipset register 0bh and 0ch
-GET_EMS_REGISTER_DATA:
-push       ax
-push       cx
-push       dx
-push       si
-mov        si, OFFSET page_frame_segment_to_ems_index_port_map_byte
-GET_NEXT_PAGE_REGISTER_DATA:
-mov        al, byte ptr cs:[si + 2]
-call       READEMSPORT
-stosw
-add        si, 3
-loop       GET_NEXT_PAGE_REGISTER_DATA
-mov        al, 0bh
-call       READCHIPSETREG
-stosb
-mov        al, 0ch
-call       READCHIPSETREG
-stosb
-pop        si
-pop        dx
-pop        cx
-pop        ax
-ret
-
-; writes a list of registers (source is cs/ds:si)
-WRITE_PAGE_MAP:
-push       ax
-push       bx
-push       cx
-push       dx
-mov        bx, OFFSET page_frame_segment_to_ems_index_port_map_byte
-WRITE_NEXT_EMS_DATA:
-lodsw
-mov        dx, ax
-mov        al, byte ptr cs:[bx + 2]
-call       WRITEEMSPORT
-add        bx, 3
-loop       WRITE_NEXT_EMS_DATA
-lodsb
-mov        ah, al
-mov        al, 0bh
-call       WRITECHIPSETREG
-lodsb
-mov        ah, al
-mov        al, 0ch
-call       WRITECHIPSETREG
-pop        dx
-pop        cx
-pop        bx
-pop        ax
-ret   
 
 MAIN_EMS_INTERRUPT_VECTOR:
+
+; inline the main function(s) here.
+
 
 cmp      ah, 044h
 jne      NOT_FUNC_44h
 
-; inline the main function(s) here.
+; page one function
 
 EMS_FUNCTION_044h:
 xor        ah, ah
@@ -819,7 +339,7 @@ push       bx
 mov        bl, ah
 xor        bh, bh
 shl        bx, 1          ; get word offset of AH - 040h
-mov        bx, word ptr cs:[bx + 028f8h]
+mov        bx, word ptr cs:[bx + offset EMS_FUNCTION_POINTERS]
 mov        word ptr cs:[temporary_jump_addr], bx
 pop        bx
 jmp        word ptr cs:[temporary_jump_addr]
@@ -866,7 +386,6 @@ ja         ARG_BX_ABOVE_TOTAL_PAGE_COUNT
 
 cmp        word ptr [handle_count], 0
 je         NO_HANDLES_LEFT
-mov        si, word ptr [handle_table_pointer]
 
 jmp         FOUND_PAGES_FOR_ALLOCATION
 
@@ -962,60 +481,12 @@ jmp        RETURNINTERRUPTRESULT0
 ;          8  Save Page Map                                  47h       
 
 EMS_FUNCTION_047h:
-push       cs
-pop        ds
-push       bx
-push       dx
-call       GET_EMM_HANDLE
-jb         NO_EMM_HANDLE_FOUND
-mov        si, word ptr [get_emm_handle_result_pointer]
-cmp        byte ptr [si + 0ch], 0ffh
-je         STATE_ALREADY_EXISTS
-mov        byte ptr [si + 0ch], 0ffh
-mov        di, si
-add        di, 0dh
-mov        ax, cs
-mov        es, ax
-push       cx
-mov        cx, 4
-call       GET_EMS_REGISTER_DATA
-pop        cx
-pop        dx
-pop        bx
-jmp        RETURNINTERRUPTRESULT0
-STATE_ALREADY_EXISTS:
-pop        dx
-pop        bx
-jmp        RETURNINTERRUPTRESULT_8D
+ 
 
 ;          9  Restore Page Map                               48h       
 
 EMS_FUNCTION_048h:
-push       cs
-pop        ds
-push       bx
-push       dx
-call       GET_EMM_HANDLE
-jb         NO_EMM_HANDLE_FOUND
-mov        si, word ptr [get_emm_handle_result_pointer]
-cmp        byte ptr [si + 0ch], 0ffh
-jne        STATE_DOESNT_EXIST
-mov        byte ptr [si + 0ch], 0
-add        si, 0dh
-push       cx
-mov        cx, 4
-call       WRITE_PAGE_MAP
-pop        cx
-pop        dx
-pop        bx
-jmp        RETURNINTERRUPTRESULT0
-pop        dx
-pop        bx
-jmp        RETURNINTERRUPTRESULT_80
-STATE_DOESNT_EXIST:
-pop        dx
-pop        bx
-jmp        RETURNINTERRUPTRESULT_8E
+
 
 ;          10 Reserved                                       49h       
 
@@ -1031,36 +502,20 @@ jmp        RETURNINTERRUPTRESULT0
 ;          12 Get Handle Count                               4Bh       
 
 EMS_FUNCTION_04Bh:
-mov        bx, CONST_HANDLE_TABLE_LENGTH
+;mov        bx, CONST_HANDLE_TABLE_LENGTH
 sub        bx, word ptr cs:[handle_count]
 jmp        RETURNINTERRUPTRESULT0
 
 ;          13 Get Handle Pages                               4Ch       
 
 EMS_FUNCTION_04Ch:
-call       GET_EMM_HANDLE
-jb         COULD_NOT_FIND_EMM_HANDLE_SPECIFIED_2
-mov        bx, word ptr cs:[get_emm_handle_result_pointer]
-mov        bx, word ptr cs:[bx]
-jmp        RETURNINTERRUPTRESULT0
-COULD_NOT_FIND_EMM_HANDLE_SPECIFIED_2:
-jmp        RETURNINTERRUPTRESULT_83
-
 
 
 ;          14 Get All Handle Pages                           4Dh       
 ; we write all handles and their page counts to es:di
 EMS_FUNCTION_04Dh:
 
-mov   word ptr es:[di], 0000h
-mov   word ptr es:[di+2], 0000h
-mov   word ptr es:[di+4], 0001h
-mov   word ptr es:[di+6], 0100h
-; one handle plus one?
-mov   bx, 2
 
-
-jmp        RETURNINTERRUPTRESULT0
 
 ;          15 Get Page Map                                   4E00h    
 ;             Set Page Map                                   4E01h     
@@ -1068,131 +523,13 @@ jmp        RETURNINTERRUPTRESULT0
 ;             Get Size of Page Map Save Array                4E03h     
 
 EMS_FUNCTION_04Eh:
-cmp        al, 3
-jb         ARG_LT_3
-jmp        ARG_GTE_3
-nop        
-ARG_LT_3:
-cmp        al, 1
-je         EMS_FUNCTION_04E01h
-push       cx
-mov        cx, word ptr cs:[number_ems_pages]
-call       GET_EMS_REGISTER_DATA
-pop        cx
-cmp        al, 0
-jne        EMS_FUNCTION_04E02h
-jmp        RETURNINTERRUPTRESULT0
-EMS_FUNCTION_04E02h:
-EMS_FUNCTION_04E01h:
-push       cx
-mov        cx, word ptr cs:[number_ems_pages]
-call       WRITE_PAGE_MAP
-pop        cx
-jmp        RETURNINTERRUPTRESULT0
-ARG_GTE_3:
-cmp        al, 3
-je         EMS_FUNCTION_04E03h
-jmp        RETURN_BAD_SUBFUNCTION_PARAMETER
-EMS_FUNCTION_04E03h:
-mov        ax, word ptr cs:[number_ems_pages]
-shl        ax, 1
-add        al, 2
-xor        ah, ah
-jmp        RETURNINTERRUPTRESULT0
+ 
 
 ; 16 Get Partial Page Map                           4F00h     
 ;             Set Partial Page Map                           4F01h     
 ;             Get Size of Partial Page Map Save Array        4F02h     
 EMS_FUNCTION_04Fh:
-cmp        al, 0
-je         EMS_FUNCTION_04F00h
-jmp        CHECK_FUNCTION_TYPE_04Fh
-nop        
-EMS_FUNCTION_04F00h:
-push       bx
-push       dx
-mov        bp, di
-cld        
-lodsw
-cmp        ax, word ptr cs:[number_ems_pages]
-ja         TOO_MANY_PAGES
-stosw
-mov        cx, ax
-jcxz       RESULT_OK
-GET_NEXT_PARAM:
-lodsw
-call       FIND_PAGE_REGISTER_BY_INDEX
-stosb
-call       GET_PAGE_FRAME_REGISTER_FOR_INDEX
-call       READEMSPORT
-stosw
-loop       GET_NEXT_PARAM
-RESULT_OK:
-pop        dx
-pop        bx
-jmp        RETURNINTERRUPTRESULT0
-pop        dx
-pop        bx
-mov        word ptr es:[bp], 0
-jmp        RETURNINTERRUPTRESULT_8B
-TOO_MANY_PAGES:
-pop        dx
-pop        bx
-mov        word ptr es:[bp], 0
-jmp        RETURNINTERRUPTRESULT_A3
-CHECK_FUNCTION_TYPE_04Fh:
-cmp        al, 1
-je         EMS_FUNCTION_04F01h
-jmp        EMS_FUNCTION_04F02h
-nop        
-
-EMS_FUNCTION_04F01h:
-push       bx
-push       dx
-cld        
-lodsw
-mov        cx, ax
-cmp        cx, word ptr cs:[number_ems_pages]
-ja         CORRUPTED_SOURCE_ARRAY
-jcxz       RESULT_OK_2
-SET_NEXT_PAGE:
-lodsb
-mov        bl, al
-lodsw
-xchg       ax, bx
-call       TURN_ON_EMS_PAGE
-loop       SET_NEXT_PAGE
-RESULT_OK_2:
-pop        dx
-pop        bx
-jmp        RETURNINTERRUPTRESULT0
-; unused
-pop        dx
-pop        bx
-jmp        RETURNINTERRUPTRESULT_80
-CORRUPTED_SOURCE_ARRAY:
-pop        dx
-pop        bx
-jmp        RETURNINTERRUPTRESULT_A3
-; unused
-pop        dx
-pop        bx
-jmp        RETURNINTERRUPTRESULT_9C
-EMS_FUNCTION_04F02h:
-
-cmp        al, 2
-je         CORRECT_SUBFUNCTION
-jmp        RETURN_BAD_SUBFUNCTION_PARAMETER
-CORRECT_SUBFUNCTION:
-cmp        bx, word ptr cs:[number_ems_pages]
-ja         TOO_MANY_PAGES_2
-mov        al, 3
-mul        bl
-add        al, 2
-jmp        RETURNINTERRUPTRESULT0
-TOO_MANY_PAGES_2:
-mov        al, 0
-jmp        RETURNINTERRUPTRESULT_8B
+ 
 
 ;          17 Map/Unmap Multiple Handle Pages
 ;             (Physical page number mode)                    5000h     
@@ -1209,7 +546,7 @@ xor        ah, ah
 cmp        ah, 1
 je         EMS_FUNCTION_05001h
 ; physical page number mode
-DO_NEXT_PAGE_5800:
+DO_NEXT_PAGE_5000:
 ; next page in ax....
 lodsw
 mov        bx, ax
@@ -1217,12 +554,26 @@ lodsw
 ; read two words - bx and ax
 
 cmp ax, 12
-jae NOT_CONVENTIONAL_REGISTER_5800
+jae NOT_CONVENTIONAL_REGISTER_5000
 add ax, 4 ; need to add 4 for d000 case for scamp...  c000, e000  not supported
 out        0E8h, al   ; select EMS page
 sub ax, 4
-jmp done_with_out_e8
-NOT_CONVENTIONAL_REGISTER_5800:
+xchg  ax, bx
+cmp   ax, 0FFFFh   ; -1 check
+je    handle_default_page
+add   ax, 028h   ; offset by default starting page
+mov   ah, 1      ; still dont understand why this is necessary 
+out   0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
+
+
+loop       DO_NEXT_PAGE_5000
+
+; exits if we fall thru loop with no error
+pop        bx
+xor        ax, ax
+jmp        RETURNINTERRUPTRESULT
+
+NOT_CONVENTIONAL_REGISTER_5000:
  
 out        0E8h, al   ; select EMS page
 done_with_out_e8:
@@ -1234,7 +585,7 @@ mov   ah, 1      ; still dont understand why this is necessary
 out   0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
 
 
-loop       DO_NEXT_PAGE_5800
+loop       DO_NEXT_PAGE_5000
 
 ; exits if we fall thru loop with no error
 pop        bx
@@ -1246,7 +597,7 @@ mov  ax,   bx   ; retrieve page number
 add  ax, 4
 mov  ah, 1      ; still dont understand why this is necessary 
 out  0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
-loop       DO_NEXT_PAGE_5800
+loop       DO_NEXT_PAGE_5000
 ; fall thru if done..
 pop        bx
 xor        ax, ax
@@ -1257,7 +608,7 @@ jmp        RETURNINTERRUPTRESULT
 ; note: not really implemented yet
 EMS_FUNCTION_05001h:
 
-DO_NEXT_PAGE_5801:
+DO_NEXT_PAGE_5001:
 ; next page in ax....
 lodsw
 mov        bx, ax
@@ -1265,9 +616,9 @@ lodsw
 ; read two words - bx and ax
 
 cmp ax, 12
-jae NOT_CONVENTIONAL_REGISTER_5801
+jae NOT_CONVENTIONAL_REGISTER_5001
 add ax, 4 ; need to add 4 for d000 case for scamp...  c000, e000  not supported
-NOT_CONVENTIONAL_REGISTER_5801:
+NOT_CONVENTIONAL_REGISTER_5001:
  
 out        0E8h, al   ; select EMS page
 xchg ax, ax  ; nop delays
@@ -1283,63 +634,13 @@ out  0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
 
 
 
-loop       DO_NEXT_PAGE_5801
+loop       DO_NEXT_PAGE_5001
 xor        ax, ax
 pop        bx
 jmp        RETURNINTERRUPTRESULT
 
 
-; bx is logical page. if -1, won't be remapped.
-; ax is physical page
-REMAP_PAGE:
-push       ds
-push       bx
-push       cx
-push       dx
-push       si
-push       di
-push       cs
-pop        ds
-mov        di, ax         ; cache ax
-call       GET_EMM_HANDLE
-jae        FOUND_EMM_HANDLE_2
-jmp        RETURN_RESULT_B_83
-nop        
-FOUND_EMM_HANDLE_2:
-call       TURN_OFF_EMS_PAGE
-cmp        bx, -1            ; -1 means conventional memory/unmapped... no need to remap
-je         NO_NEED_TO_REMAP
-mov        si, word ptr [get_emm_handle_result_pointer] ; not sure what's going on here yet
-cmp        bx, word ptr [si]    ; bx contains num pages to the handle
-jb         EMM_HANDLE_VALUE_OK
-jmp        RETURN_RESULT_B_8A
-nop        
-EMM_HANDLE_VALUE_OK:
-mov        si, word ptr [si + 0ah]
-mov        cx, bx
-jcxz       FOUND_EMM_HANDLE_POINTER
-FOLLOW_CHAIN_LOOP:
-mov        si, word ptr [si + 2]
-loop       FOLLOW_CHAIN_LOOP
-FOUND_EMM_HANDLE_POINTER:
-cmp        si, word ptr [end_of_page_linked_list]
-jae        PAGE_OVERFLOW_5
-cmp        si, word ptr [page_linked_list_pointer]  
-jb         PAGE_UNDERFLOW_5
-mov        bx, word ptr [si]
-mov        ax, di
-call       TURN_ON_EMS_PAGE
 
-NO_NEED_TO_REMAP:
-mov        ah, 0
-jmp        RETURN_RESULT_B
-nop        
-
-PAGE_OVERFLOW_5:
-PAGE_UNDERFLOW_5:
-mov        ah, 080h
-jmp        RETURN_RESULT_B
-nop        
 
 ; The memory manager couldn't find the EMM handle your program specified.
 RETURN_RESULT_B_83:
@@ -1396,35 +697,7 @@ EMS_FUNCTION_051h:
 
 ; it seems this is mostly unsupported.
 EMS_FUNCTION_052h:
-cmp        al, 0
-jne        NOT_05200h
-call       GET_EMM_HANDLE
-jb         COULD_NOT_FIND_EMM_HANDLE_SPECIFIED_4
-mov        al, 0
-jmp        RETURNINTERRUPTRESULT0
-NOT_05200h:
-cmp        al, 1
-jne        NOT_05201h
-call       GET_EMM_HANDLE
-jb         COULD_NOT_FIND_EMM_HANDLE_SPECIFIED_4
-cmp        bl, 0
-jne        UNDEFINED_ATTRIBUTE_TYPE
-jmp        RETURNINTERRUPTRESULT0
-UNDEFINED_ATTRIBUTE_TYPE:
-cmp        bl, 1
-jne        UNSUPPORTED_FEATURE
-jmp        RETURNINTERRUPTRESULT_90
-COULD_NOT_FIND_EMM_HANDLE_SPECIFIED_4:
-jmp        RETURNINTERRUPTRESULT_83
-UNSUPPORTED_FEATURE:
-jmp        RETURNINTERRUPTRESULT_91
-NOT_05201h:
-cmp        al, 2
-jne        BAD_SUBFUNCTION_PARAMETER
-mov        al, 0
-jmp        RETURNINTERRUPTRESULT0
-BAD_SUBFUNCTION_PARAMETER:
-jmp        RETURN_BAD_SUBFUNCTION_PARAMETER
+
 
 ;          20 Get Handle Name                                5300h     
 ;             Set Handle Name                                5301h     
@@ -1820,12 +1093,8 @@ db 0Dh, 00h, 14h
 db 0Eh, 00h, 30h
 ; 03adfh  seems to be a dupe of mappable_384K_conventional?
 mappable_384K_conventional_dupe dw 0000h
-; 03ae1h  stored to seemingly never used again
-mystery_value dw 0000h
 ; 03ae3h  stores slot pointer * 4
 slotpointer_byte_times_4_word dw 0000h
-; 03ae5h  stores cursor ending area from bios (00040h:0060)
-cursor_ending_area dw 0000h
 ; 03ae7h  stores slot pointer byte
 slotpointer_byte db 00h
 ; 03ae8h  amount of mappable memory in 256k-640k region. seems to either store 0 or 384 decimal (0180h)
@@ -1834,69 +1103,15 @@ mappable_384K_conventional dw 0000h
 string_driver_exists db 0Dh, 0Ah, ' EMS Driver already exists (chaining not supported).',0Dh, 0Ah,0Ah, 0Ah, '$'
 ; 03B0Bh  
 string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for VL82C311', 0Dh, 0Ah,'$'
-; 03BF8h
-string_ems_not_enabled db 0Dh, 0Ah, '     EMS Disable ! $' 
-; 03C0Eh
-string_config_sys_page_frame_error db 0Dh, 0Ah, '     CONFIG.SYS parameter PAGE FRAME error.$'
-; 03C3Ch
-string_config_sys_page_port_error db 0Dh, 0Ah, '     CONFIG.SYS parameter PAGE PORT error.$'
-; 03C69h
-string_config_sys_ems_memory_error db 0Dh, 0Ah, '     CONFIG.SYS parameter EMS MEMORY error.$'
-; 03C97h
-string_ems_page_frame_prefix db 0Dh, 0Ah, '     User specified PAGE FRAME = $'
+ 
 
-; 03CBBh
-string_user_specified_ems_memory db 0Dh, 0Ah, '     User specified EMS MEMORY $'
-; 03CDDh
-string_user_specified_ems_backfill db 0Dh, 0Ah, '     User specified EMS backfill area = $'
-; 03D07h
-string_program_set_page_frame db 0Dh, 0Ah, '     Program set PAGE FRAME   = $'
-; 03D2Bh
-string_ems_page_frame_string db '1234H$'
-; 03D31h
-string_system_ram_specified_error db 0Dh, 0Ah, '     SYSTEM RAM specified error.$'
-; 03D54h
-string_memory_relocate_error db 0Dh, 0Ah, '     MEMORY RELOCATE specified error.$'
-; 03D7Ch
-string_ems_memory_specified_error db 0Dh, 0Ah, '     EMS MEMORY specified error.$'
-; 03D9Fh
-string_page_frame_specified_error db 0Dh, 0Ah, '     PAGE FRAME specified error.$'
-; 03DC2h
-string_shadow_ram_in_page_frame db 0Dh, 0Ah, '     There are SHADOW RAM in PAGE FRAME.$'
-
-; 03DEDh
-string_rom_in_page_frame db 0Dh, 0Ah, '     There are ROM ENABLE in PAGE FRAME.$'
-; 03E18h
-string_error_in_page db 0Dh, 0Ah, '     ERROR PAGE $'
 ; 03E2Bh
 string_driver_successfully_installed db 0Dh, 0Ah, 'SQEMM successfully initialized.', 0Ah, 0Dh, '$'
 ; 03E58h
 string_driver_failed_installing db 0Dh, 0Ah, '     VL82C311 EMS is not installed.', 0Ah, 0Ah, 0Ah, 0Ah, 0Dh, '$'
-; 03E83h
-string_testing_page db  0Dh, '     Test Expanded Memory Page '
-; note this carries over
-; 03EA3h
-string_page_number db '0000$'
-; 03EA8h
-string_press_esc_to_bypass_testing db '  .... Press [Esc] to bypass testing$'
-; 03ECDh
-string_testing_bypassed db '  .... Testing bypassed.            $'
-; 03EF2h
-string_there_are db 0Dh, 0Ah, '     There are$'
-; 03F03h
-string_pages_for_ems db ' PAGEs for EMS.$'
-; 03F13h
-string_newline db 0Ah, '$'
-; 03F15h
-string_newline2 db 0Dh, 0Ah, '$'
-; 03F18h
-string_page_frames db 'C000H$C400H$C800H$CC00H$D000H$D400H$D800H$DC00H$E000H$'
-; 03f4eh
-page_frame_index_byte db 04h
-; 03F4Fh
-string_off_on db 'OFF$ON$'
-; 03f56h
-skip_testing_memory db 00h
+
+
+
 
 
 DRIVER_INIT:
@@ -1940,9 +1155,6 @@ mov        word ptr [number_ems_pages], 36
 ; one handle for now
 mov        word ptr [handle_count], 01h
 
-; prep this pointer
-lea        si, handle_table
-mov        word ptr [handle_table_pointer], si
 
 ; enable d000 register and backfill
 
@@ -2007,18 +1219,6 @@ loop enablebackfillloop
 
 
 
-
-
-; generate OS rights password
-mov        ah, 0
-int        01ah       ; Read System Clock Counter
-add        dh, cl
-sub        ch, dl
-xchg       dh, ch
-mov        bx, cx
-mov        word ptr [os_password_low], bx
-mov        cx, dx
-mov        word ptr [os_password_high], cx
 
 ; set interrupt vector  067h
 
