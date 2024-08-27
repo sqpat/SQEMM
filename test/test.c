@@ -273,10 +273,10 @@ void mapAOld() {
 			I_Error("Call 0x44 failed with value %x!\n", errorreg);
 		}
 
-		outp(0xe8, i + 4);
-		j = inp(0xea);
-		k = inp(0xeb);
-		printf("%i %x %x:", i, j, k);
+		//outp(0xe8, i + 4);
+		//j = inp(0xea);
+		//k = inp(0xeb);
+		//printf("%i %x %x:", i, j, k);
 	}
 	printf("\n");
 }
@@ -299,10 +299,10 @@ void mapBOld() {
 			I_Error("Call 0x44 failed with value %x!\n", errorreg);
 		}
 
-		outp(0xe8, i + 4);
-		j = inp(0xea);
-		k = inp(0xeb);
-		printf("%i %x %x:", i, j, k);
+		//outp(0xe8, i + 4);
+		//j = inp(0xea);
+		//k = inp(0xeb);
+		//printf("%i %x %x:", i, j, k);
 
 	}
 	printf("\n");
@@ -311,13 +311,13 @@ void mapBOld() {
 
 
 void mapA() {
-	pagedata2[0] = 4;
+	pagedata2[0] = 32;
 	pagedata2[1] = pagenum9000;
-	pagedata2[2] = 5;
+	pagedata2[2] = 33;
 	pagedata2[3] = pagenum9000 + 1;
-	pagedata2[4] = 6;
+	pagedata2[4] = 34;
 	pagedata2[5] = pagenum9000 + 2;
-	pagedata2[6] = 7;
+	pagedata2[6] = 35;
 	pagedata2[7] = pagenum9000 + 3;
 
 	regs.w.ax = 0x5000;  // physical page
@@ -336,13 +336,13 @@ void mapA() {
 void mapB() {
 	//page out, by paging in 60-63
 
-	pagedata2[0] = 60;
+	pagedata2[0] = 28;
 	pagedata2[1] = pagenum9000;
-	pagedata2[2] = 61;
+	pagedata2[2] = 29;
 	pagedata2[3] = pagenum9000 + 1;
-	pagedata2[4] = 62;
+	pagedata2[4] = 30;
 	pagedata2[5] = pagenum9000 + 2;
-	pagedata2[6] = 63;
+	pagedata2[6] = 31;
 	pagedata2[7] = pagenum9000 + 3;
 
 
@@ -374,8 +374,8 @@ void I_InitEMS(void)
 	int16_t i, j;
 	//int16_t far *pagedata;
 	int16_t pagedata[80];
+    uint16_t baseoffset;
 	int16_t* far pointervalue = pagedata;
-
 
 	uint16_t* far fakepointer;
 
@@ -508,10 +508,13 @@ void I_InitEMS(void)
 
 
 
+	baseoffset = 0x8000;
+
+
 	for (i = 0; i < numentries; i ++) {
-		if (pagedata[i*2] == 0x9000u) {
+		if (pagedata[i*2] == baseoffset) {
 			pagenum9000 = pagedata[(i*2) + 1];
-			printf( "Pagenum for 0x9000 was: %x", pagenum9000);
+			printf( "Pagenum for 0x%x was: %x", baseoffset, pagenum9000);
 		}
 		if (pagedata[i*2] == pageframebase) {
 			pageframe = pagedata[(i*2) + 1];
@@ -521,7 +524,7 @@ void I_InitEMS(void)
 
 	}
 
-
+	//pagenum9000 = pageframe;
 	//printf("\nPagenum for 0x9000 NOT FOUND!");
 
 	//found:
@@ -530,59 +533,59 @@ void I_InitEMS(void)
 	// initial setup, map seg 9000 memory to 4-7
 	// cant do 0-3 cause up above we mapped that to page frame
 	printf("\n");
-	mapAOld();
+	mapA();
 
 	// write data
 
-	fakepointer = MK_FP(0xD000, 0x0000);
+	fakepointer = MK_FP(baseoffset, 0x0000);
 	*fakepointer = 0x1234;
-	fakepointer = MK_FP(0xD400, 0x0000);
+	fakepointer = MK_FP(baseoffset+0x400, 0x0000);
 	*fakepointer = 0x3456;
 
-	fakepointer = MK_FP(0xD800, 0x0000);
+	fakepointer = MK_FP(baseoffset+0x800, 0x0000);
 	*fakepointer = 0x5678;
-	fakepointer = MK_FP(0xDC00, 0x0000);
+	fakepointer = MK_FP(baseoffset+0xC00, 0x0000);
 	*fakepointer = 0x789A;
 
 	//page out, by paging in 60-63
 
-	mapBOld();
+	mapB();
 
 
 
-	fakepointer = MK_FP(0xD000, 0x0000);
+	fakepointer = MK_FP(baseoffset, 0x0000);
 	*fakepointer = 0xAAAA;
-	fakepointer = MK_FP(0xD400, 0x0000);
+	fakepointer = MK_FP(baseoffset+0x400, 0x0000);
 	*fakepointer = 0xBBBB;
-	fakepointer = MK_FP(0xD800, 0x0000);
+	fakepointer = MK_FP(baseoffset+0x800, 0x0000);
 	*fakepointer = 0xCCCC;
-	fakepointer = MK_FP(0xDC00, 0x0000);
+	fakepointer = MK_FP(baseoffset+0xC00, 0x0000);
 	*fakepointer = 0xDDDD;
 	 
-	mapAOld();
+	mapA();
 
 
-	printf("\nvalues were:");
-	fakepointer = MK_FP(0xD000, 0x0000);
+	printf("\nvalues were: (should be 1234...)");
+	fakepointer = MK_FP(baseoffset, 0x0000);
 	printf("%x ", *fakepointer);
-	fakepointer = MK_FP(0xD400, 0x0000);
+	fakepointer = MK_FP(baseoffset+0x400, 0x0000);
 	printf("%x ", *fakepointer);
-	fakepointer = MK_FP(0xD800, 0x0000);
+	fakepointer = MK_FP(baseoffset+0x800, 0x0000);
 	printf("%x ", *fakepointer);
-	fakepointer = MK_FP(0xDc00, 0x0000);
+	fakepointer = MK_FP(baseoffset+0xC00, 0x0000);
 	printf("%x ", *fakepointer);
 	printf("\n");
 
-	mapBOld();
+	mapB();
 	
-	printf("\nother values were:");
-	fakepointer = MK_FP(0xD000, 0x0000);
+	printf("\nother values were: (should be AAAA...)");
+	fakepointer = MK_FP(baseoffset, 0x0000);
 	printf("%x ", *fakepointer);
-	fakepointer = MK_FP(0xD400, 0x0000);
+	fakepointer = MK_FP(baseoffset+0x400, 0x0000);
 	printf("%x ", *fakepointer);
-	fakepointer = MK_FP(0xD800, 0x0000);
+	fakepointer = MK_FP(baseoffset+0x800, 0x0000);
 	printf("%x ", *fakepointer);
-	fakepointer = MK_FP(0xDc00, 0x0000);
+	fakepointer = MK_FP(baseoffset+0xC00, 0x0000);
 	printf("%x ", *fakepointer);
 	
 	/*
@@ -612,6 +615,12 @@ int main(void)
   {
 		int16_t result;
 
+		// dummy write to enable config registers in scamp
+		outp(0xFB, 0x00);
+		
+		outp(0xEC, 0x0B);
+		outp(0xED, 0xE0); // enable global
+
 		I_InitEMS();
  
 
@@ -620,6 +629,11 @@ int main(void)
 		FreeEMS();
 		printf("ems freed successfully");
 
+		outp(0xEC, 0x0B);
+		outp(0xED, 0xA0); // disable global
+
+		// dummy write to disable config registers in scamp
+		outp(0xF9, 0x00);
 
         return 0;
 }
