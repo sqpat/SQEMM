@@ -95,6 +95,9 @@ mov  word ptr [bx + 3], 08103h
 ret  
  
 CONST_HANDLE_TABLE_LENGTH = 0FFh
+CONST_PAGE_COUNT = 128
+; as low as 43h seems to work? not sure why this isnt just 28h
+CONST_PAGE_OFFSET_AMT = 50h
 
 
  
@@ -251,9 +254,8 @@ sub ax, 4
 xchg  ax, bx
 cmp   ax, 0FFFFh   ; -1 check
 je    handle_default_page
-add   ax, 028h   ; offset by default starting page
-mov   ah, 1      ; still dont understand why this is necessary 
-out   0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
+add   ax, CONST_PAGE_OFFSET_AMT   ; offset by default starting page
+out   0EAh, ax   ; write 16 bit page num. 
 
 loop       DO_NEXT_PAGE_5000
 
@@ -271,9 +273,9 @@ out        0E8h, al   ; select EMS page
 xchg  ax, bx
 cmp   ax, 0FFFFh   ; -1 check
 je    handle_default_page
-add   ax, 028h   ; offset by default starting page
-mov   ah, 1      ; still dont understand why this is necessary 
-out   0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
+
+add   ax, CONST_PAGE_OFFSET_AMT   ; offset by default starting page
+out   0EAh, ax   ; write 16 bit page num. 
 
 
 loop       DO_NEXT_PAGE_5000
@@ -289,8 +291,7 @@ handle_default_page:
 ; mapping to page -1
 mov  ax,   bx   ; retrieve page number
 add  ax,   4
-mov  ah,   1    ; still dont understand why this is necessary 
-out  0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
+out  0EAh, ax   ; write 16 bit page num. 
 loop       DO_NEXT_PAGE_5000
 ; fall thru if done..
 
@@ -333,9 +334,8 @@ xchg  ax, bx
 cmp   ax, 0FFFFh   ; -1 check
 je    handle_default_page_44h
 mov   bx, ax     ; restore bx for return
-add   ax, 028h   ; offset by default starting page
-mov   ah, 1      ; still dont understand why this is necessary 
-out   0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
+add   ax, CONST_PAGE_OFFSET_AMT   ; offset by default starting page
+out   0EAh, ax   ; write 16 bit page num. 
 mov   ah, 000h
 iret
 
@@ -348,11 +348,8 @@ xchg  ax, bx
 cmp   ax, 0FFFFh   ; -1 check
 je    handle_default_page_44h
 mov   bx, ax     ; restore bx for return
-add   ax, 028h   ; offset by default starting page
-
-mov   ah, 1      ; still dont understand why this is necessary 
-
-out   0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
+add   ax, CONST_PAGE_OFFSET_AMT   ; offset by default starting page
+out   0EAh, ax   ; write 16 bit page num. 
 
 
 RETURN_RESULT_00:
@@ -365,8 +362,7 @@ handle_default_page_44h:
 xchg  ax,   bx   ; retrieve page number, restore bx at same time
 ; add four to get the default page value for the page 
 add   ax, 4
-mov   ah, 1      ; still dont understand why this is necessary 
-out   0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
+out   0EAh, ax   ; write 16 bit page num. 
 mov   ah, 000h
 iret
 
@@ -645,7 +641,7 @@ mov  ax, bx
 ; ??? seems this must be on, not sure why actually...
 mov  ah, 1    
 
-out  0EAh, ax   ; write 16 bit page num. (to turn off, should be FFFF)
+out  0EAh, ax   ; write 16 bit page num. 
 
 
 
@@ -1161,9 +1157,9 @@ EMS_INTERRUPT_FREE:
 ; hard coded to d000 for now
 mov        word ptr [page_frame_segment], 0D000h
 
-; 256 pages hardcoded for now
-mov        word ptr [unallocated_page_count], 256
-mov        word ptr [total_page_count], 256
+; 128 pages hardcoded for now
+mov        word ptr [unallocated_page_count], CONST_PAGE_COUNT
+mov        word ptr [total_page_count], CONST_PAGE_COUNT
 
 ; ok?
 mov        word ptr [number_ems_pages], 36
