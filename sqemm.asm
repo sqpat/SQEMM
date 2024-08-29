@@ -50,6 +50,7 @@ mov  word ptr cs:[driver_arguments], bx        ; store 32 bit pointer to argumen
 mov  word ptr cs:[driver_arguments+2], es        
 retf 
 
+; todo clean this up
 EMS_DRIVER_CALL:
 push dx
 push cx
@@ -107,6 +108,11 @@ CONST_PAGE_OFFSET_AMT = 50h
 ;                 second word its physical ems index port
 ; 144 bytes long 
 ; i think a clone of the above struct in practice except pre-formatted for return in function 5800h (2nd arg a word, ordered lowest segment first)
+
+; CHIPSET SPECIFIC START
+
+; you can hardcode the chipset's mappable page list here for call 5800
+
 mappable_phys_page_struct:
 dw 04000h, 000Ch, 04400h, 000Dh, 04800h, 000Eh, 04C00h, 000Fh
 dw 05000h, 0010h, 05400h, 0011h, 05800h, 0012h, 05C00h, 0013h
@@ -119,6 +125,7 @@ dw 0E000h, 0004h, 0E400h, 0005h, 0E800h, 0006h, 0EC00h, 0007h
 dw 0C000h, 0008h, 0C400h, 0009h, 0C800h, 000Ah, 0CC00h, 000Bh 
 
  
+; CHIPSET SPECIFIC END
 
 
 ;0284Fh
@@ -223,6 +230,16 @@ MAIN_EMS_INTERRUPT_VECTOR:
 
 cmp      ah, 050h
 jne      NOT_FUNC_50h
+
+; CHIPSET SPECIFIC START
+
+; implement the inlined function 50 and/or 44 for pagination
+; namely, change the registers that are being written to,
+; properly handle the 'unmap' case with bx = FFFF/-1, and
+; otherwise offset registers if necessary. For example, in the
+; case of SCAMP we must offset page registers by 50h or so to
+; avoid them mapping to default conventional memory ranges.
+
 EMS_FUNCTION_050h:
 push cx
 push bx
@@ -392,6 +409,7 @@ iret
 
 NOT_FUNC_44h:
 
+; CHIPSET SPECIFIC END
 
 
 push       cx
@@ -1154,6 +1172,15 @@ EMS_INTERRUPT_FREE:
 ; do actual driver preparation here
 ; todotodo
 
+; CHIPSET SPECIFIC START
+
+; for porting to other chipsets, prepare chipset registers
+; and driver variables here. In this case we set page frame
+; to D000, set 36 mappable pages, we are only allowing a
+; single handle, and set 128 mappable pages. we also prepare
+; ems registers to initial values and enable EMS and backfill.
+
+
 ; hard coded to d000 for now
 mov        word ptr [page_frame_segment], 0D000h
 
@@ -1228,6 +1255,7 @@ loop enablebackfillloop
 ; note: we must treat 'set page to default/-1' case as these values
 ; and we must offset every page set offset by 28h otherwise to avoid these defaults.
 
+; CHIPSET SPECIFIC END
 
 
 
