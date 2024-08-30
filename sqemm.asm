@@ -9,6 +9,31 @@
 	.MODEL  tiny
 	
 .DATA
+
+SCAMP_CHIPSET = 1
+SCAT_CHIPSET = 2
+
+;COMPILE_CHIPSET = SCAMP_CHIPSET
+COMPILE_CHIPSET = SCAT_CHIPSET
+
+
+CONST_HANDLE_TABLE_LENGTH = 0FFh
+CONST_PAGE_COUNT = 256
+; as low as 43h seems to work? not sure why this isnt just 28h
+SCAMP_PAGE_OFFSET_AMT = 50h
+SCAMP_PAGE_SELECT_REGISTER = 0E8h
+SCAMP_PAGE_SET_REGISTER = 0EAh
+
+SCAT_PAGE_REGISTER_OFFSET = 018h
+SCAT_CHIPSET_CONFIG_REGISTER_SELECT = 022h
+SCAT_CHIPSET_CONFIG_REGISTER_READWRITE = 023h
+SCAT_EMS_CONFIG_REGISTER = 04Fh
+SCAT_PAGE_SELECT_REGISTER = 020Ah
+SCAT_PAGE_SET_REGISTER = 0208h
+SCAT_PAGE_OFFSET_AMT = 08028h
+SCAT_CHIPSET_UNMAP_VALUE = 03FFh
+
+
 .CODE
 
 
@@ -46,8 +71,9 @@ dw OFFSET RETURN_UNRECOGNIZED_COMMAND
 
 ; 00062h
 EMS_DRIVER_INIT:
-mov  word ptr cs:[driver_arguments], bx        ; store 32 bit pointer to arguments to 02871h
-mov  word ptr cs:[driver_arguments+2], es        
+; store 32 bit pointer to reques theader
+mov  word ptr cs:[request_header_pointer], bx        
+mov  word ptr cs:[request_header_pointer+2], es        
 retf 
 
 ; todo clean this up
@@ -63,8 +89,8 @@ push es
 push bp
 push cs
 pop  ds 
-mov  bx, ds:word ptr [driver_arguments]
-mov  es, ds:word ptr [driver_arguments+2]
+mov  bx, ds:word ptr [request_header_pointer]
+mov  es, ds:word ptr [request_header_pointer+2]
 mov  ax, word ptr es:[bx + 2]
 mov  ah, 0
 cmp  al, 0ch
@@ -95,15 +121,10 @@ RETURN_UNRECOGNIZED_COMMAND:
 mov  word ptr [bx + 3], 08103h
 ret  
  
-CONST_HANDLE_TABLE_LENGTH = 0FFh
-CONST_PAGE_COUNT = 128
-; as low as 43h seems to work? not sure why this isnt just 28h
-CONST_PAGE_OFFSET_AMT = 50h
 
 
  
 
-; 027bfh 
 ; Two-word pairs. first word is page frame (04000h, 04400h... etc) up to f000.  
 ;                 second word its physical ems index port
 ; 144 bytes long 
@@ -111,66 +132,67 @@ CONST_PAGE_OFFSET_AMT = 50h
 
 ; CHIPSET SPECIFIC START
 
-; you can hardcode the chipset's mappable page list here for call 5800
-
 mappable_phys_page_struct:
-dw 04000h, 000Ch, 04400h, 000Dh, 04800h, 000Eh, 04C00h, 000Fh
-dw 05000h, 0010h, 05400h, 0011h, 05800h, 0012h, 05C00h, 0013h
-dw 06000h, 0014h, 06400h, 0015h, 06800h, 0016h, 06C00h, 0017h
-dw 07000h, 0018h, 07400h, 0019h, 07800h, 001Ah, 07C00h, 001Bh
-dw 08000h, 001Ch, 08400h, 001Dh, 08800h, 001Eh, 08C00h, 001Fh
-dw 09000h, 0020h, 09400h, 0021h, 09800h, 0022h, 09C00h, 0023h
-dw 0D000h, 0000h, 0D400h, 0001h, 0D800h, 0002h, 0DC00h, 0003h
-dw 0E000h, 0004h, 0E400h, 0005h, 0E800h, 0006h, 0EC00h, 0007h
-dw 0C000h, 0008h, 0C400h, 0009h, 0C800h, 000Ah, 0CC00h, 000Bh 
 
+IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
+
+  ; you can hardcode the chipset's mappable page list here for call 5800
+
+  dw 04000h, 000Ch, 04400h, 000Dh, 04800h, 000Eh, 04C00h, 000Fh
+  dw 05000h, 0010h, 05400h, 0011h, 05800h, 0012h, 05C00h, 0013h
+  dw 06000h, 0014h, 06400h, 0015h, 06800h, 0016h, 06C00h, 0017h
+  dw 07000h, 0018h, 07400h, 0019h, 07800h, 001Ah, 07C00h, 001Bh
+  dw 08000h, 001Ch, 08400h, 001Dh, 08800h, 001Eh, 08C00h, 001Fh
+  dw 09000h, 0020h, 09400h, 0021h, 09800h, 0022h, 09C00h, 0023h
+  dw 0D000h, 0000h, 0D400h, 0001h, 0D800h, 0002h, 0DC00h, 0003h
+  dw 0E000h, 0004h, 0E400h, 0005h, 0E800h, 0006h, 0EC00h, 0007h
+  dw 0C000h, 0008h, 0C400h, 0009h, 0C800h, 000Ah, 0CC00h, 000Bh 
+
+ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
+
+  dw 04000h, 0000h, 04400h, 0001h, 04800h, 0002h, 04C00h, 0003h
+  dw 05000h, 0004h, 05400h, 0005h, 05800h, 0006h, 05C00h, 0007h
+  dw 06000h, 0008h, 06400h, 0009h, 06800h, 000Ah, 06C00h, 000Bh
+  dw 07000h, 000Ch, 07400h, 000Eh, 07800h, 000Eh, 07C00h, 000Fh
+  dw 08000h, 0010h, 08400h, 0011h, 08800h, 0012h, 08C00h, 0013h
+  dw 09000h, 0014h, 09400h, 0015h, 09800h, 0016h, 09C00h, 0017h
+  dw 0D000h, 0018h, 0D400h, 0019h, 0D800h, 001Ah, 0DC00h, 001Bh
+ 
+ENDIF
  
 ; CHIPSET SPECIFIC END
 
 
-;0284Fh
-db 'MAP_PAGE_END'
 
 
 
-; 02871h: 32-bit pointer to arguments to driver
-driver_arguments dd 00000000h 
-
+;  32-bit pointer to arguments to driver
+request_header_pointer dd 00000000h 
 
 
 
 
 
-;02881h  ; segment of pageframe
+
+; segment of pageframe
 page_frame_segment dw 0000h 
-; 02883h
+; used to hold a jump addr. could maybe be combined with another temp
 temporary_jump_addr dw 0000h
  
-; 02885h initialized to 0feh.
+; number of ems handles..
 handle_count dw 0000h
 
-; 02887h
-  ; pointer to result of GET_EMM_HANDLE
-get_emm_handle_result_pointer dw 0000h;
-
-
-; 02889h
 ; stores total page count
 total_page_count dw 0000h
 
 
-; 0288Bh
-db 'L_Page_num'
-; 02895h
 ; stores unallocated page count 
 unallocated_page_count dw 0000h;
-; 02897h
-db 'P_Page_num'
-;028a1h
+; number of ems pages
 number_ems_pages dw 0000h
 
 
-; 028F8h: EMS Function pointer table
+; EMS Function pointer table
 EMS_FUNCTION_POINTERS:
 dw  OFFSET EMS_FUNCTION_040h
 dw  OFFSET EMS_FUNCTION_041h
@@ -241,170 +263,289 @@ jne      NOT_FUNC_50h
 ; avoid them mapping to default conventional memory ranges.
 
 EMS_FUNCTION_050h:
-push cx
-push bx
-push si
-
-;cmp        cx, 0
-;jne        VALID_SUBFUNCTION_PARAMETER
-; invalid subfunction parameter
-;jmp        RETURN_BAD_SUBFUNCTION_PARAMETER
-;VALID_SUBFUNCTION_PARAMETER:
-;push       bx
-;xor        ah, ah
-;cmp        ah, 1
-;je         EMS_FUNCTION_05001h
-
-; physical page number mode
-DO_NEXT_PAGE_5000:
-; next page in ax....
-lodsw
-mov        bx, ax
-lodsw
-; read two words - bx and ax
-
-cmp ax, 12
-jae NOT_CONVENTIONAL_REGISTER_5000
-add ax, 4 ; need to add 4 for d000 case for scamp...  c000, e000  not supported
-out        0E8h, al   ; select EMS page
-sub ax, 4
-xchg  ax, bx
-cmp   ax, 0FFFFh   ; -1 check
-je    handle_default_page
-add   ax, CONST_PAGE_OFFSET_AMT   ; offset by default starting page
-out   0EAh, ax   ; write 16 bit page num. 
-
-loop       DO_NEXT_PAGE_5000
-
-; exits if we fall thru loop with no error
-xor        ax, ax
-pop si
-pop bx
-pop cx
-iret
-
-NOT_CONVENTIONAL_REGISTER_5000:
- 
-out        0E8h, al   ; select EMS page
-
-xchg  ax, bx
-cmp   ax, 0FFFFh   ; -1 check
-je    handle_default_page
-
-add   ax, CONST_PAGE_OFFSET_AMT   ; offset by default starting page
-out   0EAh, ax   ; write 16 bit page num. 
 
 
-loop       DO_NEXT_PAGE_5000
+IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
 
-; exits if we fall thru loop with no error
-xor        ax, ax
-pop si
-pop bx
-pop cx
-iret
+  push cx
+  push bx
+  push si
 
-handle_default_page:
-; mapping to page -1
-mov  ax,   bx   ; retrieve page number
-add  ax,   4
-out  0EAh, ax   ; write 16 bit page num. 
-loop       DO_NEXT_PAGE_5000
-; fall thru if done..
 
-xor        ax, ax
-pop si
-pop bx
-pop cx
-iret
+  ; physical page number mode
+  DO_NEXT_PAGE_5000:
+  ; next page in ax....
+  lodsw
+  mov        bx, ax
+  lodsw
+  ; read two words - bx and ax
+
+  cmp ax, 12
+  jae NOT_CONVENTIONAL_REGISTER_5000
+  add ax, 4 ; need to add 4 for d000 case for scamp...  c000, e000  not supported
+  out        SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
+  sub ax, 4
+  xchg  ax, bx
+  cmp   ax, 0FFFFh   ; -1 check
+  je    handle_default_page
+  add   ax, SCAMP_PAGE_OFFSET_AMT   ; offset by default starting page
+  out   SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
+
+  loop       DO_NEXT_PAGE_5000
+
+  ; exits if we fall thru loop with no error
+  xor        ax, ax
+  pop si
+  pop bx
+  pop cx
+  iret
+
+  NOT_CONVENTIONAL_REGISTER_5000:
+  
+  out        SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
+
+  xchg  ax, bx
+  cmp   ax, 0FFFFh   ; -1 check
+  je    handle_default_page
+
+  add   ax, SCAMP_PAGE_OFFSET_AMT   ; offset by default starting page
+  out   SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
+
+
+  loop       DO_NEXT_PAGE_5000
+
+  ; exits if we fall thru loop with no error
+  xor        ax, ax
+  pop si
+  pop bx
+  pop cx
+  iret
+
+  handle_default_page:
+  ; mapping to page -1
+  mov  ax,   bx   ; retrieve page number
+  add  ax,   4
+  out  SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
+  loop       DO_NEXT_PAGE_5000
+  ; fall thru if done..
+
+  xor        ax, ax
+  pop si
+  pop bx
+  pop cx
+  iret
+
+ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
+
+  push cx
+  push bx
+  push si
+  push dx
+
+
+  ; physical page number mode
+  DO_NEXT_PAGE_5000:
+  ; next page in ax....
+  lodsw
+  mov        bx, ax
+  lodsw
+  ; read two words - bx and ax
+
+  mov   dx, SCAT_PAGE_SELECT_REGISTER
+  out   dx, al   ; select EMS page
+  mov   ax, bx
+  cmp   ax, 0FFFFh   ; -1 check
+  je    handle_default_page
+  add   ax, SCAT_PAGE_OFFSET_AMT   ; offset by default starting page
+  mov   dx, SCAT_PAGE_SET_REGISTER
+  out   dx, ax   ; write 16 bit page num. 
+
+  loop       DO_NEXT_PAGE_5000
+
+  ; exits if we fall thru loop with no error
+  xor        ax, ax
+  pop dx
+  pop si
+  pop bx
+  pop cx
+  iret
+
+  
+  handle_default_page:
+  ; mapping to page -1
+  mov   ax, SCAT_CHIPSET_UNMAP_VALUE
+  mov   dx, SCAT_PAGE_SET_REGISTER
+  out   dx, ax   ; write 16 bit page num. 
+  loop       DO_NEXT_PAGE_5000
+  ; fall thru if done..
+
+  xor        ax, ax
+  pop dx
+  pop si
+  pop bx
+  pop cx
+  iret
+
+
+ENDIF
+
 
 NOT_FUNC_50h:
-cmp      ah, 044h
-jne      NOT_FUNC_44h
+  cmp      ah, 044h
+  jne      NOT_FUNC_44h
 
-; page one function
+  ; page one function
+
 
 EMS_FUNCTION_044h:
-xor        ah, ah
-cmp        ax, word ptr cs:[number_ems_pages]
-jb         ENOUGH_PAGES
-jmp        RETURN_RESULT_8B
 
-ENOUGH_PAGES:
-cmp        dx,  1
-jne        RETURN_RESULT_83
+IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
+
+  xor        ah, ah
+  cmp        ax, word ptr cs:[number_ems_pages]
+  jb         ENOUGH_PAGES
+  jmp        RETURN_RESULT_8B
+
+  ENOUGH_PAGES:
+  cmp        dx,  1
+  jne        RETURN_RESULT_83
+  
+  ; call TURN_OFF_EMS_PAGE
+  ; al and bx are still the args
+
+  ; dumb hack. internally c000 - ec00 are pages 0-11 in order.
+  ; but if you want d000 to be page frame, outwardly we must expose it as 0-4.
+  ; so we are assuming 0-4 and adding by 4 to get the real internal offset
+  ; and assume 4-12 not used.
+
+  cmp   ax, 12
+  jae   NOT_CONVENTIONAL_REGISTER
+  add   ax, 4 ; need to add 4 for d000 case for scamp...  we do this branch knowing it may need to undone eventually
+  out   SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
+  sub   ax, 4      ; subtract because we may need this later for handle default page (TODO only do this then)
+  xchg  ax, bx
+  cmp   ax, 0FFFFh   ; -1 check
+  je    handle_default_page_44h
+  mov   bx, ax     ; restore bx for return
+  add   ax, SCAMP_PAGE_OFFSET_AMT   ; offset by default starting page
+  out   SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
+  mov   ah, 000h
+  iret
+
+  NOT_CONVENTIONAL_REGISTER:
+
+
+  ; write ems port... select chipset register
+  out   SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
+  xchg  ax, bx
+  cmp   ax, 0FFFFh   ; -1 check
+  je    handle_default_page_44h
+  mov   bx, ax     ; restore bx for return
+  add   ax, SCAMP_PAGE_OFFSET_AMT   ; offset by default starting page
+  out   SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
+
+
+  RETURN_RESULT_00:
+
+  mov        ah, 000h
+  iret
+
+  handle_default_page_44h:
+  ; mapping to page -1
+  xchg  ax,   bx   ; retrieve page number, restore bx at same time
+  ; add four to get the default page value for the page 
+  add   ax, 4
+  out   SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
+  mov   ah, 000h
+  iret
+
+
+
+
+  PAGE_OVERFLOW_3:
+  PAGE_UNDERFLOW_3:
+
+  mov        ah, 080h
+  iret
+
+  ; The memory manager couldn't find the EMM handle your program specified.
+  RETURN_RESULT_83:
+  mov        ah, 083h
+  iret
+
+  RETURN_RESULT_8A:
+  mov        ah, 08Ah
+  iret
+
+  RETURN_RESULT_8B:
+  mov        ah, 08Bh
+  iret
+
+ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
+
+  ; note: scat maps 0-4 not to the page frame but rather to 4000-4c00
+  ; which is unfortunate. its not really backward compatible with 0-3 = page frame 3.2 style programming...
+  ; for now in sqemm, call 44h (a 3.2 call) will map 0-4 to the page frame and ignore backfill register addresses.
+
+  xor        ah, ah
+  cmp        ax, word ptr cs:[number_ems_pages]
+  jb         ENOUGH_PAGES
+  jmp        RETURN_RESULT_8B
+
+  ENOUGH_PAGES:
+  cmp        dx,  1
+  jne        RETURN_RESULT_83
+  
+  ; call TURN_OFF_EMS_PAGE
+  ; al and bx are still the args
+
+  push dx
  
-; call TURN_OFF_EMS_PAGE
-; al and bx are still the args
+  mov   dx, SCAT_PAGE_SELECT_REGISTER
+  add   ax, SCAT_PAGE_REGISTER_OFFSET ; convert 0-4 to 18-1c
+  out   dx, al   ; select EMS page
+  mov   ax, bx
+  cmp   ax, 0FFFFh   ; -1 check
+  je    handle_default_page_44h
+  add   ax, SCAT_PAGE_OFFSET_AMT   ; offset by default starting page
+  mov   dx, SCAT_PAGE_SET_REGISTER
+  out   dx, ax   ; write 16 bit page num. 
+  pop   dx
+  mov   ah, 000h
+  iret
 
-; dumb hack. internally c000 - ec00 are pages 0-11 in order.
-; but if you want d000 to be page frame, outwardly we must expose it as 0-4.
-; so we are assuming 0-4 and adding by 4 to get the real internal offset
-; and assume 4-12 not used.
+  
 
-cmp   ax, 12
-jae   NOT_CONVENTIONAL_REGISTER
-add   ax, 4 ; need to add 4 for d000 case for scamp...  we do this branch knowing it may need to undone eventually
-out   0E8h, al   ; select EMS page
-sub   ax, 4      ; subtract because we may need this later for handle default page (TODO only do this then)
-xchg  ax, bx
-cmp   ax, 0FFFFh   ; -1 check
-je    handle_default_page_44h
-mov   bx, ax     ; restore bx for return
-add   ax, CONST_PAGE_OFFSET_AMT   ; offset by default starting page
-out   0EAh, ax   ; write 16 bit page num. 
-mov   ah, 000h
-iret
+  handle_default_page_44h:
+  ; mapping to page -1
+  mov   ax, SCAT_CHIPSET_UNMAP_VALUE
+  mov   dx, SCAT_PAGE_SET_REGISTER
+  out   dx, ax   ; write 16 bit page num. 
+  pop   dx
 
-NOT_CONVENTIONAL_REGISTER:
+  mov   ah, 000h
+  iret
 
+  PAGE_OVERFLOW_3:
+  PAGE_UNDERFLOW_3:
 
-; write ems port... select chipset register
-out   0E8h, al   ; select EMS page
-xchg  ax, bx
-cmp   ax, 0FFFFh   ; -1 check
-je    handle_default_page_44h
-mov   bx, ax     ; restore bx for return
-add   ax, CONST_PAGE_OFFSET_AMT   ; offset by default starting page
-out   0EAh, ax   ; write 16 bit page num. 
+  mov        ah, 080h
+  iret
 
+  ; The memory manager couldn't find the EMM handle your program specified.
+  RETURN_RESULT_83:
+  mov        ah, 083h
+  iret
 
-RETURN_RESULT_00:
+  RETURN_RESULT_8A:
+  mov        ah, 08Ah
+  iret
 
-mov        ah, 000h
-iret
+  RETURN_RESULT_8B:
+  mov        ah, 08Bh
+  iret
 
-handle_default_page_44h:
-; mapping to page -1
-xchg  ax,   bx   ; retrieve page number, restore bx at same time
-; add four to get the default page value for the page 
-add   ax, 4
-out   0EAh, ax   ; write 16 bit page num. 
-mov   ah, 000h
-iret
-
-
-
-
-PAGE_OVERFLOW_3:
-PAGE_UNDERFLOW_3:
-
-mov        ah, 080h
-iret
-
-; The memory manager couldn't find the EMM handle your program specified.
-RETURN_RESULT_83:
-mov        ah, 083h
-iret
-
-RETURN_RESULT_8A:
-mov        ah, 08Ah
-iret
-
-RETURN_RESULT_8B:
-mov        ah, 08Bh
-iret
-
+ENDIF
 
 
 NOT_FUNC_44h:
@@ -650,7 +791,7 @@ jae NOT_CONVENTIONAL_REGISTER_5001
 add ax, 4 ; need to add 4 for d000 case for scamp...  c000, e000  not supported
 NOT_CONVENTIONAL_REGISTER_5001:
  
-out        0E8h, al   ; select EMS page
+out        SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
 xchg ax, ax  ; nop delays
 xchg ax, ax
 xchg ax, ax
@@ -659,7 +800,7 @@ mov  ax, bx
 ; ??? seems this must be on, not sure why actually...
 mov  ah, 1    
 
-out  0EAh, ax   ; write 16 bit page num. 
+out  SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
 
 
 
@@ -697,20 +838,6 @@ pop        cx
 pop        bx
 pop        ds
 ret
-
-
-
-
-COULD_NOT_FIND_EMM_HANDLE_SPECIFIED_3:
-pop        dx
-mov        di, word ptr [get_emm_handle_result_pointer]
-mov        bx, word ptr [di]
-jmp        RETURNINTERRUPTRESULT_83
-INSUFFICIENT_PAGES:
-pop        dx
-mov        di, word ptr [get_emm_handle_result_pointer]
-mov        bx, word ptr [di]
-jmp        RETURNINTERRUPTRESULT_87
 
 
 
@@ -1098,47 +1225,19 @@ pop        si
 pop        cx
 iret
 
+;db 'SQEMM PROGRAM END'
+
+end_of_driver_label:
 
 
-; STRINGS
-;03A9Dh
-db 'DATATECH EMM PROGRAM END'
-; 03ab5h: 3 byte structs, 0Eh of them.
-;010004 020006 030008 040008 050010 060018 070020 080020 09803F 0A0020 0B803F 0C000C 0D0014 0E0030
-memory_configs: 
-
-db 01h, 00h, 04h
-db 02h, 00h, 06h
-db 03h, 00h, 08h
-db 04h, 00h, 08h
-db 05h, 00h, 10h
-db 06h, 00h, 18h
-db 07h, 00h, 20h
-db 08h, 00h, 20h
-db 09h, 80h, 3Fh
-db 0Ah, 00h, 20h
-db 0Bh, 80h, 3Fh
-db 0Ch, 00h, 0Ch
-db 0Dh, 00h, 14h
-db 0Eh, 00h, 30h
-; 03adfh  seems to be a dupe of mappable_384K_conventional?
-mappable_384K_conventional_dupe dw 0000h
-; 03ae3h  stores slot pointer * 4
-slotpointer_byte_times_4_word dw 0000h
-; 03ae7h  stores slot pointer byte
-slotpointer_byte db 00h
-; 03ae8h  amount of mappable memory in 256k-640k region. seems to either store 0 or 384 decimal (0180h)
-mappable_384K_conventional dw 0000h
-; 03aeah  
-string_driver_exists db 0Dh, 0Ah, ' EMS Driver already exists (chaining not supported).',0Dh, 0Ah,0Ah, 0Ah, '$'
-; 03B0Bh  
-string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for VL82C311', 0Dh, 0Ah,'$'
- 
-
-; 03E2Bh
+string_driver_exists db 0Dh, 0Ah, 'EMS Driver already loaded (chaining not supported).',0Dh, 0Ah, '$'
 string_driver_successfully_installed db 0Dh, 0Ah, 'SQEMM successfully initialized.', 0Ah, 0Dh, '$'
-; 03E58h
-string_driver_failed_installing db 0Dh, 0Ah, '     VL82C311 EMS is not installed.', 0Ah, 0Ah, 0Ah, 0Ah, 0Dh, '$'
+string_driver_failed_installing db 0Dh, 0Ah, ' Driver not installed.', 0Ah,  '$'
+IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for VLSI SCAMP', 0Dh, 0Ah,'$'
+ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for C&T SCAT', 0Dh, 0Ah,'$'
+ENDIF
 
 
 
@@ -1148,7 +1247,6 @@ DRIVER_INIT:
 mov        ax, cs
 mov        ds, ax
 mov        word ptr [pointer_to_ems_init], OFFSET RETURN_UNRECOGNIZED_COMMAND     ; overwrite pointer to this init function with pointer to "failed to install" (03fa5h)
-
 lea        dx, [string_main_header]
 
 call       PRINT_STRING
@@ -1169,91 +1267,111 @@ jmp        DRIVER_NOT_INSTALLED_2
 
 EMS_INTERRUPT_FREE:
 
-; do actual driver preparation here
-; todotodo
 
 ; CHIPSET SPECIFIC START
 
-; for porting to other chipsets, prepare chipset registers
-; and driver variables here. In this case we set page frame
-; to D000, set 36 mappable pages, we are only allowing a
-; single handle, and set 128 mappable pages. we also prepare
-; ems registers to initial values and enable EMS and backfill.
+IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
 
 
-; hard coded to d000 for now
-mov        word ptr [page_frame_segment], 0D000h
-
-; 128 pages hardcoded for now
-mov        word ptr [unallocated_page_count], CONST_PAGE_COUNT
-mov        word ptr [total_page_count], CONST_PAGE_COUNT
-
-; ok?
-mov        word ptr [number_ems_pages], 36
-
-; one handle for now
-mov        word ptr [handle_count], 01h
+  ; for porting to other chipsets, prepare chipset registers
+  ; and driver variables here. In this case we set page frame
+  ; to D000, set 36 mappable pages, we are only allowing a
+  ; single handle, and set 256 mappable pages. we also prepare
+  ; ems registers to initial values and enable EMS and backfill.
 
 
-; enable d000 register and backfill
+  ; hard coded to d000 for now
+  mov        word ptr [page_frame_segment], 0D000h
 
-mov        al, 0Bh
-out        0ECh, al
-xchg ax, ax
-xchg ax, ax
-xchg ax, ax
-xchg ax, ax
-;mov        al, 0A0h   ; turn on ems 
-mov        al, 0E0h   ; turn on ems, backfill
-out        0EDh, al
+  ; 256 pages hardcoded for now
+  mov        word ptr [unallocated_page_count], CONST_PAGE_COUNT
+  mov        word ptr [total_page_count], CONST_PAGE_COUNT
+  mov        word ptr [number_ems_pages], 36
 
-
-mov        al, 0Ch
-out        0ECh, al
-xchg ax, ax
-xchg ax, ax
-xchg ax, ax
-xchg ax, ax
-mov        al, 0F0h  ; turn on d000 as page frame
-out        0EDh, al
-
-; set first four page registers for d000
-xor   cx, cx
-mov   cl, 3h  ; 24 registers, 0C to 23
-mov   ax, 4
-
-enablepageloop:
-out   0E8h, al
-sub   ax, 4
-xchg  ax, ax
-xchg  ax, ax
-out   0EAh, ax
-add   ax, 5         ; inc included..
-loop enablepageloop
+  ; one handle for now
+  mov        word ptr [handle_count], 01h
 
 
-; NOTE: If we enable backfill, we must initialize page registers for backfill region
-;  4-28 to be 4-28
+  ; enable d000 register and backfill
 
-mov   ax, 0Ch
-mov   cl, 18h  ; 24 registers, 0C to 23
+  mov        al, 0Bh
+  out        0ECh, al
+  xchg ax, ax
+  xchg ax, ax
+  xchg ax, ax
+  xchg ax, ax
+  ;mov        al, 0A0h   ; turn on ems 
+  mov        al, 0E0h   ; turn on ems, backfill
+  out        0EDh, al
 
-; 0c maps to 10, 
-; 0d maps to 11, 
-; ...
-; 23 maps to 27
 
-enablebackfillloop:
-out   0E8h, al
-add   ax, 4
-xchg  ax, ax
-xchg  ax, ax
-out   0EAh, ax
-sub   ax, 3       ; inc included..
-loop enablebackfillloop
+  mov        al, 0Ch
+  out        0ECh, al
+  xchg ax, ax
+  xchg ax, ax
+  xchg ax, ax
+  xchg ax, ax
+  mov        al, 0F0h  ; turn on d000 as page frame
+  out        0EDh, al
 
-; note: we must treat 'set page to default/-1' case as these values
-; and we must offset every page set offset by 28h otherwise to avoid these defaults.
+  ; set first four page registers for d000
+  xor   cx, cx
+  mov   cl, 3h  ; 24 registers, 0C to 23
+  mov   ax, 4
+
+  enablepageloop:
+  out   SCAMP_PAGE_SELECT_REGISTER, al
+  sub   ax, 4
+  xchg  ax, ax
+  xchg  ax, ax
+  out   SCAMP_PAGE_SET_REGISTER, ax
+  add   ax, 5         ; inc included..
+  loop enablepageloop
+
+
+  ; NOTE: If we enable backfill, we must initialize page registers for backfill region
+  ;  4-28 to be 4-28
+
+  mov   ax, 0Ch
+  mov   cl, 18h  ; 24 registers, 0C to 23
+
+  ; 0c maps to 10, 
+  ; 0d maps to 11, 
+  ; ...
+  ; 23 maps to 27
+
+  enablebackfillloop:
+  out   SCAMP_PAGE_SELECT_REGISTER, al
+  add   ax, 4
+  xchg  ax, ax
+  xchg  ax, ax
+  out   SCAMP_PAGE_SET_REGISTER, ax
+  sub   ax, 3       ; inc included..
+  loop enablebackfillloop
+
+  ; note: we must treat 'set page to default/-1' case as these values
+  ; and we must offset every page set offset by 28h otherwise to avoid these defaults.
+
+ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
+
+  ; enable writes to registers...
+  mov al, SCAT_EMS_CONFIG_REGISTER
+  out SCAT_CHIPSET_CONFIG_REGISTER_SELECT, al
+  mov al, 0C0h   ; enable EMS, and make registers writeable
+  out SCAT_CHIPSET_CONFIG_REGISTER_READWRITE, al
+
+  ; hard coded to d000 for now
+  mov        word ptr [page_frame_segment], 0D000h
+
+  ; 256 pages hardcoded for now
+  mov        word ptr [unallocated_page_count], CONST_PAGE_COUNT
+  mov        word ptr [total_page_count], CONST_PAGE_COUNT
+  mov        word ptr [number_ems_pages], 28
+
+  ; one handle for now
+  mov        word ptr [handle_count], 01h
+
+ENDIF
 
 ; CHIPSET SPECIFIC END
 
@@ -1263,7 +1381,6 @@ loop enablebackfillloop
 ; set interrupt vector  067h
 
 lea        dx, MAIN_EMS_INTERRUPT_VECTOR
-
 mov        al, 067h
 mov        ah, 025h
 int        021h
@@ -1273,12 +1390,14 @@ DRIVER_INSTALLED:
 lea        dx, [string_driver_successfully_installed]
 
 call       PRINT_STRING
-les        bx, [driver_arguments]
+les        bx, [request_header_pointer]
 mov        word ptr es:[bx + 3], 0100h
-mov        ax, OFFSET memory_configs
-; 0610h?  ;1006h?
-mov        word ptr es:[bx + 0eh], ax
+
+; 0Eh: MS-DOS 5 set pointer to end of memory used by driver
+; 10h: the segment for above
+mov        word ptr es:[bx + 0eh], offset  end_of_driver_label
 mov        word ptr es:[bx + 010h], cs
+;mov        word ptr es:[bx + 017h], 00
 ret
 
 ; DRIVER NOT INSTALLED
@@ -1291,10 +1410,11 @@ lea        dx, [string_driver_failed_installing]
 ; todo whats this
 DRIVER_NOT_INSTALLED_2:
 call       PRINT_STRING
-les        bx, [driver_arguments]
+les        bx, [request_header_pointer]
 mov        word ptr es:[bx + 3], 0810ch
-mov        word ptr es:[bx + 0eh], 0
+mov        word ptr es:[bx + 0eh], offset end_of_driver_label
 mov        word ptr es:[bx + 010h], cs
+;mov        word ptr es:[bx + 017h], 00
 ret
 
 ; prints string ending in '$' in DS:DX
@@ -1308,5 +1428,7 @@ int        021h
 pop        ax
 pop        ds
 ret
+
+
 
 END
