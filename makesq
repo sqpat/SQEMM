@@ -1,0 +1,21 @@
+CCOPTS = -zp1 -oaxet -oi -zq -j -mm -0 -s -zdp -d__COMPILER_WATCOM
+
+GLOBOBJS = &
+ sqemm.obj
+
+sqemm.exe : $(GLOBOBJS)
+ wlink @sqemm.lnk
+ wstrip sqemm.exe
+ exe2bin sqemm.exe
+ move sqemm.bin sqemm.sys /Y
+
+.c.obj :
+ wcc $(CCOPTS) $[*
+
+.asm.obj :
+ tasm /m6 $[*
+
+clean : .SYMBOLIC
+ del *.obj
+ del *.err
+ del sqemm.sys

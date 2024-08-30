@@ -1,0 +1,21 @@
+CCOPTS = -zp1 -oaxet -oi -zq -j -mm -0 -s -zdp -d__COMPILER_WATCOM
+
+GLOBOBJS = &
+ scamphi.obj
+
+scamphi.exe : $(GLOBOBJS)
+ wlink @scamphi.lnk
+ wstrip scamphi.exe
+ exe2bin scamphi.exe
+ move scamphi.bin scamphi.sys /Y
+
+.c.obj :
+ wcc $(CCOPTS) $[*
+
+.asm.obj :
+ tasm /m4 $[*
+
+clean : .SYMBOLIC
+ del *.obj
+ del *.err
+ del scamphi.sys
