@@ -1,0 +1,51 @@
+Open Watcom Linker Version 1.9
+Portions Copyright (c) 1985-2002 Sybase, Inc. All Rights Reserved.
+Created on:       24/08/30 11:29:34
+Executable Image: scathi.exe
+creating a DOS executable
+
+
+                        +------------+
+                        |   Groups   |
+                        +------------+
+
+Group                           Address              Size
+=====                           =======              ====
+
+DGROUP                          0000:0000            0000007c
+
+
+
+                        +--------------+
+                        |   Segments   |
+                        +--------------+
+
+Segment                Class          Group          Address         Size
+=======                =====          =====          =======         ====
+
+_TEXT                  CODE           DGROUP         0000:0000       0000007b
+_DATA                  DATA           DGROUP         0007:000c       00000000
+
+
+                        +----------------+
+                        |   Memory Map   |
+                        +----------------+
+
+* = unreferenced symbol
++ = symbol only referenced locally
+
+Address        Symbol
+=======        ======
+
+Warning! W1014: stack segment not found
+Warning! W1023: no starting address found, using 0000:0000
+
+
+                        +-----------------------+
+                        |   Linker Statistics   |
+                        +-----------------------+
+
+Stack size:  09e8 (2536.)
+Memory size:  007c (124.)
+Entry point address: 0000:0000
+Link time: 00:00.00
