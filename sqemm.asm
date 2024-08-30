@@ -24,13 +24,17 @@ SCAMP_PAGE_OFFSET_AMT = 50h
 SCAMP_PAGE_SELECT_REGISTER = 0E8h
 SCAMP_PAGE_SET_REGISTER = 0EAh
 
+; 18h for D000. 1Ch for E000 if we were to use that.
 SCAT_PAGE_REGISTER_OFFSET = 018h
 SCAT_CHIPSET_CONFIG_REGISTER_SELECT = 022h
 SCAT_CHIPSET_CONFIG_REGISTER_READWRITE = 023h
 SCAT_EMS_CONFIG_REGISTER = 04Fh
 SCAT_PAGE_SELECT_REGISTER = 020Ah
 SCAT_PAGE_SET_REGISTER = 0208h
-SCAT_PAGE_OFFSET_AMT = 08028h
+
+; 8000 is to mark bit 15 for free "ems enabled"
+; 0100 is [currently hardcoded] 4 MB offset for beginning of EMS pagination,
+SCAT_PAGE_OFFSET_AMT = 08100h
 SCAT_CHIPSET_UNMAP_VALUE = 03FFh
 
 
@@ -157,6 +161,7 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   dw 08000h, 0010h, 08400h, 0011h, 08800h, 0012h, 08C00h, 0013h
   dw 09000h, 0014h, 09400h, 0015h, 09800h, 0016h, 09C00h, 0017h
   dw 0D000h, 0018h, 0D400h, 0019h, 0D800h, 001Ah, 0DC00h, 001Bh
+  dw 0E000h, 001Ch, 0E400h, 001Dh, 0E800h, 001Eh, 0EC00h, 001Fh
  
 ENDIF
  
@@ -352,18 +357,20 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   ; read two words - bx and ax
 
   mov   dx, SCAT_PAGE_SELECT_REGISTER
+  
   out   dx, al   ; select EMS page
-  mov   ax, bx
-  cmp   ax, 0FFFFh   ; -1 check
-  je    handle_default_page
-  add   ax, SCAT_PAGE_OFFSET_AMT   ; offset by default starting page
   mov   dx, SCAT_PAGE_SET_REGISTER
+  cmp   bx, 0FFFFh   ; -1 check
+  je    handle_default_page
+
+  mov   ax, SCAT_PAGE_OFFSET_AMT   ; offset by default starting page
+  add   ax, bx
   out   dx, ax   ; write 16 bit page num. 
 
   loop       DO_NEXT_PAGE_5000
 
-  ; exits if we fall thru loop with no error
-  xor        ax, ax
+  ; exit fall thru
+  xor ax, ax
   pop dx
   pop si
   pop bx
@@ -374,12 +381,12 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   handle_default_page:
   ; mapping to page -1
   mov   ax, SCAT_CHIPSET_UNMAP_VALUE
-  mov   dx, SCAT_PAGE_SET_REGISTER
   out   dx, ax   ; write 16 bit page num. 
   loop       DO_NEXT_PAGE_5000
-  ; fall thru if done..
 
-  xor        ax, ax
+
+  ; exit fall thru
+  xor ax, ax
   pop dx
   pop si
   pop bx
@@ -410,7 +417,6 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
   cmp        dx,  1
   jne        RETURN_RESULT_83
   
-  ; call TURN_OFF_EMS_PAGE
   ; al and bx are still the args
 
   ; dumb hack. internally c000 - ec00 are pages 0-11 in order.
@@ -496,34 +502,33 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   cmp        dx,  1
   jne        RETURN_RESULT_83
   
-  ; call TURN_OFF_EMS_PAGE
   ; al and bx are still the args
 
-  push dx
+  push dx  
  
   mov   dx, SCAT_PAGE_SELECT_REGISTER
-  add   ax, SCAT_PAGE_REGISTER_OFFSET ; convert 0-4 to 18-1c
+  add   al, SCAT_PAGE_REGISTER_OFFSET ; convert 0-4 to 18-1c
   out   dx, al   ; select EMS page
-  mov   ax, bx
-  cmp   ax, 0FFFFh   ; -1 check
-  je    handle_default_page_44h
-  add   ax, SCAT_PAGE_OFFSET_AMT   ; offset by default starting page
   mov   dx, SCAT_PAGE_SET_REGISTER
+  cmp   bx, 0FFFFh   ; -1 check
+  je    handle_default_page_44h
+  
+  mov   ax, SCAT_PAGE_OFFSET_AMT   ; offset by default starting page
+  add   ax, bx
   out   dx, ax   ; write 16 bit page num. 
+  
   pop   dx
-  mov   ah, 000h
+  xor   ax, ax
   iret
 
-  
 
   handle_default_page_44h:
   ; mapping to page -1
-  mov   ax, SCAT_CHIPSET_UNMAP_VALUE
-  mov   dx, SCAT_PAGE_SET_REGISTER
+  mov   ax, SCAT_CHIPSET_UNMAP_VALUE ; "turn off ems for this page" value
   out   dx, ax   ; write 16 bit page num. 
+  
   pop   dx
-
-  mov   ah, 000h
+  xor   ax, ax
   iret
 
   PAGE_OVERFLOW_3:
@@ -1366,7 +1371,7 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   ; 256 pages hardcoded for now
   mov        word ptr [unallocated_page_count], CONST_PAGE_COUNT
   mov        word ptr [total_page_count], CONST_PAGE_COUNT
-  mov        word ptr [number_ems_pages], 28
+  mov        word ptr [number_ems_pages], 32
 
   ; one handle for now
   mov        word ptr [handle_count], 01h
