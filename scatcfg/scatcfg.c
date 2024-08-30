@@ -268,7 +268,7 @@ void printemsregisterdata(){
 
 
 		outp(CHIPSET_CONFIG_EMS_PAGE_REGISTER_SELECT, 0x4F);
-		_outtext ("Ad   0x209    0x208   Ad   0x209    0x208        \n");
+		_outtext ("Ad   0x209    0x208    Ad   0x209    0x208        \n");
 
 		bit = inp(CHIPSET_CONFIG_EMS_PAGE_REGISTER_READWRITE);
 		bit |= 0x40;
@@ -296,24 +296,22 @@ void printemsregisterdata(){
 			
 
 // 2nd half
-			if (i + 16 < 28){
-				outp(CHIPSET_CONFIG_EMS_PAGE_REGISTER_SELECT, i+16);
-				sprintf (bigstring,"%02X\0", i+16);
-				_outtext(bigstring);
+			outp(CHIPSET_CONFIG_EMS_PAGE_REGISTER_SELECT, i+16);
+			sprintf (bigstring,"%02X\0", i+16);
+			_outtext(bigstring);
 
-				value1 = inp(CHIPSET_CONFIG_EMS_PAGE_REGISTER_READWRITE);
-				printchar(179);
-				value2 = inp(CHIPSET_CONFIG_EMS_PAGE_REGISTER_READWRITE+1);
+			value1 = inp(CHIPSET_CONFIG_EMS_PAGE_REGISTER_READWRITE);
+			printchar(179);
+			value2 = inp(CHIPSET_CONFIG_EMS_PAGE_REGISTER_READWRITE+1);
 
-				fullvalue = (value2 << 8) + value1;
+			fullvalue = (value2 << 8) + value1;
 
-				sprintf (bigstring,BYTE_TO_BINARY_PATTERN"\0", BYTE_TO_BINARY(value2));
-				_outtext(bigstring);
-				printchar(179);
-				sprintf (bigstring,BYTE_TO_BINARY_PATTERN"\0", BYTE_TO_BINARY(value1));
-				_outtext(bigstring);
-				printchar(179);
-			}
+			sprintf (bigstring,BYTE_TO_BINARY_PATTERN"\0", BYTE_TO_BINARY(value2));
+			_outtext(bigstring);
+			printchar(179);
+			sprintf (bigstring,BYTE_TO_BINARY_PATTERN"\0", BYTE_TO_BINARY(value1));
+			_outtext(bigstring);
+			printchar(179);
 			
 			
 			sprintf (bigstring,"\n\0");
@@ -356,19 +354,49 @@ main
 		if (checkparm("-resetems")){
 			int16_t i;
 			int16_t baseoffset;
-			for (i = 0; i < 24; i++){
+			for (i = 0; i < 0x20; i++){
 				outp(CHIPSET_CONFIG_EMS_PAGE_REGISTER_SELECT, i);
 				baseoffset = i * i; // delay for outp
 				outpw(CHIPSET_CONFIG_EMS_PAGE_REGISTER_READWRITE, 0x03FF);
 			}
+
+			printemsregisterdata();
+
 			return 0;
 		}
 		
+		if (checkparm("-readyemsg")){
+			int16_t i;
+			int16_t baseoffset;
+			for (i = 0; i < 0x20; i++){
+				outp(CHIPSET_CONFIG_EMS_PAGE_REGISTER_SELECT, i);
+				baseoffset = i * i; // delay for outp
+				outpw(CHIPSET_CONFIG_EMS_PAGE_REGISTER_READWRITE, 0x8030 + i);
+			}
+
+			printemsregisterdata();
+
+			return 0;
+		}
+		
+		if (checkparm("-readyems")){
+			int16_t i;
+			int16_t baseoffset;
+			for (i = 0; i < 0x20; i++){
+				outp(CHIPSET_CONFIG_EMS_PAGE_REGISTER_SELECT, i);
+				baseoffset = i * i; // delay for outp
+				outpw(CHIPSET_CONFIG_EMS_PAGE_REGISTER_READWRITE, 0x8010 + i);
+			}
+
+			printemsregisterdata();
+
+			return 0;
+		}
 
 		if (checkparm("-set4000")){
 			int16_t i;
 			int16_t baseoffset;
-			for (i = 0; i < 24; i++){
+			for (i = 0; i < 28; i++){
 				byte __far *loc = MK_FP(0x4000 + i * 0x400, 0);
 				*loc = (i+1) * 2;
 			}
