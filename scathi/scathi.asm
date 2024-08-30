@@ -42,32 +42,59 @@ out 023h, al
 nop
 nop
 
-
 mov dx, 020Ah 
-mov al, 01Ch  ; page E000
+mov al, 018h  ; page D000
 out dx, al
 mov ax, 08028h ; ems enable  page 28h
 mov dx, 0208h 
 out dx, ax
 
 mov dx, 020Ah 
+mov al, 019h  ; page D400
+out dx, al
+mov ax, 08029h ; ems enable  page 29h
+mov dx, 0208h 
+out dx, ax
+
+mov dx, 020Ah 
+mov al, 01Ah  ; page D800
+out dx, al
+mov ax, 0802Ah ; ems enable  page 2Ah
+mov dx, 0208h 
+out dx, ax
+
+mov dx, 020Ah 
+mov al, 01Bh  ; page DC00
+out dx, al
+mov ax, 0802Bh ; ems enable  page 2Bh
+mov dx, 0208h 
+out dx, ax
+
+mov dx, 020Ah 
+mov al, 01Ch  ; page E000
+out dx, al
+mov ax, 0802Ch ; ems enable  page 2Ch
+mov dx, 0208h 
+out dx, ax
+
+mov dx, 020Ah 
 mov al, 01Dh  ; page E400
 out dx, al
-mov ax, 08029h ; ems enable  page 28h
+mov ax, 0802Dh ; ems enable  page 2Dh
 mov dx, 0208h 
 out dx, ax
 
 mov dx, 020Ah 
 mov al, 01Eh  ; page E800
 out dx, al
-mov ax, 0802Ah ; ems enable  page 28h
+mov ax, 0802Eh ; ems enable  page 2Eh
 mov dx, 0208h 
 out dx, ax
 
 mov dx, 020Ah 
 mov al, 01Fh  ; page EC00
 out dx, al
-mov ax, 0802Bh ; ems enable  page 28h
+mov ax, 0802Fh ; ems enable  page 2Fh
 mov dx, 0208h 
 out dx, ax
 

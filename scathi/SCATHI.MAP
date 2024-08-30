@@ -1,6 +1,6 @@
 Open Watcom Linker Version 1.9
 Portions Copyright (c) 1985-2002 Sybase, Inc. All Rights Reserved.
-Created on:       24/08/30 11:29:34
+Created on:       24/08/30 11:39:58
 Executable Image: scathi.exe
 creating a DOS executable
 
@@ -12,7 +12,7 @@ creating a DOS executable
 Group                           Address              Size
 =====                           =======              ====
 
-DGROUP                          0000:0000            0000007c
+DGROUP                          0000:0000            000000b0
 
 
 
@@ -23,8 +23,8 @@ DGROUP                          0000:0000            0000007c
 Segment                Class          Group          Address         Size
 =======                =====          =====          =======         ====
 
-_TEXT                  CODE           DGROUP         0000:0000       0000007b
-_DATA                  DATA           DGROUP         0007:000c       00000000
+_TEXT                  CODE           DGROUP         0000:0000       000000af
+_DATA                  DATA           DGROUP         000b:0000       00000000
 
 
                         +----------------+
@@ -46,6 +46,6 @@ Warning! W1023: no starting address found, using 0000:0000
                         +-----------------------+
 
 Stack size:  09e8 (2536.)
-Memory size:  007c (124.)
+Memory size:  00b0 (176.)
 Entry point address: 0000:0000
 Link time: 00:00.00
