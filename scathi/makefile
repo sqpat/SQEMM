@@ -6,8 +6,8 @@ CCOPTS = /d2 /omaxet /ml
 GLOBOBJS = scatcfg.obj
 
 
-scatcfg.exe : $(GLOBOBJS) 
- wlink @scatcfg.lnk
+scathi.exe : $(GLOBOBJS) 
+ wlink @scathi.lnk
  wstrip scatcfg.exe
 
 .c.obj :
