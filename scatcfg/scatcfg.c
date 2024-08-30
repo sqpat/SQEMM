@@ -266,10 +266,16 @@ void printemsregisterdata(){
 		byte bit;
 		char bigstring[60];
 
+
+		outp(CHIPSET_CONFIG_EMS_PAGE_REGISTER_SELECT, 0x4F);
 		_outtext ("Ad   0x209    0x208   Ad   0x209    0x208        \n");
 
+		bit = inp(CHIPSET_CONFIG_EMS_PAGE_REGISTER_READWRITE);
+		bit |= 0x40;
+		outp(CHIPSET_CONFIG_EMS_PAGE_REGISTER_READWRITE, bit);
 
-		for (i = 0; i < 18; i++){
+
+		for (i = 0; i < 16; i++){
 
 			outp(CHIPSET_CONFIG_EMS_PAGE_REGISTER_SELECT, i);
 			sprintf (bigstring,"%02X\0", i);
@@ -290,23 +296,24 @@ void printemsregisterdata(){
 			
 
 // 2nd half
+			if (i + 16 < 28){
+				outp(CHIPSET_CONFIG_EMS_PAGE_REGISTER_SELECT, i+16);
+				sprintf (bigstring,"%02X\0", i+16);
+				_outtext(bigstring);
 
-			outp(CHIPSET_CONFIG_EMS_PAGE_REGISTER_SELECT, i+18);
-			sprintf (bigstring,"%02X\0", i+18);
-			_outtext(bigstring);
+				value1 = inp(CHIPSET_CONFIG_EMS_PAGE_REGISTER_READWRITE);
+				printchar(179);
+				value2 = inp(CHIPSET_CONFIG_EMS_PAGE_REGISTER_READWRITE+1);
 
-			value1 = inp(CHIPSET_CONFIG_EMS_PAGE_REGISTER_READWRITE);
-			printchar(179);
-			value2 = inp(CHIPSET_CONFIG_EMS_PAGE_REGISTER_READWRITE+1);
+				fullvalue = (value2 << 8) + value1;
 
-			fullvalue = (value2 << 8) + value1;
-
-			sprintf (bigstring,BYTE_TO_BINARY_PATTERN"\0", BYTE_TO_BINARY(value2));
-			_outtext(bigstring);
-			printchar(179);
-			sprintf (bigstring,BYTE_TO_BINARY_PATTERN"\0", BYTE_TO_BINARY(value1));
-			_outtext(bigstring);
-			printchar(179);
+				sprintf (bigstring,BYTE_TO_BINARY_PATTERN"\0", BYTE_TO_BINARY(value2));
+				_outtext(bigstring);
+				printchar(179);
+				sprintf (bigstring,BYTE_TO_BINARY_PATTERN"\0", BYTE_TO_BINARY(value1));
+				_outtext(bigstring);
+				printchar(179);
+			}
 			
 			
 			sprintf (bigstring,"\n\0");
