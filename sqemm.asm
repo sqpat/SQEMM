@@ -288,17 +288,20 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
   ; read two words - bx and ax
 
   cmp   ax, 12
-  jae   NOT_CONVENTIONAL_REGISTER_5000
-  add   ax, 4 ; need to add 4 for d000 case for scamp...  c000, e000  not supported
-  out   SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
+  ; default, lets assume backfill
+  jb PAGEFRAME_REGISTER_5000
+
+  out SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
+ 
   cmp   bx, 0FFFFh   ; -1 check
-  je    handle_default_page
+  je    handle_default_page_with_add
+  ; default is not the -1 case
   mov   ax, bx
   add   ax, SCAMP_PAGE_OFFSET_AMT   ; offset by default starting page
   out   SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
 
-  loop       DO_NEXT_PAGE_5000
 
+  loop       DO_NEXT_PAGE_5000
   ; exits if we fall thru loop with no error
   xor        ax, ax
   pop si
@@ -306,17 +309,16 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
   pop cx
   iret
 
-  NOT_CONVENTIONAL_REGISTER_5000:
+
+  PAGEFRAME_REGISTER_5000:
   
-  out        SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
-
+  add   ax, 4 ; need to add 4 for d000 case for scamp...  c000, e000  not supported
+  out   SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
   cmp   bx, 0FFFFh   ; -1 check
-  je    handle_default_page_with_add
-
+  je    handle_default_page
   mov   ax, bx
   add   ax, SCAMP_PAGE_OFFSET_AMT   ; offset by default starting page
   out   SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
-
 
   loop       DO_NEXT_PAGE_5000
 
