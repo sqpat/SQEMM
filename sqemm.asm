@@ -14,15 +14,16 @@ SCAMP_CHIPSET = 1
 SCAT_CHIPSET = 2
 
 ;COMPILE_CHIPSET = SCAMP_CHIPSET
-COMPILE_CHIPSET = SCAT_CHIPSET
+COMPILE_CHIPSET = SCAMP_CHIPSET
 
 
 CONST_HANDLE_TABLE_LENGTH = 0FFh
 CONST_PAGE_COUNT = 256
-; as low as 43h seems to work? not sure why this isnt just 28h
-SCAMP_PAGE_OFFSET_AMT = 50h
+; 80h represents 2 MB offset beyond EMS start point
+SCAMP_PAGE_OFFSET_AMT = 80h
 SCAMP_PAGE_SELECT_REGISTER = 0E8h
 SCAMP_PAGE_SET_REGISTER = 0EAh
+SCAMP_PAGE_FRAME_COUNT = 36
 
 ; 18h for D000. 1Ch for E000 if we were to use that.
 SCAT_PAGE_REGISTER_OFFSET = 018h
@@ -31,10 +32,11 @@ SCAT_CHIPSET_CONFIG_REGISTER_READWRITE = 023h
 SCAT_EMS_CONFIG_REGISTER = 04Fh
 SCAT_PAGE_SELECT_REGISTER = 020Ah
 SCAT_PAGE_SET_REGISTER = 0208h
+SCAT_PAGE_FRAME_COUNT = 32
 
 ; 8000 is to mark bit 15 for free "ems enabled"
-; 0100 is [currently hardcoded] 4 MB offset for beginning of EMS pagination,
-SCAT_PAGE_OFFSET_AMT = 08100h
+; 0080 is [currently hardcoded] 2 MB offset for beginning of EMS pagination,
+SCAT_PAGE_OFFSET_AMT = 08080h
 SCAT_CHIPSET_UNMAP_VALUE = 03FFh
 
 
@@ -285,14 +287,13 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
   lodsw
   ; read two words - bx and ax
 
-  cmp ax, 12
-  jae NOT_CONVENTIONAL_REGISTER_5000
-  add ax, 4 ; need to add 4 for d000 case for scamp...  c000, e000  not supported
-  out        SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
-  sub ax, 4
-  xchg  ax, bx
-  cmp   ax, 0FFFFh   ; -1 check
+  cmp   ax, 12
+  jae   NOT_CONVENTIONAL_REGISTER_5000
+  add   ax, 4 ; need to add 4 for d000 case for scamp...  c000, e000  not supported
+  out   SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
+  cmp   bx, 0FFFFh   ; -1 check
   je    handle_default_page
+  mov   ax, bx
   add   ax, SCAMP_PAGE_OFFSET_AMT   ; offset by default starting page
   out   SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
 
@@ -309,10 +310,10 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
   
   out        SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
 
-  xchg  ax, bx
-  cmp   ax, 0FFFFh   ; -1 check
-  je    handle_default_page
+  cmp   bx, 0FFFFh   ; -1 check
+  je    handle_default_page_with_add
 
+  mov   ax, bx
   add   ax, SCAMP_PAGE_OFFSET_AMT   ; offset by default starting page
   out   SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
 
@@ -326,10 +327,11 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
   pop cx
   iret
 
+  handle_default_page_with_add:
+  add   ax, 4
+  
   handle_default_page:
   ; mapping to page -1
-  mov  ax,   bx   ; retrieve page number
-  add  ax,   4
   out  SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
   loop       DO_NEXT_PAGE_5000
   ; fall thru if done..
@@ -377,7 +379,6 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   pop cx
   iret
 
-  
   handle_default_page:
   ; mapping to page -1
   mov   ax, SCAT_CHIPSET_UNMAP_VALUE
@@ -428,14 +429,12 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
   jae   NOT_CONVENTIONAL_REGISTER
   add   ax, 4 ; need to add 4 for d000 case for scamp...  we do this branch knowing it may need to undone eventually
   out   SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
-  sub   ax, 4      ; subtract because we may need this later for handle default page (TODO only do this then)
-  xchg  ax, bx
-  cmp   ax, 0FFFFh   ; -1 check
+  cmp   bx, 0FFFFh   ; -1 check
   je    handle_default_page_44h
-  mov   bx, ax     ; restore bx for return
+  mov   ax, bx  
   add   ax, SCAMP_PAGE_OFFSET_AMT   ; offset by default starting page
   out   SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
-  mov   ah, 000h
+  xor   ax, ax
   iret
 
   NOT_CONVENTIONAL_REGISTER:
@@ -443,26 +442,25 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
 
   ; write ems port... select chipset register
   out   SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
-  xchg  ax, bx
-  cmp   ax, 0FFFFh   ; -1 check
-  je    handle_default_page_44h
-  mov   bx, ax     ; restore bx for return
+  cmp   bx, 0FFFFh   ; -1 check
+  je    handle_default_page_44h_with_add
+  mov   ax, bx 
   add   ax, SCAMP_PAGE_OFFSET_AMT   ; offset by default starting page
   out   SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
 
 
   RETURN_RESULT_00:
 
-  mov        ah, 000h
+  xor   ax, ax
   iret
+  handle_default_page_44h_with_add:
+  add   ax, 4
 
   handle_default_page_44h:
   ; mapping to page -1
-  xchg  ax,   bx   ; retrieve page number, restore bx at same time
   ; add four to get the default page value for the page 
-  add   ax, 4
   out   SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
-  mov   ah, 000h
+  xor   ax, ax
   iret
 
 
@@ -1291,7 +1289,7 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
   ; 256 pages hardcoded for now
   mov        word ptr [unallocated_page_count], CONST_PAGE_COUNT
   mov        word ptr [total_page_count], CONST_PAGE_COUNT
-  mov        word ptr [number_ems_pages], 36
+  mov        word ptr [number_ems_pages], SCAMP_PAGE_FRAME_COUNT
 
   ; one handle for now
   mov        word ptr [handle_count], 01h
@@ -1371,7 +1369,7 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   ; 256 pages hardcoded for now
   mov        word ptr [unallocated_page_count], CONST_PAGE_COUNT
   mov        word ptr [total_page_count], CONST_PAGE_COUNT
-  mov        word ptr [number_ems_pages], 32
+  mov        word ptr [number_ems_pages], SCAT_PAGE_FRAME_COUNT
 
   ; one handle for now
   mov        word ptr [handle_count], 01h
