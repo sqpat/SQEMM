@@ -12,9 +12,11 @@
 
 SCAMP_CHIPSET = 1
 SCAT_CHIPSET = 2
+HT18_CHIPSET = 3
 
 ;COMPILE_CHIPSET = SCAMP_CHIPSET
-COMPILE_CHIPSET = SCAMP_CHIPSET
+;COMPILE_CHIPSET = SCAT_CHIPSET
+COMPILE_CHIPSET = HT18_CHIPSET
 
 
 CONST_HANDLE_TABLE_LENGTH = 0FFh
@@ -38,6 +40,19 @@ SCAT_PAGE_FRAME_COUNT = 32
 ; 0080 is [currently hardcoded] 2 MB offset for beginning of EMS pagination,
 SCAT_PAGE_OFFSET_AMT = 08080h
 SCAT_CHIPSET_UNMAP_VALUE = 03FFh
+
+; 1Ch for D000. 18h for C000 if we were to use that.
+HT18_PAGE_REGISTER_OFFSET = 01Ch
+HT18_EMS_CONFIG_REGISTER = 00h
+HT18_CHIPSET_CONFIG_REGISTER_SELECT = 1EDh
+HT18_CHIPSET_CONFIG_REGISTER_READWRITE = 1EFh
+; todo correct?
+HT18_PAGE_OFFSET_AMT = 0280h
+HT18_PAGE_SELECT_REGISTER = 01EEh
+HT18_PAGE_SET_REGISTER = 01ECh
+HT18_PAGE_FRAME_COUNT = 32
+HT18_CHIPSET_UNMAP_VALUE = 0000h
+
 
 
 .CODE
@@ -165,6 +180,17 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   dw 0D000h, 0018h, 0D400h, 0019h, 0D800h, 001Ah, 0DC00h, 001Bh
   dw 0E000h, 001Ch, 0E400h, 001Dh, 0E800h, 001Eh, 0EC00h, 001Fh
  
+ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
+
+  dw 04000h, 0000h, 04400h, 0001h, 04800h, 0002h, 04C00h, 0003h
+  dw 05000h, 0004h, 05400h, 0005h, 05800h, 0006h, 05C00h, 0007h
+  dw 06000h, 0008h, 06400h, 0009h, 06800h, 000Ah, 06C00h, 000Bh
+  dw 07000h, 000Ch, 07400h, 000Eh, 07800h, 000Eh, 07C00h, 000Fh
+  dw 08000h, 0010h, 08400h, 0011h, 08800h, 0012h, 08C00h, 0013h
+  dw 09000h, 0014h, 09400h, 0015h, 09800h, 0016h, 09C00h, 0017h
+  dw 0C000h, 0018h, 0C400h, 0019h, 0C800h, 001Ah, 0CC00h, 001Bh
+  dw 0D000h, 001Ch, 0D400h, 001Dh, 0D800h, 001Eh, 0DC00h, 001Fh
+
 ENDIF
  
 ; CHIPSET SPECIFIC END
@@ -396,6 +422,58 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   pop cx
   iret
 
+ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
+
+  push cx
+  push bx
+  push si
+  push dx
+
+
+  ; physical page number mode
+  DO_NEXT_PAGE_5000:
+  ; next page in ax....
+  lodsw
+  mov        bx, ax
+  lodsw
+  ; read two words - bx and ax
+
+  mov   dx, HT18_PAGE_SELECT_REGISTER
+  
+  out   dx, al   ; select EMS page
+  mov   dx, HT18_PAGE_SET_REGISTER
+  cmp   bx, 0FFFFh   ; -1 check
+  je    handle_default_page
+
+  mov   ax, HT18_PAGE_OFFSET_AMT   ; offset by default starting page
+  add   ax, bx
+  out   dx, ax   ; write 16 bit page num. 
+
+  loop       DO_NEXT_PAGE_5000
+
+  ; exit fall thru
+  xor ax, ax
+  pop dx
+  pop si
+  pop bx
+  pop cx
+  iret
+
+  handle_default_page:
+  ; mapping to page -1
+  mov   ax, HT18_CHIPSET_UNMAP_VALUE
+  out   dx, ax   ; write 16 bit page num. 
+  loop       DO_NEXT_PAGE_5000
+
+
+  ; exit fall thru
+  xor ax, ax
+  pop dx
+  pop si
+  pop bx
+  pop cx
+  iret
+
 
 ENDIF
 
@@ -525,6 +603,70 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   handle_default_page_44h:
   ; mapping to page -1
   mov   ax, SCAT_CHIPSET_UNMAP_VALUE ; "turn off ems for this page" value
+  out   dx, ax   ; write 16 bit page num. 
+  
+  pop   dx
+  xor   ax, ax
+  iret
+
+  PAGE_OVERFLOW_3:
+  PAGE_UNDERFLOW_3:
+
+  mov        ah, 080h
+  iret
+
+  ; The memory manager couldn't find the EMM handle your program specified.
+  RETURN_RESULT_83:
+  mov        ah, 083h
+  iret
+
+  RETURN_RESULT_8A:
+  mov        ah, 08Ah
+  iret
+
+  RETURN_RESULT_8B:
+  mov        ah, 08Bh
+  iret
+
+
+ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
+
+  ; note: ht18 like scat maps 0-4 not to the page frame but rather to 4000-4c00
+  ; which is unfortunate. its not really backward compatible with 0-3 = page frame 3.2 style programming...
+  ; for now in sqemm, call 44h (a 3.2 call) will map 0-4 to the page frame and ignore backfill register addresses.
+
+  xor        ah, ah
+  cmp        ax, word ptr cs:[number_ems_pages]
+  jb         ENOUGH_PAGES
+  jmp        RETURN_RESULT_8B
+
+  ENOUGH_PAGES:
+  cmp        dx,  1
+  jne        RETURN_RESULT_83
+  
+  ; al and bx are still the args
+
+  push dx  
+ 
+  mov   dx, HT18_PAGE_SELECT_REGISTER
+  add   al, HT18_PAGE_REGISTER_OFFSET ; convert 0-4 to 1c-1f
+  out   dx, al   ; select EMS page
+  mov   dx, HT18_PAGE_SET_REGISTER
+  cmp   bx, 0FFFFh   ; -1 check
+  je    handle_default_page_44h
+  
+  mov   ax, HT18_PAGE_OFFSET_AMT   ; offset by default starting page
+  add   ax, bx
+  out   dx, ax   ; write 16 bit page num. 
+  
+  pop   dx
+  xor   ax, ax
+  iret
+
+
+  handle_default_page_44h:
+  ; mapping to page -1
+  mov   ax, HT18_CHIPSET_UNMAP_VALUE ; "turn off ems for this page" value
   out   dx, ax   ; write 16 bit page num. 
   
   pop   dx
@@ -1242,6 +1384,8 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
   string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for VLSI SCAMP', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for C&T SCAT', 0Dh, 0Ah,'$'
+ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Headland HT-18', 0Dh, 0Ah,'$'
 ENDIF
 
 
@@ -1364,6 +1508,28 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   out SCAT_CHIPSET_CONFIG_REGISTER_SELECT, al
   mov al, 0C0h   ; enable EMS, and make registers writeable
   out SCAT_CHIPSET_CONFIG_REGISTER_READWRITE, al
+
+  ; hard coded to d000 for now
+  mov        word ptr [page_frame_segment], 0D000h
+
+  ; 256 pages hardcoded for now
+  mov        word ptr [unallocated_page_count], CONST_PAGE_COUNT
+  mov        word ptr [total_page_count], CONST_PAGE_COUNT
+  mov        word ptr [number_ems_pages], SCAT_PAGE_FRAME_COUNT
+
+  ; one handle for now
+  mov        word ptr [handle_count], 01h
+
+ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
+
+; enable writes to registers...
+  mov al, HT18_EMS_CONFIG_REGISTER
+  mov dx, HT18_CHIPSET_CONFIG_REGISTER_SELECT
+  out dx, al
+  mov dx, HT18_CHIPSET_CONFIG_REGISTER_READWRITE
+  in al, dx
+  or al, 02h                                        ; enable EMS flag on
+  out dx, al
 
   ; hard coded to d000 for now
   mov        word ptr [page_frame_segment], 0D000h

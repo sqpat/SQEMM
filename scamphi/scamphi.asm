@@ -43,6 +43,45 @@ out 0EDh, al
 nop
 nop
 
+; TOPCAT SPECIFIC
+
+
+mov  al, 08h
+out 0E8h, al
+nop
+mov  ax, 0F830h
+out 0EAh, ax   ; set a page for e000
+nop
+
+mov  al, 09h
+out 0E8h, al
+nop
+mov  ax, 0F831h
+out 0EAh, ax   ; set a page for e400
+nop
+
+mov  al, 0Ah
+out 0E8h, al
+nop
+mov  ax, 0F832h
+out 0EAh, ax   ; set a page for e800
+nop
+
+mov  al, 0Bh
+out 0E8h, al
+nop
+mov  ax, 0F833h
+out 0EAh, ax   ; set a page for ec00
+nop
+
+mov  al, 02h
+out 0E8h, al
+nop
+mov  ax, 0F834h
+out 0EAh, ax   ; set a page for c800
+nop
+nop
+
 
 
 mov        word ptr ds:[bx + 3], 0810Ch    ; general failure

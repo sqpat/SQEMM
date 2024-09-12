@@ -1,6 +1,6 @@
 Open Watcom Linker Version 1.9
 Portions Copyright (c) 1985-2002 Sybase, Inc. All Rights Reserved.
-Created on:       24/08/26 16:59:53
+Created on:       24/09/11 14:08:45
 Executable Image: scamphi.exe
 creating a DOS executable
 
@@ -12,7 +12,7 @@ creating a DOS executable
 Group                           Address              Size
 =====                           =======              ====
 
-DGROUP                          0000:0000            00000056
+DGROUP                          0000:0000            0000008e
 
 
 
@@ -23,8 +23,8 @@ DGROUP                          0000:0000            00000056
 Segment                Class          Group          Address         Size
 =======                =====          =====          =======         ====
 
-_TEXT                  CODE           DGROUP         0000:0000       00000056
-_DATA                  DATA           DGROUP         0005:0006       00000000
+_TEXT                  CODE           DGROUP         0000:0000       0000008e
+_DATA                  DATA           DGROUP         0008:000e       00000000
 
 
                         +----------------+
@@ -46,6 +46,6 @@ Warning! W1023: no starting address found, using 0000:0000
                         +-----------------------+
 
 Stack size:  09e8 (2536.)
-Memory size:  0056 (86.)
+Memory size:  008e (142.)
 Entry point address: 0000:0000
 Link time: 00:00.00
