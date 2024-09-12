@@ -1,0 +1,21 @@
+CCOPTS = -zp1 -oaxet -oi -zq -j -mm -0 -s -zdp -d__COMPILER_WATCOM
+
+GLOBOBJS = &
+ topcathi.obj
+
+topcathi.exe : $(GLOBOBJS)
+ wlink @topcathi.lnk
+ wstrip topcathi.exe
+ exe2bin topcathi.exe
+ move topcathi.bin topcathi.sys /Y
+
+.c.obj :
+ wcc $(CCOPTS) $[*
+
+.asm.obj :
+ tasm /m4 $[*
+
+clean : .SYMBOLIC
+ del *.obj
+ del *.err
+ del topcathi.sys
