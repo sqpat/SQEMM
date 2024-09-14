@@ -13,10 +13,14 @@
 SCAMP_CHIPSET = 1
 SCAT_CHIPSET = 2
 HT18_CHIPSET = 3
+HT12_CHIPSET = 4
+HEDAKA_CHIPSET = 5
 
 ;COMPILE_CHIPSET = SCAMP_CHIPSET
 ;COMPILE_CHIPSET = SCAT_CHIPSET
-COMPILE_CHIPSET = HT18_CHIPSET
+;COMPILE_CHIPSET = HT18_CHIPSET
+COMPILE_CHIPSET = HT12_CHIPSET
+;COMPILE_CHIPSET = HEDAKA_CHIPSET
 
 
 CONST_HANDLE_TABLE_LENGTH = 0FFh
@@ -53,6 +57,31 @@ HT18_PAGE_SET_REGISTER = 01ECh
 HT18_PAGE_FRAME_COUNT = 32
 HT18_CHIPSET_UNMAP_VALUE = 0000h
 
+
+HEDAKA_PAGE_REGISTER_0 = 00208h
+HEDAKA_PAGE_REGISTER_1 = 04208h
+HEDAKA_PAGE_REGISTER_2 = 08208h
+HEDAKA_PAGE_REGISTER_3 = 0C208h
+; A8 puts us right after 9c00... 
+; chipset doesnt seem to allow for more than 2MB EMS addressable INCLUDING conventional memory (?)
+HEDAKA_PAGE_OFFSET_AMT = 0B0h
+HEDAKA_PAGE_FRAME_COUNT = 4
+HEDAKA_CHIPSET_UNMAP_VALUE = 00h
+
+
+; 1Ch for D000. 18h for C000 if we were to use that.
+
+HT12_PAGE_REGISTER_0 = 020h
+HT12_PAGE_REGISTER_1 = 021h
+HT12_PAGE_REGISTER_2 = 022h
+HT12_PAGE_REGISTER_3 = 023h
+HT12_EMS_CONFIG_REGISTER = 019h
+HT12_CHIPSET_CONFIG_REGISTER_SELECT = 1EDh
+HT12_CHIPSET_CONFIG_REGISTER_READWRITE = 1EFh
+HT12_PAGE_OFFSET_AMT = 48h
+HT12_PAGE_SELECT_REGISTER = 01EDh
+HT12_PAGE_SET_REGISTER = 01EFh
+HT12_PAGE_FRAME_COUNT = 4
 
 
 .CODE
@@ -190,6 +219,14 @@ ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
   dw 09000h, 0014h, 09400h, 0015h, 09800h, 0016h, 09C00h, 0017h
   dw 0C000h, 0018h, 0C400h, 0019h, 0C800h, 001Ah, 0CC00h, 001Bh
   dw 0D000h, 001Ch, 0D400h, 001Dh, 0D800h, 001Eh, 0DC00h, 001Fh
+
+ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
+
+  dw 0D000h, 0000h, 0D400h, 0001h, 0D800h, 0002h, 0DC00h, 0003h
+
+ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
+
+  dw 0D000h, 0000h, 0D400h, 0001h, 0D800h, 0002h, 0DC00h, 0003h
 
 ENDIF
  
@@ -474,6 +511,153 @@ ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
   pop cx
   iret
 
+ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
+
+  push cx
+  push si
+  push dx
+  push bx
+
+
+  ; physical page number mode
+  DO_NEXT_PAGE_5000:
+
+  ; preselect the register for the page on/off 
+
+  mov dx, HT12_CHIPSET_CONFIG_REGISTER_SELECT
+  mov ax, HT12_EMS_CONFIG_REGISTER
+  out dx, al
+  mov dx, HT12_CHIPSET_CONFIG_REGISTER_READWRITE
+  in  al, dx   ; read in the port. we are going to AND the page on...
+
+  mov bl, al   ; store value in bl..
+
+  ; lets load next argument.
+  lodsw
+
+  push cx
+  mov        cl, al
+
+
+  ; read two words - dx and ax
+
+  
+  mov dl, 1
+  sal dl, cl ; turn on the bit for this page
+
+  lodsw
+
+  
+  ; bl has previous config register  contents  
+  ; cl has page number
+  ; dl is ready to be ored etc
+  
+  
+  cmp   ax, 0FFFFh   ; -1 check
+  je    handle_default_page
+
+  xchg ax, bx
+  or  al, dl  ; page is turned on
+  mov dx, HT12_CHIPSET_CONFIG_REGISTER_READWRITE
+  out dx, al  ; page has been turned on (in case it was off)
+
+  mov ax, cx
+  add al, HT12_PAGE_REGISTER_0  ; add by page 0 offset
+  mov dx, HT12_CHIPSET_CONFIG_REGISTER_SELECT
+  out dx, al    ; select page
+
+  mov dx, HT12_CHIPSET_CONFIG_REGISTER_READWRITE
+  mov ax, bx
+  add al, HT12_PAGE_OFFSET_AMT
+  out dx, al ; write page
+
+  pop cx
+
+  loop       DO_NEXT_PAGE_5000
+
+  ; exit fall thru
+  xor ax, ax
+  pop bx
+  pop dx
+  pop si
+  pop cx
+  iret
+
+  handle_default_page:
+  ; mapping to page -1
+
+  
+  mov al, bl  
+  not dl
+  and al, dl  ; page is turned off
+  mov dx, HT12_CHIPSET_CONFIG_REGISTER_READWRITE
+  out dx, al  ; page has been turned on (in case it was off)
+
+  pop cx
+
+  loop       DO_NEXT_PAGE_5000
+
+
+  ; exit fall thru
+  xor ax, ax
+  pop bx
+  pop dx
+  pop si
+  pop cx
+  iret
+
+
+ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
+
+push cx
+  push si
+  push dx
+
+
+  ; physical page number mode
+  DO_NEXT_PAGE_5000:
+  ; next page in ax....
+  lodsw
+  mov        dx, ax
+  lodsw
+  ; read two words - bx and ax
+
+  ror   ax, 2
+  ; 0-4 becomes 0208, 4208, 8208, c208
+  add   ax, HEDAKA_PAGE_REGISTER_0
+
+  xchg  dx, ax
+
+  cmp   ax, 0FFFFh   ; -1 check
+  je    handle_default_page
+
+  add    ax, HEDAKA_PAGE_OFFSET_AMT   ; turn on EMS ON bit and add conventional offset
+  out   dx, al   ; write 8 bit page num. 
+
+  loop       DO_NEXT_PAGE_5000
+
+  ; exit fall thru
+  xor ax, ax
+  pop dx
+  pop si
+  pop cx
+  iret
+
+  handle_default_page:
+  ; mapping to page -1
+  mov   ax, HEDAKA_CHIPSET_UNMAP_VALUE
+  out   dx, al   ; write 8 bit page num. 
+  loop       DO_NEXT_PAGE_5000
+
+
+  ; exit fall thru
+  xor ax, ax
+  pop dx
+  pop si
+  pop bx
+  pop cx
+  iret
+
 
 ENDIF
 
@@ -671,6 +855,155 @@ ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
   
   pop   dx
   xor   ax, ax
+  iret
+
+  PAGE_OVERFLOW_3:
+  PAGE_UNDERFLOW_3:
+
+  mov        ah, 080h
+  iret
+
+  ; The memory manager couldn't find the EMM handle your program specified.
+  RETURN_RESULT_83:
+  mov        ah, 083h
+  iret
+
+  RETURN_RESULT_8A:
+  mov        ah, 08Ah
+  iret
+
+  RETURN_RESULT_8B:
+  mov        ah, 08Bh
+  iret
+
+ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
+
+  xor        ah, ah
+  cmp        ax, word ptr cs:[number_ems_pages]
+  jb         ENOUGH_PAGES
+  jmp        RETURN_RESULT_8B
+
+  ENOUGH_PAGES:
+  cmp        dx,  1
+  jne        RETURN_RESULT_83
+  
+  ; al and bx are still the args
+
+  push cx
+  push dx
+
+
+  mov cx, ax  ; page number
+
+  mov dx, HT12_CHIPSET_CONFIG_REGISTER_SELECT
+  mov ax, HT12_EMS_CONFIG_REGISTER
+  out dx, al
+  
+  mov dx, HT12_CHIPSET_CONFIG_REGISTER_READWRITE
+  in  al, dx   ; read in the port. we are going to AND the page on...
+  mov dl, 1
+  sal dl, cl ; get the bit for the page
+
+  cmp   bx, 0FFFFh   ; -1 check
+  je    handle_default_page_44h
+
+  or  al, dl  ; page is turned on
+  mov dx, HT12_CHIPSET_CONFIG_REGISTER_READWRITE
+  out dx, al  ; page has been turned on (in case it was off)
+
+  mov ax, cx
+  add al, HT12_PAGE_REGISTER_0  ; add by page 0 offset
+  mov dx, HT12_CHIPSET_CONFIG_REGISTER_SELECT
+  out dx, al    ; select page
+
+  mov dx, HT12_CHIPSET_CONFIG_REGISTER_READWRITE
+  mov ax, bx
+  add al, HT12_PAGE_OFFSET_AMT
+  out dx, al ; write page
+
+  pop dx
+  pop cx
+  xor ax, ax
+  iret
+
+
+  handle_default_page_44h:
+  ; mapping to page -1
+  ; if we turn off the page then we must update the page bit...
+
+
+  ; turn off the page
+  not dx
+  and al, dl   ; turn off page bit
+  mov dx, HT12_CHIPSET_CONFIG_REGISTER_READWRITE
+  out dx, al  ; page is now turned off
+
+  pop dx
+  pop cx
+  xor ax, ax
+  iret
+
+  PAGE_OVERFLOW_3:
+  PAGE_UNDERFLOW_3:
+
+  mov        ah, 080h
+  iret
+
+  ; The memory manager couldn't find the EMM handle your program specified.
+  RETURN_RESULT_83:
+  mov        ah, 083h
+  iret
+
+  RETURN_RESULT_8A:
+  mov        ah, 08Ah
+  iret
+
+  RETURN_RESULT_8B:
+  mov        ah, 08Bh
+  iret
+
+ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
+
+  ; page frame's pages are 208, 4208, 8208, c208. Technicaly x209 works too.
+
+  xor        ah, ah
+  cmp        ax, word ptr cs:[number_ems_pages]
+  jb         ENOUGH_PAGES
+  jmp        RETURN_RESULT_8B
+
+  ENOUGH_PAGES:
+  cmp        dx,  1
+  jne        RETURN_RESULT_83
+  
+  ; al and bx are still the args
+
+  push dx  
+ 
+  ror ax, 2
+  add ax, HEDAKA_PAGE_REGISTER_0
+
+  ; 0-4 becomes 0208h, 4208h, 8208h, c208h
+  mov dx, ax
+
+  cmp   bx, 0FFFFh   ; -1 check
+  je    handle_default_page_44h
+
+  mov ax, bx
+  add    ax, HEDAKA_PAGE_OFFSET_AMT   ; turn on EMS ON bit and add conventional offset
+  out   dx, al   ; write 16 bit page num. 
+
+  pop   dx
+  xor   ax, ax
+  iret
+
+
+  handle_default_page_44h:
+  ; mapping to page -1
+  mov   ax, HEDAKA_CHIPSET_UNMAP_VALUE ; "turn off ems for this page" value
+  out   dx, al   ; write 16 bit page num. 
+  
+  pop   dx
+  ;xor   ax, ax   ; already 0 above
   iret
 
   PAGE_OVERFLOW_3:
@@ -1385,7 +1718,11 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for C&T SCAT', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Headland HT-18', 0Dh, 0Ah,'$'
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Headland HT-18, HT-21, HT-22, HT-25', 0Dh, 0Ah,'$'
+ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Headland HT-12', 0Dh, 0Ah,'$'
+ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for HEDAKA/CITYGATE/PCCHIPS Chipsets', 0Dh, 0Ah,'$'
 ENDIF
 
 
@@ -1537,7 +1874,92 @@ ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
   ; 256 pages hardcoded for now
   mov        word ptr [unallocated_page_count], CONST_PAGE_COUNT
   mov        word ptr [total_page_count], CONST_PAGE_COUNT
-  mov        word ptr [number_ems_pages], SCAT_PAGE_FRAME_COUNT
+  mov        word ptr [number_ems_pages], HT18_PAGE_FRAME_COUNT
+
+  ; one handle for now
+  mov        word ptr [handle_count], 01h
+
+ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
+
+  ; initialization of registers
+  mov   dx, HT12_PAGE_SELECT_REGISTER
+  mov   al, HT12_EMS_CONFIG_REGISTER 
+  out   dx, al   
+
+  ; enable ems
+  mov   dx, HT12_PAGE_SET_REGISTER
+  mov   al, 0CFh  ; select all 4 pages on, D000 page frame, EMS ON
+  out   dx, al   
+
+  ; set default page 0
+  mov   dx, HT12_PAGE_SELECT_REGISTER
+  mov   al, HT12_PAGE_REGISTER_0
+  out   dx, al   
+
+  mov   dx, HT12_PAGE_SET_REGISTER
+  mov   al, HT12_PAGE_OFFSET_AMT + 0
+  out   dx, al   
+  ; set default page 1
+  mov   dx, HT12_PAGE_SELECT_REGISTER
+  mov   al, HT12_PAGE_REGISTER_1
+  out   dx, al   
+
+  mov   dx, HT12_PAGE_SET_REGISTER
+  mov   al, HT12_PAGE_OFFSET_AMT + 1
+  out   dx, al   
+  ; set default page 2
+  mov   dx, HT12_PAGE_SELECT_REGISTER
+  mov   al, HT12_PAGE_REGISTER_2
+  out   dx, al   
+
+  mov   dx, HT12_PAGE_SET_REGISTER
+  mov   al, HT12_PAGE_OFFSET_AMT + 2
+  out   dx, al   
+  ; set default page 3
+  mov   dx, HT12_PAGE_SELECT_REGISTER
+  mov   al, HT12_PAGE_REGISTER_3
+  out   dx, al   
+
+  mov   dx, HT12_PAGE_SET_REGISTER
+  mov   al, HT12_PAGE_OFFSET_AMT + 3
+  out   dx, al   
+
+
+  ; hard coded to d000 for now
+  mov        word ptr [page_frame_segment], 0D000h
+
+  ; 256 pages hardcoded for now
+  mov        word ptr [unallocated_page_count], CONST_PAGE_COUNT
+  mov        word ptr [total_page_count], CONST_PAGE_COUNT
+  mov        word ptr [number_ems_pages], HEDAKA_PAGE_FRAME_COUNT
+
+  ; one handle for now
+  mov        word ptr [handle_count], 01h
+
+ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
+
+; todo: enable ems if not set in bios? dont know registers 
+; initialization of registers
+  mov   dx, 0208h
+  mov   ax, 080h 
+  out   dx, al   ; write 8 bit page num. 
+  add   dh, 040h
+  inc   al
+  out   dx, al   ; write 8 bit page num. 
+  add   dh, 040h
+  inc   al
+  out   dx, al   ; write 8 bit page num. 
+  add   dh, 040h
+  inc   al
+  out   dx, al   ; write 8 bit page num. 
+
+  ; hard coded to d000 for now
+  mov        word ptr [page_frame_segment], 0D000h
+
+  ; 256 pages hardcoded for now
+  mov        word ptr [unallocated_page_count], CONST_PAGE_COUNT
+  mov        word ptr [total_page_count], CONST_PAGE_COUNT
+  mov        word ptr [number_ems_pages], HEDAKA_PAGE_FRAME_COUNT
 
   ; one handle for now
   mov        word ptr [handle_count], 01h
