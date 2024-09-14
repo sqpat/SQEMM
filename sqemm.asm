@@ -1,14 +1,5 @@
-; overview of file:
-; first 0Ah bytes: standard sys header
-; up to 062h: data, pointers
-; 062h to 0BDh: entry points to driver
-; then several thousand bytes of data
-; then the main code, including accessory functions, ems functions, and driver init entry point.
+; BUILD FLAGS - uncomment one
 
-	.286
-	.MODEL  tiny
-	
-.DATA
 
 SCAMP_CHIPSET = 1
 SCAT_CHIPSET = 2
@@ -23,6 +14,17 @@ LOTECH_BOARD = 6
 ;COMPILE_CHIPSET = HT12_CHIPSET
 ;COMPILE_CHIPSET = HEDAKA_CHIPSET
 COMPILE_CHIPSET = LOTECH_BOARD
+
+IF COMPILE_CHIPSET EQ LOTECH_BOARD
+	.8086
+ELSE
+	.286
+ENDIF
+
+	.MODEL  tiny
+	
+.DATA
+
 
 
 CONST_HANDLE_TABLE_LENGTH = 0FFh
