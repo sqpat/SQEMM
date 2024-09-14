@@ -21,6 +21,8 @@ lds bx,  cs:[driver_arguments]
 
 out 0FBh, al  ; dummy write config enable
 
+COMMENT @
+
 mov  al, 00Fh
 out 0ECh, al
 nop
@@ -31,6 +33,8 @@ nop
 out 0EDh, al
 nop
 nop
+
+@
 
 mov  al, 011h
 out 0ECh, al
@@ -70,6 +74,7 @@ mov  ax, 0F833h
 out 0EAh, ax   ; set a page for ec00
 nop
 
+COMMENT @
 mov  al, 02h
 out 0E8h, al
 nop
@@ -78,6 +83,7 @@ out 0EAh, ax   ; set a page for c800
 nop
 nop
 
+@
 
 
 mov        word ptr ds:[bx + 3], 0810Ch    ; general failure

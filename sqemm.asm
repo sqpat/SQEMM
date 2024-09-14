@@ -15,18 +15,20 @@ SCAT_CHIPSET = 2
 HT18_CHIPSET = 3
 HT12_CHIPSET = 4
 HEDAKA_CHIPSET = 5
+LOTECH_BOARD = 6
 
-COMPILE_CHIPSET = SCAMP_CHIPSET
+;COMPILE_CHIPSET = SCAMP_CHIPSET
 ;COMPILE_CHIPSET = SCAT_CHIPSET
 ;COMPILE_CHIPSET = HT18_CHIPSET
 ;COMPILE_CHIPSET = HT12_CHIPSET
 ;COMPILE_CHIPSET = HEDAKA_CHIPSET
+COMPILE_CHIPSET = LOTECH_BOARD
 
 
 CONST_HANDLE_TABLE_LENGTH = 0FFh
 CONST_PAGE_COUNT = 256
 ; 80h represents 2 MB offset beyond EMS start point
-SCAMP_PAGE_OFFSET_AMT = 80h
+SCAMP_PAGE_OFFSET_AMT = 68h
 SCAMP_PAGE_SELECT_REGISTER = 0E8h
 SCAMP_PAGE_SET_REGISTER = 0EAh
 SCAMP_PAGE_FRAME_COUNT = 36
@@ -69,7 +71,6 @@ HEDAKA_PAGE_FRAME_COUNT = 4
 HEDAKA_CHIPSET_UNMAP_VALUE = 00h
 
 
-; 1Ch for D000. 18h for C000 if we were to use that.
 
 HT12_PAGE_REGISTER_0 = 020h
 HT12_PAGE_REGISTER_1 = 021h
@@ -82,6 +83,13 @@ HT12_PAGE_OFFSET_AMT = 48h
 HT12_PAGE_SELECT_REGISTER = 01EDh
 HT12_PAGE_SET_REGISTER = 01EFh
 HT12_PAGE_FRAME_COUNT = 4
+
+LOTECH_PAGE_REGISTER_0 = 0260h
+LOTECH_PAGE_REGISTER_1 = 0261h
+LOTECH_PAGE_REGISTER_2 = 0262h
+LOTECH_PAGE_REGISTER_3 = 0263h
+LOTECH_CHIPSET_UNMAP_VALUE = 0FFh
+LOTECH_PAGE_FRAME_COUNT = 4
 
 
 .CODE
@@ -225,6 +233,10 @@ ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
   dw 0D000h, 0000h, 0D400h, 0001h, 0D800h, 0002h, 0DC00h, 0003h
 
 ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
+
+  dw 0D000h, 0000h, 0D400h, 0001h, 0D800h, 0002h, 0DC00h, 0003h
+
+ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
 
   dw 0D000h, 0000h, 0D400h, 0001h, 0D800h, 0002h, 0DC00h, 0003h
 
@@ -609,7 +621,7 @@ ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
 
 ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
 
-push cx
+  push cx
   push si
   push dx
 
@@ -657,6 +669,36 @@ push cx
   pop bx
   pop cx
   iret
+ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
+
+  push cx
+  push si
+  push dx
+
+
+  ; physical page number mode
+  DO_NEXT_PAGE_5000:
+  ; next page in ax....
+
+  lodsw
+  add  ax,  LOTECH_PAGE_REGISTER_0
+  mov  dx, ax
+  lodsw
+
+  out   dx, al   ; write 8 bit page num. 
+
+  loop       DO_NEXT_PAGE_5000
+
+
+  ; exit fall thru
+  xor ax, ax
+  pop dx
+  pop si
+  pop bx
+  pop cx
+  iret
+
+
 
 
 ENDIF
@@ -1024,6 +1066,57 @@ ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
   RETURN_RESULT_8B:
   mov        ah, 08Bh
   iret
+ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
+
+
+  ; page frame's pages are 260h, 261h, 262h, 263h
+
+  xor        ah, ah
+  cmp        ax, word ptr cs:[number_ems_pages]
+  jb         ENOUGH_PAGES
+  jmp        RETURN_RESULT_8B
+
+  ENOUGH_PAGES:
+  cmp        dx,  1
+  jne        RETURN_RESULT_83
+  
+  ; al and bx are still the args
+
+  push dx  
+ 
+
+
+  add ax, LOTECH_PAGE_REGISTER_0
+  mov dx, ax
+  mov ax, bx
+
+  ; since FF works as an unmap, lets just write that.
+
+  out   dx, al   ; write 16 bit page num. 
+  
+  pop   dx
+  xor   ax, ax   ; already 0 above
+  iret
+
+  PAGE_OVERFLOW_3:
+  PAGE_UNDERFLOW_3:
+
+  mov        ah, 080h
+  iret
+
+  ; The memory manager couldn't find the EMM handle your program specified.
+  RETURN_RESULT_83:
+  mov        ah, 083h
+  iret
+
+  RETURN_RESULT_8A:
+  mov        ah, 08Ah
+  iret
+
+  RETURN_RESULT_8B:
+  mov        ah, 08Bh
+  iret
+
 
 ENDIF
 
@@ -1723,6 +1816,8 @@ ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
   string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Headland HT-12', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
   string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for HEDAKA/CITYGATE/PCCHIPS Chipsets', 0Dh, 0Ah,'$'
+ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Lo-tech EMS Board', 0Dh, 0Ah,'$'
 ENDIF
 
 
@@ -1960,6 +2055,32 @@ ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
   mov        word ptr [unallocated_page_count], CONST_PAGE_COUNT
   mov        word ptr [total_page_count], CONST_PAGE_COUNT
   mov        word ptr [number_ems_pages], HEDAKA_PAGE_FRAME_COUNT
+
+  ; one handle for now
+  mov        word ptr [handle_count], 01h
+
+ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
+
+  mov   dx, LOTECH_PAGE_REGISTER_0
+  mov   ax, 000h 
+  out   dx, al   ; write 8 bit page num. 
+  inc   dx
+  inc   al
+  out   dx, al   ; write 8 bit page num. 
+  inc   dx
+  inc   al
+  out   dx, al   ; write 8 bit page num. 
+  inc   dx
+  inc   al
+  out   dx, al   ; write 8 bit page num. 
+
+  ; hard coded to d000 for now
+  mov        word ptr [page_frame_segment], 0D000h
+
+  ; 256 pages hardcoded for now
+  mov        word ptr [unallocated_page_count], CONST_PAGE_COUNT
+  mov        word ptr [total_page_count], CONST_PAGE_COUNT
+  mov        word ptr [number_ems_pages], LOTECH_PAGE_FRAME_COUNT
 
   ; one handle for now
   mov        word ptr [handle_count], 01h
