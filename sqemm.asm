@@ -90,7 +90,7 @@ LOTECH_PAGE_REGISTER_2 = 0262h
 LOTECH_PAGE_REGISTER_3 = 0263h
 LOTECH_CHIPSET_UNMAP_VALUE = 0FFh
 LOTECH_PAGE_FRAME_COUNT = 4
-
+LOTECH_CONST_PAGE_COUNT = 128
 
 .CODE
 
@@ -694,7 +694,6 @@ ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
   xor ax, ax
   pop dx
   pop si
-  pop bx
   pop cx
   iret
 
@@ -1084,8 +1083,6 @@ ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
 
   push dx  
  
-
-
   add ax, LOTECH_PAGE_REGISTER_0
   mov dx, ax
   mov ax, bx
@@ -1095,7 +1092,7 @@ ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
   out   dx, al   ; write 16 bit page num. 
   
   pop   dx
-  xor   ax, ax   ; already 0 above
+  xor   ax, ax  
   iret
 
   PAGE_OVERFLOW_3:
