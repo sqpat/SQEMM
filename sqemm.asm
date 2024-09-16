@@ -9,6 +9,7 @@ HEDAKA_CHIPSET = 5
 LOTECH_BOARD = 6
 NEAT_CHIPSET = 7
 INTEL_ABOVEBOARD = 8
+SARC_RC2016A = 9
 
 ;COMPILE_CHIPSET = SCAMP_CHIPSET
 ;COMPILE_CHIPSET = SCAT_CHIPSET
@@ -17,12 +18,13 @@ INTEL_ABOVEBOARD = 8
 ;COMPILE_CHIPSET = HEDAKA_CHIPSET
 ;COMPILE_CHIPSET = LOTECH_BOARD
 ;COMPILE_CHIPSET =  NEAT_CHIPSET
-COMPILE_CHIPSET =  INTEL_ABOVEBOARD
+;COMPILE_CHIPSET =  INTEL_ABOVEBOARD
+COMPILE_CHIPSET =  SARC_RC2016A
 
 
 IF COMPILE_CHIPSET EQ LOTECH_BOARD
-	.8086
 ELIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
+	.8086
 ELSE
 	.286
 ENDIF
@@ -124,6 +126,24 @@ INTEL_AB_PAGE_OFFSET_AMT = 080h
 INTEL_AB_CHIPSET_UNMAP_VALUE = 00h
 INTEL_AB_PAGE_FRAME_COUNT = 4
 INTEL_AB_CONST_PAGE_COUNT = 128
+
+
+
+SARC_RC2016_CHIPSET_INDEX_PORT = 022h
+SARC_RC2016_CHIPSET_VALUE_PORT = 023h
+
+SARC_RC2016_PAGE_REGISTER_0 = 088h
+SARC_RC2016_PAGE_REGISTER_1 = 08Ah
+SARC_RC2016_PAGE_REGISTER_2 = 08Ch
+SARC_RC2016_PAGE_REGISTER_3 = 08Eh
+
+; sets pages d000, d400, d800, dc00 to 
+SARC_RC2016_BASE_PAGE_REGISTER_0 = 0c4h
+
+SARC_RC2016_PAGE_OFFSET_AMT = 020h
+SARC_RC2016_CHIPSET_UNMAP_VALUE = 00h
+SARC_RC2016_PAGE_FRAME_COUNT = 4
+SARC_RC2016_CONST_PAGE_COUNT = 128
 
 .CODE
 
@@ -278,6 +298,10 @@ ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
   dw 0D000h, 0000h, 0D400h, 0001h, 0D800h, 0002h, 0DC00h, 0003h
 
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
+
+  dw 0D000h, 0000h, 0D400h, 0001h, 0D800h, 0002h, 0DC00h, 0003h
+
+ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
 
   dw 0D000h, 0000h, 0D400h, 0001h, 0D800h, 0002h, 0DC00h, 0003h
 
@@ -792,6 +816,95 @@ ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
   iret
 
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
+
+  push cx
+  push si
+  push dx
+
+  ; physical page number mode
+  DO_NEXT_PAGE_5000:
+  ; next page in ax....
+
+  lodsw
+  mov  dx, ax
+  lodsw
+
+
+  cmp dx, 0FFFFh
+  je    handle_default_page
+
+  mov ah, al
+  sal al, 1
+  add al, SARC_RC2016_PAGE_REGISTER_0
+
+  out  SARC_RC2016_CHIPSET_INDEX_PORT, al
+
+  
+  mov al, ah 
+
+  add  al, 0C4h ; pages 0-4 map to d000-dc000
+
+  mov ah, dl
+  and ah, 03h
+  sal ah, 4
+  add al, ah
+
+  out  SARC_RC2016_CHIPSET_VALUE_PORT, al
+
+  and al, 03h  ; restore page number
+  sal al, 1
+  add al, SARC_RC2016_PAGE_REGISTER_0 + 1
+
+  out SARC_RC2016_CHIPSET_INDEX_PORT, al
+  mov ax, dx
+  sar ax, 2
+  add ax, SARC_RC2016_PAGE_OFFSET_AMT
+  out SARC_RC2016_CHIPSET_VALUE_PORT, al
+ 
+
+  loop       DO_NEXT_PAGE_5000
+
+
+  ; exit fall thru
+  xor ax, ax
+  pop dx
+  pop si
+  pop cx
+  iret
+
+
+  handle_default_page:
+  ; mapping to page -1
+  ; dx is scratch, ax is page
+
+  mov dx, ax
+  add dx, SARC_RC2016_PAGE_REGISTER_0
+  add dx, ax
+  xchg dx, ax
+  ; select page register
+  out  SARC_RC2016_CHIPSET_INDEX_PORT, al
+  inc  ax     ; dx has next register
+  xchg dx, ax
+  mov   al, 0h
+  out  SARC_RC2016_CHIPSET_VALUE_PORT, al
+  xchg dx, ax
+  out  SARC_RC2016_CHIPSET_INDEX_PORT, al
+  xor ax, ax
+  out  SARC_RC2016_CHIPSET_VALUE_PORT, al
+
+
+  loop       DO_NEXT_PAGE_5000
+
+  ; exit fall thru
+  xor ax, ax
+  pop dx
+  pop si
+  pop bx
+  pop cx
+  iret
+
+ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
+
 
   push cx
   push si
@@ -1376,6 +1489,99 @@ ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
   RETURN_RESULT_8B:
   mov        ah, 08Bh
   iret
+
+ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
+
+  xor        ah, ah
+  cmp        ax, word ptr cs:[pageable_frame_count]
+  jb         ENOUGH_PAGES
+  jmp        RETURN_RESULT_8B
+
+  ENOUGH_PAGES:
+  cmp        dx,  1
+  jne        RETURN_RESULT_83
+  
+  
+  ; al and bx are still the args
+
+  ; 88h + 2*ax
+  mov  ah, SARC_RC2016_PAGE_REGISTER_0
+  add  ah, al
+  add  ah, al
+
+  xchg ah, al
+ 
+
+  out  SARC_RC2016_CHIPSET_INDEX_PORT, al
+  inc  al     
+  xchg ah, al  
+
+  cmp   bx, 0FFFFh   ; -1 check
+  je    handle_default_page_44h
+
+
+  add  al, 0C4h ; pages 0-4 map to d000-dc000
+
+
+  ; ah is now the next port to write to.
+  ; al contains bits 0-3 (d000  page frame target)
+  ;    and bits 6-7 (conventional mapping)
+  ;    needs bits 4-5 (bits 1-2 of bx)
+
+  mov ah, bl
+  and ah, 03h
+  sal ah, 4
+  add al, ah
+
+  out  SARC_RC2016_CHIPSET_VALUE_PORT, al
+  and al, 03
+
+  sal al, 1
+  add al, SARC_RC2016_PAGE_REGISTER_0 + 1
+  out  SARC_RC2016_CHIPSET_INDEX_PORT, al
+  mov ax, bx
+  sar ax, 2
+  add al, SARC_RC2016_PAGE_OFFSET_AMT
+  out SARC_RC2016_CHIPSET_VALUE_PORT, al
+
+  xor   ax, ax  
+  iret
+
+  handle_default_page_44h:
+  ; mapping to page -1
+
+  mov   al, 00h
+  out  SARC_RC2016_CHIPSET_VALUE_PORT, al
+  xchg ah, al
+
+
+  out  SARC_RC2016_CHIPSET_INDEX_PORT, al
+  
+  xor   ax, ax
+
+  out  SARC_RC2016_CHIPSET_VALUE_PORT, al
+
+  iret
+
+  PAGE_OVERFLOW_3:
+  PAGE_UNDERFLOW_3:
+
+  mov        ah, 080h
+  iret
+
+  ; The memory manager couldn't find the EMM handle your program specified.
+  RETURN_RESULT_83:
+  mov        ah, 083h
+  iret
+
+  RETURN_RESULT_8A:
+  mov        ah, 08Ah
+  iret
+
+  RETURN_RESULT_8B:
+  mov        ah, 08Bh
+  iret
+
 
 ENDIF
 
@@ -2081,6 +2287,8 @@ ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
   string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Chips NEAT', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
   string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Intel Above Board', 0Dh, 0Ah,'$'
+ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for SARC RC2016A', 0Dh, 0Ah,'$'
 ENDIF
 
 
@@ -2403,6 +2611,61 @@ ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
   mov        word ptr [unallocated_page_count], INTEL_AB_CONST_PAGE_COUNT
   mov        word ptr [total_page_count], INTEL_AB_CONST_PAGE_COUNT
   mov        word ptr [pageable_frame_count], INTEL_AB_PAGE_FRAME_COUNT
+
+  ; one handle for now
+  mov        word ptr [handle_count], 01h
+
+ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
+
+  mov   ax, SARC_RC2016_PAGE_REGISTER_0
+  out   SARC_RC2016_CHIPSET_INDEX_PORT, al  
+  mov   ax, SARC_RC2016_BASE_PAGE_REGISTER_0
+  out   SARC_RC2016_CHIPSET_VALUE_PORT, al  
+
+  mov   ax, SARC_RC2016_PAGE_REGISTER_0 + 1
+  out   SARC_RC2016_CHIPSET_INDEX_PORT, al  
+  mov   ax, SARC_RC2016_PAGE_OFFSET_AMT
+  out   SARC_RC2016_CHIPSET_VALUE_PORT, al  
+
+  mov   ax, SARC_RC2016_PAGE_REGISTER_1
+  out   SARC_RC2016_CHIPSET_INDEX_PORT, al  
+  mov   ax, SARC_RC2016_BASE_PAGE_REGISTER_0+1
+  out   SARC_RC2016_CHIPSET_VALUE_PORT, al  
+
+  mov   ax, SARC_RC2016_PAGE_REGISTER_1 + 1
+  out   SARC_RC2016_CHIPSET_INDEX_PORT, al  
+  mov   ax, SARC_RC2016_PAGE_OFFSET_AMT
+  out   SARC_RC2016_CHIPSET_VALUE_PORT, al  
+
+  mov   ax, SARC_RC2016_PAGE_REGISTER_2
+  out   SARC_RC2016_CHIPSET_INDEX_PORT, al  
+  mov   ax, SARC_RC2016_BASE_PAGE_REGISTER_0+2
+  out   SARC_RC2016_CHIPSET_VALUE_PORT, al  
+
+  mov   ax, SARC_RC2016_PAGE_REGISTER_2 + 1
+  out   SARC_RC2016_CHIPSET_INDEX_PORT, al  
+  mov   ax, SARC_RC2016_PAGE_OFFSET_AMT
+  out   SARC_RC2016_CHIPSET_VALUE_PORT, al  
+
+  mov   ax, SARC_RC2016_PAGE_REGISTER_3
+  out   SARC_RC2016_CHIPSET_INDEX_PORT, al  
+  mov   ax, SARC_RC2016_BASE_PAGE_REGISTER_0+3
+  out   SARC_RC2016_CHIPSET_VALUE_PORT, al  
+
+  mov   ax, SARC_RC2016_PAGE_REGISTER_3 + 1
+  out   SARC_RC2016_CHIPSET_INDEX_PORT, al  
+  mov   ax, SARC_RC2016_PAGE_OFFSET_AMT
+  out   SARC_RC2016_CHIPSET_VALUE_PORT, al  
+
+  
+
+  ; hard coded to d000 for now
+  mov        word ptr [page_frame_segment], 0D000h
+
+  ; 128 pages hardcoded for now
+  mov        word ptr [unallocated_page_count], SARC_RC2016_CONST_PAGE_COUNT
+  mov        word ptr [total_page_count], SARC_RC2016_CONST_PAGE_COUNT
+  mov        word ptr [pageable_frame_count], SARC_RC2016_PAGE_FRAME_COUNT
 
   ; one handle for now
   mov        word ptr [handle_count], 01h
