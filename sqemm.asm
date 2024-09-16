@@ -7,13 +7,15 @@ HT18_CHIPSET = 3
 HT12_CHIPSET = 4
 HEDAKA_CHIPSET = 5
 LOTECH_BOARD = 6
+NEAT_CHIPSET = 7
 
 ;COMPILE_CHIPSET = SCAMP_CHIPSET
 ;COMPILE_CHIPSET = SCAT_CHIPSET
 ;COMPILE_CHIPSET = HT18_CHIPSET
 ;COMPILE_CHIPSET = HT12_CHIPSET
 ;COMPILE_CHIPSET = HEDAKA_CHIPSET
-COMPILE_CHIPSET = LOTECH_BOARD
+;COMPILE_CHIPSET = LOTECH_BOARD
+COMPILE_CHIPSET =  NEAT_CHIPSET
 
 IF COMPILE_CHIPSET EQ LOTECH_BOARD
 	.8086
@@ -68,9 +70,11 @@ HEDAKA_PAGE_REGISTER_2 = 08208h
 HEDAKA_PAGE_REGISTER_3 = 0C208h
 ; A8 puts us right after 9c00... 
 ; chipset doesnt seem to allow for more than 2MB EMS addressable INCLUDING conventional memory (?)
-HEDAKA_PAGE_OFFSET_AMT = 0B0h
+HEDAKA_PAGE_OFFSET_AMT = 0B8h
 HEDAKA_PAGE_FRAME_COUNT = 4
-HEDAKA_CHIPSET_UNMAP_VALUE = 00h
+; no real unmap support?
+HEDAKA_CHIPSET_UNMAP_VALUE = 7Fh
+HEDAKA_CONST_PAGE_COUNT = 72
 
 
 
@@ -93,6 +97,18 @@ LOTECH_PAGE_REGISTER_3 = 0263h
 LOTECH_CHIPSET_UNMAP_VALUE = 0FFh
 LOTECH_PAGE_FRAME_COUNT = 4
 LOTECH_CONST_PAGE_COUNT = 128
+
+NEAT_CHIPSET_CONFIG_REGISTER_SELECT = 022h
+NEAT_CHIPSET_CONFIG_REGISTER_READWRITE = 023h
+NEAT_PAGE_REGISTER_0 = 00208h
+NEAT_PAGE_REGISTER_1 = 04208h
+NEAT_PAGE_REGISTER_2 = 08208h
+NEAT_PAGE_REGISTER_3 = 0C208h
+NEAT_PAGE_OFFSET_AMT = 080h
+NEAT_PAGE_FRAME_COUNT = 4
+; no real unmap support?
+NEAT_CHIPSET_UNMAP_VALUE = 7Fh
+NEAT_CONST_PAGE_COUNT = 128
 
 .CODE
 
@@ -242,6 +258,10 @@ ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
 
   dw 0D000h, 0000h, 0D400h, 0001h, 0D800h, 0002h, 0DC00h, 0003h
 
+ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
+
+  dw 0D000h, 0000h, 0D400h, 0001h, 0D800h, 0002h, 0DC00h, 0003h
+
 ENDIF
  
 ; CHIPSET SPECIFIC END
@@ -266,14 +286,14 @@ temporary_jump_addr dw 0000h
 ; number of ems handles..
 handle_count dw 0000h
 
-; stores total page count
+; stores total logical page count
 total_page_count dw 0000h
 
-
-; stores unallocated page count 
+; stores unallocated logical page count 
 unallocated_page_count dw 0000h;
-; number of ems pages
-number_ems_pages dw 0000h
+
+; number of (physically) addressable pages. eg usually 4 for 3.2 style hardware, 28+ for 4.0 style hardware
+pageable_frame_count dw 0000h
 
 
 ; EMS Function pointer table
@@ -701,6 +721,57 @@ ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
 
 
 
+ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
+
+  push cx
+  push si
+  push dx
+
+
+  ; physical page number mode
+  DO_NEXT_PAGE_5000:
+  ; next page in ax....
+  lodsw
+  mov        dx, ax
+  lodsw
+  ; read two words - bx and ax
+
+  ror   ax, 2
+  ; 0-4 becomes 0208, 4208, 8208, c208
+  add   ax, NEAT_PAGE_REGISTER_0
+
+  xchg  dx, ax
+
+  cmp   ax, 0FFFFh   ; -1 check
+  je    handle_default_page
+
+  add   ax, NEAT_PAGE_OFFSET_AMT   ; turn on EMS ON bit
+  out   dx, al   ; write 8 bit page num. 
+
+  loop       DO_NEXT_PAGE_5000
+
+  ; exit fall thru
+  xor ax, ax
+  pop dx
+  pop si
+  pop cx
+  iret
+
+  handle_default_page:
+  ; mapping to page -1
+  mov   ax, NEAT_CHIPSET_UNMAP_VALUE
+  out   dx, al   ; write 8 bit page num. 
+  loop       DO_NEXT_PAGE_5000
+
+
+  ; exit fall thru
+  xor ax, ax
+  pop dx
+  pop si
+  pop bx
+  pop cx
+  iret
+
 
 ENDIF
 
@@ -717,7 +788,7 @@ EMS_FUNCTION_044h:
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
 
   xor        ah, ah
-  cmp        ax, word ptr cs:[number_ems_pages]
+  cmp        ax, word ptr cs:[pageable_frame_count]
   jb         ENOUGH_PAGES
   jmp        RETURN_RESULT_8B
 
@@ -799,7 +870,7 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   ; for now in sqemm, call 44h (a 3.2 call) will map 0-4 to the page frame and ignore backfill register addresses.
 
   xor        ah, ah
-  cmp        ax, word ptr cs:[number_ems_pages]
+  cmp        ax, word ptr cs:[pageable_frame_count]
   jb         ENOUGH_PAGES
   jmp        RETURN_RESULT_8B
 
@@ -863,7 +934,7 @@ ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
   ; for now in sqemm, call 44h (a 3.2 call) will map 0-4 to the page frame and ignore backfill register addresses.
 
   xor        ah, ah
-  cmp        ax, word ptr cs:[number_ems_pages]
+  cmp        ax, word ptr cs:[pageable_frame_count]
   jb         ENOUGH_PAGES
   jmp        RETURN_RESULT_8B
 
@@ -922,7 +993,7 @@ ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
 ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
 
   xor        ah, ah
-  cmp        ax, word ptr cs:[number_ems_pages]
+  cmp        ax, word ptr cs:[pageable_frame_count]
   jb         ENOUGH_PAGES
   jmp        RETURN_RESULT_8B
 
@@ -1010,7 +1081,7 @@ ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
   ; page frame's pages are 208, 4208, 8208, c208. Technicaly x209 works too.
 
   xor        ah, ah
-  cmp        ax, word ptr cs:[number_ems_pages]
+  cmp        ax, word ptr cs:[pageable_frame_count]
   jb         ENOUGH_PAGES
   jmp        RETURN_RESULT_8B
 
@@ -1073,7 +1144,7 @@ ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
   ; page frame's pages are 260h, 261h, 262h, 263h
 
   xor        ah, ah
-  cmp        ax, word ptr cs:[number_ems_pages]
+  cmp        ax, word ptr cs:[pageable_frame_count]
   jb         ENOUGH_PAGES
   jmp        RETURN_RESULT_8B
 
@@ -1115,7 +1186,68 @@ ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
   RETURN_RESULT_8B:
   mov        ah, 08Bh
   iret
+  
+ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
 
+  ; page frame's pages are 208, 4208, 8208, c208. 
+
+  xor        ah, ah
+  cmp        ax, word ptr cs:[pageable_frame_count]
+  jb         ENOUGH_PAGES
+  jmp        RETURN_RESULT_8B
+
+  ENOUGH_PAGES:
+  cmp        dx,  1
+  jne        RETURN_RESULT_83
+  
+  ; al and bx are still the args
+
+  push dx  
+ 
+  ror ax, 2
+  add ax, NEAT_PAGE_REGISTER_0
+
+  ; 0-4 becomes 0208h, 4208h, 8208h, c208h
+  mov dx, ax
+
+  cmp   bx, 0FFFFh   ; -1 check
+  je    handle_default_page_44h
+
+  mov   ax, bx
+  add   ax, NEAT_PAGE_OFFSET_AMT   ; turn on EMS ON bit
+  out   dx, al   ; write 8 bit page num. 
+
+  pop   dx
+  xor   ax, ax
+  iret
+
+  handle_default_page_44h:
+  ; mapping to page -1
+  mov   ax, NEAT_CHIPSET_UNMAP_VALUE ; "turn off ems for this page" value
+  out   dx, al   ; write 8 bit page num. 
+  
+  pop   dx
+  xor   ax, ax  
+  iret
+
+  PAGE_OVERFLOW_3:
+  PAGE_UNDERFLOW_3:
+
+  mov        ah, 080h
+  iret
+
+  ; The memory manager couldn't find the EMM handle your program specified.
+  RETURN_RESULT_83:
+  mov        ah, 083h
+  iret
+
+  RETURN_RESULT_8A:
+  mov        ah, 08Ah
+  iret
+
+  RETURN_RESULT_8B:
+  mov        ah, 08Bh
+  iret
 
 ENDIF
 
@@ -1506,7 +1638,7 @@ push       bx
 push       cs
 pop        ds
 mov        si, OFFSET mappable_phys_page_struct
-mov        cx, word ptr cs:[number_ems_pages]
+mov        cx, word ptr cs:[pageable_frame_count]
 LOOP_05800h:
 mov        ax, word ptr [si]
 stosw
@@ -1514,7 +1646,7 @@ mov        ax, word ptr [si + 2]
 stosw
 add        si, 4
 loop       LOOP_05800h
-mov        cx, word ptr cs:[number_ems_pages]
+mov        cx, word ptr cs:[pageable_frame_count]
 mov        ah, 0
 pop        bx
 pop        di
@@ -1526,7 +1658,7 @@ NOT_05800h:
 cmp        al, 1
 jne        EXITINTERRUPTB_RESULT8F
 EMS_FUNCTION_05801h:
-mov        cx, word ptr cs:[number_ems_pages]
+mov        cx, word ptr cs:[pageable_frame_count]
 mov        ax, 0
 iret
 EXITINTERRUPTB_RESULT8F:
@@ -1817,6 +1949,8 @@ ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
   string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for HEDAKA/CITYGATE/PCCHIPS Chipsets', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
   string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Lo-tech EMS Board', 0Dh, 0Ah,'$'
+ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Chips NEAT', 0Dh, 0Ah,'$'
 ENDIF
 
 
@@ -1866,7 +2000,7 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
   ; 256 pages hardcoded for now
   mov        word ptr [unallocated_page_count], CONST_PAGE_COUNT
   mov        word ptr [total_page_count], CONST_PAGE_COUNT
-  mov        word ptr [number_ems_pages], SCAMP_PAGE_FRAME_COUNT
+  mov        word ptr [pageable_frame_count], SCAMP_PAGE_FRAME_COUNT
 
   ; one handle for now
   mov        word ptr [handle_count], 01h
@@ -1946,7 +2080,7 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   ; 256 pages hardcoded for now
   mov        word ptr [unallocated_page_count], CONST_PAGE_COUNT
   mov        word ptr [total_page_count], CONST_PAGE_COUNT
-  mov        word ptr [number_ems_pages], SCAT_PAGE_FRAME_COUNT
+  mov        word ptr [pageable_frame_count], SCAT_PAGE_FRAME_COUNT
 
   ; one handle for now
   mov        word ptr [handle_count], 01h
@@ -1968,7 +2102,7 @@ ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
   ; 256 pages hardcoded for now
   mov        word ptr [unallocated_page_count], CONST_PAGE_COUNT
   mov        word ptr [total_page_count], CONST_PAGE_COUNT
-  mov        word ptr [number_ems_pages], HT18_PAGE_FRAME_COUNT
+  mov        word ptr [pageable_frame_count], HT18_PAGE_FRAME_COUNT
 
   ; one handle for now
   mov        word ptr [handle_count], 01h
@@ -2025,7 +2159,7 @@ ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
   ; 256 pages hardcoded for now
   mov        word ptr [unallocated_page_count], CONST_PAGE_COUNT
   mov        word ptr [total_page_count], CONST_PAGE_COUNT
-  mov        word ptr [number_ems_pages], HEDAKA_PAGE_FRAME_COUNT
+  mov        word ptr [pageable_frame_count], HT12_PAGE_FRAME_COUNT
 
   ; one handle for now
   mov        word ptr [handle_count], 01h
@@ -2035,7 +2169,7 @@ ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
 ; todo: enable ems if not set in bios? dont know registers 
 ; initialization of registers
   mov   dx, 0208h
-  mov   ax, 080h 
+  mov   ax, HEDAKA_PAGE_OFFSET_AMT
   out   dx, al   ; write 8 bit page num. 
   add   dh, 040h
   inc   al
@@ -2051,9 +2185,9 @@ ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
   mov        word ptr [page_frame_segment], 0D000h
 
   ; 256 pages hardcoded for now
-  mov        word ptr [unallocated_page_count], CONST_PAGE_COUNT
-  mov        word ptr [total_page_count], CONST_PAGE_COUNT
-  mov        word ptr [number_ems_pages], HEDAKA_PAGE_FRAME_COUNT
+  mov        word ptr [unallocated_page_count], HEDAKA_CONST_PAGE_COUNT
+  mov        word ptr [total_page_count], HEDAKA_CONST_PAGE_COUNT
+  mov        word ptr [pageable_frame_count], HEDAKA_PAGE_FRAME_COUNT
 
   ; one handle for now
   mov        word ptr [handle_count], 01h
@@ -2079,7 +2213,40 @@ ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
   ; 256 pages hardcoded for now
   mov        word ptr [unallocated_page_count], CONST_PAGE_COUNT
   mov        word ptr [total_page_count], CONST_PAGE_COUNT
-  mov        word ptr [number_ems_pages], LOTECH_PAGE_FRAME_COUNT
+  mov        word ptr [pageable_frame_count], LOTECH_PAGE_FRAME_COUNT
+
+  ; one handle for now
+  mov        word ptr [handle_count], 01h
+
+ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
+
+; offset pages by 2 MB
+
+mov al, 06Eh
+out NEAT_CHIPSET_CONFIG_REGISTER_SELECT, al
+mov al, 055h
+out NEAT_CHIPSET_CONFIG_REGISTER_READWRITE, al
+
+  mov   dx, 0208h
+  mov   ax, NEAT_PAGE_OFFSET_AMT
+  out   dx, al   ; write 8 bit page num. 
+  add   dh, 040h
+  inc   al
+  out   dx, al   ; write 8 bit page num. 
+  add   dh, 040h
+  inc   al
+  out   dx, al   ; write 8 bit page num. 
+  add   dh, 040h
+  inc   al
+  out   dx, al   ; write 8 bit page num. 
+
+  ; page frame d000 for now
+  mov        word ptr [page_frame_segment], 0D000h
+
+  ; 256 pages hardcoded for now
+  mov        word ptr [unallocated_page_count], NEAT_CONST_PAGE_COUNT
+  mov        word ptr [total_page_count], NEAT_CONST_PAGE_COUNT
+  mov        word ptr [pageable_frame_count], NEAT_PAGE_FRAME_COUNT
 
   ; one handle for now
   mov        word ptr [handle_count], 01h
