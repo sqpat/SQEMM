@@ -8,6 +8,7 @@ HT12_CHIPSET = 4
 HEDAKA_CHIPSET = 5
 LOTECH_BOARD = 6
 NEAT_CHIPSET = 7
+INTEL_ABOVEBOARD = 8
 
 ;COMPILE_CHIPSET = SCAMP_CHIPSET
 ;COMPILE_CHIPSET = SCAT_CHIPSET
@@ -15,10 +16,13 @@ NEAT_CHIPSET = 7
 ;COMPILE_CHIPSET = HT12_CHIPSET
 ;COMPILE_CHIPSET = HEDAKA_CHIPSET
 ;COMPILE_CHIPSET = LOTECH_BOARD
-COMPILE_CHIPSET =  NEAT_CHIPSET
+;COMPILE_CHIPSET =  NEAT_CHIPSET
+COMPILE_CHIPSET =  INTEL_ABOVEBOARD
+
 
 IF COMPILE_CHIPSET EQ LOTECH_BOARD
 	.8086
+ELIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
 ELSE
 	.286
 ENDIF
@@ -109,6 +113,17 @@ NEAT_PAGE_FRAME_COUNT = 4
 ; no real unmap support?
 NEAT_CHIPSET_UNMAP_VALUE = 7Fh
 NEAT_CONST_PAGE_COUNT = 128
+
+
+; this is for 250 settings..
+INTEL_AB_PAGE_REGISTER_0 = 00257h
+INTEL_AB_PAGE_REGISTER_1 = 04257h
+INTEL_AB_PAGE_REGISTER_2 = 08257h
+INTEL_AB_PAGE_REGISTER_3 = 0C257h
+INTEL_AB_PAGE_OFFSET_AMT = 080h
+INTEL_AB_CHIPSET_UNMAP_VALUE = 00h
+INTEL_AB_PAGE_FRAME_COUNT = 4
+INTEL_AB_CONST_PAGE_COUNT = 128
 
 .CODE
 
@@ -259,6 +274,10 @@ ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
   dw 0D000h, 0000h, 0D400h, 0001h, 0D800h, 0002h, 0DC00h, 0003h
 
 ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
+
+  dw 0D000h, 0000h, 0D400h, 0001h, 0D800h, 0002h, 0DC00h, 0003h
+
+ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
 
   dw 0D000h, 0000h, 0D400h, 0001h, 0D800h, 0002h, 0DC00h, 0003h
 
@@ -772,6 +791,53 @@ ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
   pop cx
   iret
 
+ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
+
+  push cx
+  push si
+  push dx
+
+  ; physical page number mode
+  DO_NEXT_PAGE_5000:
+  ; next page in ax....
+
+  lodsw
+  ror  ax, 2
+  add  ax, INTEL_AB_PAGE_REGISTER_0
+  mov  dx, ax
+  lodsw
+
+  cmp   ax, 0FFFFh   ; -1 check
+  je    handle_default_page
+
+  add   ax, INTEL_AB_PAGE_OFFSET_AMT
+  out   dx, al   ; write 8 bit page num. 
+
+  loop       DO_NEXT_PAGE_5000
+
+
+  ; exit fall thru
+  xor ax, ax
+  pop dx
+  pop si
+  pop cx
+  iret
+
+
+  handle_default_page:
+  ; mapping to page -1
+  mov   ax, INTEL_AB_CHIPSET_UNMAP_VALUE
+  out   dx, al   ; write 8 bit page num. 
+  loop       DO_NEXT_PAGE_5000
+
+
+  ; exit fall thru
+  xor ax, ax
+  pop dx
+  pop si
+  pop bx
+  pop cx
+  iret
 
 ENDIF
 
@@ -1224,6 +1290,68 @@ ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
   handle_default_page_44h:
   ; mapping to page -1
   mov   ax, NEAT_CHIPSET_UNMAP_VALUE ; "turn off ems for this page" value
+  out   dx, al   ; write 8 bit page num. 
+  
+  pop   dx
+  xor   ax, ax  
+  iret
+
+  PAGE_OVERFLOW_3:
+  PAGE_UNDERFLOW_3:
+
+  mov        ah, 080h
+  iret
+
+  ; The memory manager couldn't find the EMM handle your program specified.
+  RETURN_RESULT_83:
+  mov        ah, 083h
+  iret
+
+  RETURN_RESULT_8A:
+  mov        ah, 08Ah
+  iret
+
+  RETURN_RESULT_8B:
+  mov        ah, 08Bh
+  iret
+
+ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
+
+
+  ; page frame's pages are 260h, 261h, 262h, 263h
+
+  xor        ah, ah
+  cmp        ax, word ptr cs:[pageable_frame_count]
+  jb         ENOUGH_PAGES
+  jmp        RETURN_RESULT_8B
+
+  ENOUGH_PAGES:
+  cmp        dx,  1
+  jne        RETURN_RESULT_83
+  
+  ; al and bx are still the args
+
+  push dx  
+ 
+  ror  ax, 2
+  add  ax, INTEL_AB_PAGE_REGISTER_0
+  mov  dx, ax
+
+
+  cmp   bx, 0FFFFh   ; -1 check
+  je    handle_default_page_44h
+
+  mov   ax, bx
+  add   ax, INTEL_AB_PAGE_OFFSET_AMT
+  out   dx, al   ; write 16 bit page num. 
+  
+  pop   dx
+  xor   ax, ax  
+  iret
+
+  handle_default_page_44h:
+  ; mapping to page -1
+  mov   ax, INTEL_AB_CHIPSET_UNMAP_VALUE ; "turn off ems for this page" value
   out   dx, al   ; write 8 bit page num. 
   
   pop   dx
@@ -1951,6 +2079,8 @@ ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
   string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Lo-tech EMS Board', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
   string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Chips NEAT', 0Dh, 0Ah,'$'
+ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Intel Above Board', 0Dh, 0Ah,'$'
 ENDIF
 
 
@@ -2247,6 +2377,32 @@ out NEAT_CHIPSET_CONFIG_REGISTER_READWRITE, al
   mov        word ptr [unallocated_page_count], NEAT_CONST_PAGE_COUNT
   mov        word ptr [total_page_count], NEAT_CONST_PAGE_COUNT
   mov        word ptr [pageable_frame_count], NEAT_PAGE_FRAME_COUNT
+
+  ; one handle for now
+  mov        word ptr [handle_count], 01h
+
+ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
+
+  mov   dx, INTEL_AB_PAGE_REGISTER_0
+  mov   ax, 80h 
+  out   dx, al   ; write 8 bit page num. 
+  add   dh, 040h
+  inc   al
+  out   dx, al   ; write 8 bit page num. 
+  add   dh, 040h
+  inc   al
+  out   dx, al   ; write 8 bit page num. 
+  add   dh, 040h
+  inc   al
+  out   dx, al   ; write 8 bit page num. 
+
+  ; hard coded to d000 for now
+  mov        word ptr [page_frame_segment], 0D000h
+
+  ; 128 pages hardcoded for now
+  mov        word ptr [unallocated_page_count], INTEL_AB_CONST_PAGE_COUNT
+  mov        word ptr [total_page_count], INTEL_AB_CONST_PAGE_COUNT
+  mov        word ptr [pageable_frame_count], INTEL_AB_PAGE_FRAME_COUNT
 
   ; one handle for now
   mov        word ptr [handle_count], 01h

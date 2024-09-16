@@ -116,6 +116,8 @@ void dodiff(uint8_t* filename1, uint8_t* filename2, uint8_t* ignorefilename){
 
 }
 
+uint8_t buffer1[512];
+
 void insertintoignorelist(uint16_t newvalue, int16_t pos){
 	int16_t i = pos;
 	uint16_t next = newvalue;
@@ -236,7 +238,7 @@ int16_t main ( int16_t		argc, uint8_t**	argv )  {
 
 			return 0;
 		}
-
+ 
 
 
 		printf("Usage:\n -dump [filename]: simply dumps port contents 0 thru 0x400 \n -diff [filename1] [filename2]: diffs two dump files and prints results\n -auto: dumps to dump1.bin, then dump2.bin, then diffs using ignore list\n -autoupdate: -auto: dumps to dump1.bin/dump2.bin, diffs and updates ignore.bin");
