@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
+union REGS regs;
 
 int16_t		myargc;
 uint8_t**		myargv;
@@ -239,7 +240,212 @@ int16_t main ( int16_t		argc, uint8_t**	argv )  {
 			return 0;
 		}
  
+		if (checkparm("-sarc")){
+			uint8_t i = 0x80;
 
+			for (i = 0x00; i <= 0xfe; i++){
+				outp (0x22, i);
+				printf("%02x:%02x ", i, inp(0x23));
+				if ((i % 0xd) == 0xc){
+					printf("\n");
+				}
+			}
+			outp (0x22, 0xff);
+			printf("%02x:%02x ", i, inp(0x23));
+
+			return 0;
+		}
+
+		if (checkparm("-sarc2")){
+			uint8_t iter;
+			uint8_t i = 0x80;
+			uint8_t locs1[24];
+			uint8_t locs2[6];
+
+			for (iter = 0; iter < 24; iter++){
+				locs1[iter] = *(uint8_t __far*)MK_FP(0x4000 + 0x400 * iter, 0);
+			}
+
+			for (iter = 0; iter < 6; iter++){
+				locs2[iter] = *(uint8_t __far*)MK_FP(0xC800 + 0x400 * iter, 0);
+			}
+
+			for (i = 0x88; i <= 0x8f; i++){
+				int16_t j = 0;
+				FILE* fp;
+				outp (0x22, i);
+				printf("\n Register %x", i);
+				
+				for(j = 0; j <0xff; j++){
+
+					if (((j&0x80) || (j& 0x40)) && ((j & 0xF) == 0)){
+						continue;
+					}
+
+
+					if (j == 0xbe){
+						//continue;
+					}
+
+					printf("%02x ", j);
+					fp = fopen ("test.txt", "a");
+					fprintf(fp, "%02x ", j);
+					fclose(fp);
+					
+					outp(0x23, j);
+
+					for (iter = 0; iter < 24; iter++){
+						if (locs1[iter] != *(uint8_t __far*)MK_FP(0x4000 + 0x400 * iter, 0)){
+							printf ("found a change: %lx %2x %2x", MK_FP(0x4000 + 0x400 * iter, 0), *(uint8_t __far*)MK_FP(0x4000 + 0x400 * iter, 0), locs1[iter]);
+							return 0;
+						}
+					}
+
+					for (iter = 0; iter < 6; iter++){
+						locs2[iter] = *(uint8_t __far*)MK_FP(0xC800 + 0x400 * iter, 0);
+						if (locs2[iter] != *(uint8_t __far*)MK_FP(0xC800 + 0x400 * iter, 0)){
+							printf ("found a change: %lx %2x %2x", MK_FP(0xC800 + 0x400 * iter, 0), *(uint8_t __far*)MK_FP(0xC800 + 0x400 * iter, 0), locs2[iter]);
+							return 0;
+
+						}
+
+					}
+
+				}
+			}
+
+
+			return 0;
+		}
+
+
+		if (checkparm("-sarc3")){
+			uint8_t iter;
+			uint8_t locs1  = *(uint8_t __far*)MK_FP(0xD000, 0);
+
+			int16_t j = 0;
+			outp (0x22, 0x89);
+			printf("\n Register %x", 0x89);
+			
+			for(j = 0; j <0xff; j++){
+
+				if (((j&0x80) || (j& 0x40)) && ((j & 0xF) == 0)){
+					continue;
+				}
+
+
+				if (j == 0xbe){
+					//continue;
+				}
+
+				outp(0x23, j);
+
+				if (locs1  != *(uint8_t __far*)MK_FP(0xD000, 0)){
+					printf ("found a change: %x %lx %2x %2x", j,  MK_FP(0xD000, 0), *(uint8_t __far*)MK_FP(0xD000, 0), locs1);
+					return 0;
+				}
+
+
+			}
+
+
+			return 0;
+		}
+
+		if (checkparm("-emstest")){
+			uint8_t iter;
+			uint8_t locs1  = *(uint8_t __far*)MK_FP(0xD000, 0);
+
+			uint8_t al = 0;
+			uint8_t ah = 0x44;
+			int16_t bx = 0;
+			int16_t dx = 1;
+			#define EMS_INT 0x67
+			
+			for (al = 0; al < 4; al++){
+				uint8_t port1 = 0x88 + 2 * al;
+				uint8_t port2 = 0x88 + 2 * al + 1;
+				for(bx = -1; bx <128; bx++){
+					uint8_t value1;
+					uint8_t value2;
+					uint8_t expected_value1 = (bx == -1) ? 0 :    0xC4 + al + ((bx & 3) << 4);
+					uint8_t expected_value2 = (bx == -1) ? 0x00 : 0x20 + (bx >> 2) ;
+					printf("write test al = %hhx bx = %hx:", al, bx);
+					regs.h.al = al;  // physical page
+					regs.w.bx = bx; // activepages[pageframeindex + i];    // logical page
+					regs.w.dx = dx; // handle
+					regs.h.ah = ah;
+					int86(EMS_INT, &regs, &regs);
+					if (regs.h.ah != 0) {
+						printf("nonzero return %x %hhx %hhx", bx, al, regs.h.ah);
+						return 0;
+					}
+
+					*((uint8_t __far*) MK_FP(0xD000 + 0x400 * al, 0)) = bx & 0xFF;
+
+					outp (0x22, port1);
+					value1 = 649 * al;
+					value1 = inp (0x23);
+
+					outp (0x22, port2);
+					value2 = 648 * al;
+					value2 = inp (0x23);
+
+					if ((expected_value1 != value1) || (expected_value2 != value2)){
+						outp (0x22, port1);
+						printf("bad value? %hhx %hhx %hhx %hhx", 
+							expected_value1, value1, 
+							expected_value2, value2
+						);
+
+						value1 = inp (0x23);
+
+						printf("check again: %hhx %hhx %hhx %hhx", 
+							expected_value1, value1, 
+							expected_value2, value2
+						);
+						if ((expected_value1 != value1) || (expected_value2 != value2)){
+							return 0;
+						}
+
+					}
+					printf("ok\n");
+
+
+				}
+			}
+
+			for (al = 0; al < 4; al++){
+				uint8_t port1 = 0x88 + 2 * al;
+				uint8_t port2 = 0x88 + 2 * al + 1;
+				for(bx = -1; bx <128; bx++){
+					uint8_t value1;
+					uint8_t value2;
+					printf("read test al = %hhx bx = %hx:", al, bx);
+					regs.h.al = al;  // physical page
+					regs.w.bx = bx; // activepages[pageframeindex + i];    // logical page
+					regs.w.dx = dx; // handle
+					regs.h.ah = ah;
+					int86(EMS_INT, &regs, &regs);
+					if (regs.h.ah != 0) {
+						printf("nonzero return %x %hhx %hhx", bx, al, regs.h.ah);
+						return 0;
+					}
+
+					if ((*((uint8_t __far*) MK_FP(0xD000 + 0x400 * al, 0))) != (bx & 0xFF)){
+						printf("bad data match! Expected %hhx vs %x.... %hhx %hhx", *((uint8_t __far*) MK_FP(0xD000 + 0x400 * al, 0)), bx, al, regs.h.ah);
+						return 0;
+					}
+
+					printf("ok\n");
+
+
+				}
+			}
+
+
+			return 0;
+		}
 
 		printf("Usage:\n -dump [filename]: simply dumps port contents 0 thru 0x400 \n -diff [filename1] [filename2]: diffs two dump files and prints results\n -auto: dumps to dump1.bin, then dump2.bin, then diffs using ignore list\n -autoupdate: -auto: dumps to dump1.bin/dump2.bin, diffs and updates ignore.bin");
 		
