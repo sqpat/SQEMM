@@ -10,6 +10,7 @@ LOTECH_BOARD = 6
 NEAT_CHIPSET = 7
 INTEL_ABOVEBOARD = 8
 SARC_RC2016A = 9
+STANDARD_EMS_BOARD = 10
 
 ;COMPILE_CHIPSET = SCAMP_CHIPSET
 ;COMPILE_CHIPSET = SCAT_CHIPSET
@@ -18,12 +19,13 @@ SARC_RC2016A = 9
 ;COMPILE_CHIPSET = HEDAKA_CHIPSET
 ;COMPILE_CHIPSET = LOTECH_BOARD
 ;COMPILE_CHIPSET =  NEAT_CHIPSET
-;COMPILE_CHIPSET =  INTEL_ABOVEBOARD
-COMPILE_CHIPSET =  SARC_RC2016A
-
+COMPILE_CHIPSET =  INTEL_ABOVEBOARD
+;COMPILE_CHIPSET =  SARC_RC2016A
+;COMPILE_CHIPSET = STANDARD_EMS_BOARD
 
 IF COMPILE_CHIPSET EQ LOTECH_BOARD
-ELIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
+	.8086
+ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
 	.8086
 ELSE
 	.286
@@ -117,33 +119,48 @@ NEAT_CHIPSET_UNMAP_VALUE = 7Fh
 NEAT_CONST_PAGE_COUNT = 128
 
 
-; this is for 250 settings..
-INTEL_AB_PAGE_REGISTER_0 = 00257h
-INTEL_AB_PAGE_REGISTER_1 = 04257h
-INTEL_AB_PAGE_REGISTER_2 = 08257h
-INTEL_AB_PAGE_REGISTER_3 = 0C257h
-INTEL_AB_PAGE_OFFSET_AMT = 080h
+; this is for 240 settings..
+INTEL_AB_ENABLE_REGISTER = 0024Fh
+INTEL_AB_4000_REGISTER = 00240h
+
+INTEL_AB_PAGE_REGISTER_0 = 00248h
+INTEL_AB_PAGE_REGISTER_1 = 04248h
+INTEL_AB_PAGE_REGISTER_2 = 08248h
+INTEL_AB_PAGE_REGISTER_3 = 0C248h
+INTEL_AB_PAGE_OFFSET_AMT = 0A0h
 INTEL_AB_CHIPSET_UNMAP_VALUE = 00h
-INTEL_AB_PAGE_FRAME_COUNT = 4
-INTEL_AB_CONST_PAGE_COUNT = 128
+INTEL_AB_PAGE_FRAME_COUNT = 28
+INTEL_AB_CONST_PAGE_COUNT = 96
 
 
 
 SARC_RC2016_CHIPSET_INDEX_PORT = 022h
 SARC_RC2016_CHIPSET_VALUE_PORT = 023h
-
 SARC_RC2016_PAGE_REGISTER_0 = 088h
 SARC_RC2016_PAGE_REGISTER_1 = 08Ah
 SARC_RC2016_PAGE_REGISTER_2 = 08Ch
 SARC_RC2016_PAGE_REGISTER_3 = 08Eh
-
 ; sets pages d000, d400, d800, dc00 to 
 SARC_RC2016_BASE_PAGE_REGISTER_0 = 0c4h
-
 SARC_RC2016_PAGE_OFFSET_AMT = 020h
 SARC_RC2016_CHIPSET_UNMAP_VALUE = 00h
 SARC_RC2016_PAGE_FRAME_COUNT = 4
 SARC_RC2016_CONST_PAGE_COUNT = 128
+
+; for standard lim ems 3.2 style boards with page frame and usually 2 mb.
+; this can be 208h, 218h, etc... todo parse port, etc
+STANDARD_BOARD_PAGE_REGISTER_0 = 00208h
+STANDARD_BOARD_PAGE_REGISTER_1 = 04208h
+STANDARD_BOARD_PAGE_REGISTER_2 = 08208h
+STANDARD_BOARD_PAGE_REGISTER_3 = 0C208h
+STANDARD_BOARD_PAGE_OFFSET_AMT = 080h
+STANDARD_BOARD_PAGE_FRAME_COUNT = 4
+; no real unmap support?
+STANDARD_BOARD_CHIPSET_UNMAP_VALUE = 00h
+STANDARD_BOARD_CONST_PAGE_COUNT = 128
+
+
+
 
 .CODE
 
@@ -299,9 +316,28 @@ ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
 
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
 
+  dw 04000h, 0000h, 04400h, 0001h, 04800h, 0002h, 04C00h, 0003h
+  dw 05000h, 0004h, 05400h, 0005h, 05800h, 0006h, 05C00h, 0007h
+  dw 06000h, 0008h, 06400h, 0009h, 06800h, 000Ah, 06C00h, 000Bh
+  dw 07000h, 000Ch, 07400h, 000Eh, 07800h, 000Eh, 07C00h, 000Fh
+  dw 08000h, 0010h, 08400h, 0011h, 08800h, 0012h, 08C00h, 0013h
+  dw 09000h, 0014h, 09400h, 0015h, 09800h, 0016h, 09C00h, 0017h
+  dw 0E000h, 0018h, 0E400h, 0019h, 0E800h, 001Ah, 0EC00h, 001Bh
+
+default_page_struct:
+  db 090h, 091h, 092h, 093h
+  db 094h, 095h, 096h, 097h
+  db 098h, 099h, 09Ah, 09Bh
+  db 09Ch, 09Dh, 09Eh, 09Fh
+  db 080h, 081h, 082h, 083h
+  db 084h, 085h, 086h, 087h
+  db 08Ch, 08Dh, 08Eh, 08Fh
+  
+ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
+
   dw 0D000h, 0000h, 0D400h, 0001h, 0D800h, 0002h, 0DC00h, 0003h
 
-ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
+ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
 
   dw 0D000h, 0000h, 0D400h, 0001h, 0D800h, 0002h, 0DC00h, 0003h
 
@@ -815,7 +851,7 @@ ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
   pop cx
   iret
 
-ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
+ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
 
   push cx
   push si
@@ -903,7 +939,7 @@ ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
   pop cx
   iret
 
-ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
+ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
 
 
   push cx
@@ -915,15 +951,25 @@ ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
   ; next page in ax....
 
   lodsw
-  ror  ax, 2
-  add  ax, INTEL_AB_PAGE_REGISTER_0
+
+ ; 0: 240, 1: 4240, 2: 8240, 3: C240...
+ ; 4: 241, 5: 4241, 6: 8241, 7: C241...
+ ; 8: 242, 9: 4242, A: 8242, B: C242...
+
+  ; get port number
+
   mov  dx, ax
   lodsw
 
-  cmp   ax, 0FFFFh   ; -1 check
+  cmp   dx, 0FFFFh   ; -1 check
   je    handle_default_page
 
-  add   ax, INTEL_AB_PAGE_OFFSET_AMT
+  ror  ax, 1
+  ror  ax, 1
+  add  ax, INTEL_AB_4000_REGISTER
+
+  xchg dx, ax
+  add   al, INTEL_AB_PAGE_OFFSET_AMT
   out   dx, al   ; write 8 bit page num. 
 
   loop       DO_NEXT_PAGE_5000
@@ -939,7 +985,112 @@ ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
 
   handle_default_page:
   ; mapping to page -1
-  mov   ax, INTEL_AB_CHIPSET_UNMAP_VALUE
+  ; get the value again
+  
+  mov   dx, ax
+
+  ror  ax, 1
+  ror  ax, 1
+  add  ax, INTEL_AB_4000_REGISTER
+  xchg dx, ax
+
+
+  cmp   al, 010h
+  jae   gte_8000
+  add   al, 90h
+
+  out   dx, al   ; write 8 bit page num. 
+  loop  DO_NEXT_PAGE_5000
+
+
+  ; exit fall thru
+  xor ax, ax
+  pop dx
+  pop si
+  pop cx
+  iret
+
+  gte_8000:
+
+  add   al, 070h
+  out   dx, al   ; write 8 bit page num. 
+  loop  DO_NEXT_PAGE_5000
+
+
+  ; exit fall thru
+  xor ax, ax
+  pop dx
+  pop si
+  pop cx
+  iret
+
+COMMENT @
+
+  ; need SI for indexing. Swap with ax for safekeeping
+  xchg  ax, si
+  ; load zero page for this page
+  
+  mov  dl, byte ptr [default_page_struct + si]
+  xchg  ax, si  ; put si back. ax has page index still
+  xchg  ax, dx  ; now ax gets page value
+
+  ; create dx port
+
+  ; TODO does not handle E000 properly yet...
+
+
+  out   dx, al   ; write 8 bit page num. 
+  loop  DO_NEXT_PAGE_5000
+
+
+  ; exit fall thru
+  xor ax, ax
+  pop dx
+  pop si
+  pop cx
+  iret
+
+@ 
+
+ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
+
+  push cx
+  push si
+  push dx
+
+
+  ; physical page number mode
+  DO_NEXT_PAGE_5000:
+  ; next page in ax....
+  lodsw
+  mov        dx, ax
+  lodsw
+  ; read two words - bx and ax
+
+  ror   ax, 2
+  ; 0-4 becomes 0208, 4208, 8208, c208
+  add   ax, STANDARD_BOARD_PAGE_REGISTER_0
+
+  xchg  dx, ax
+
+  cmp   ax, 0FFFFh   ; -1 check
+  je    handle_default_page
+
+  add   ax, STANDARD_BOARD_PAGE_OFFSET_AMT   ; turn on EMS ON bit
+  out   dx, al   ; write 8 bit page num. 
+
+  loop       DO_NEXT_PAGE_5000
+
+  ; exit fall thru
+  xor ax, ax
+  pop dx
+  pop si
+  pop cx
+  iret
+
+  handle_default_page:
+  ; mapping to page -1
+  mov   ax, STANDARD_BOARD_CHIPSET_UNMAP_VALUE
   out   dx, al   ; write 8 bit page num. 
   loop       DO_NEXT_PAGE_5000
 
@@ -951,6 +1102,7 @@ ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
   pop bx
   pop cx
   iret
+
 
 ENDIF
 
@@ -1430,9 +1582,7 @@ ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
 
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
 
-
-  ; page frame's pages are 260h, 261h, 262h, 263h
-
+; still only working in page frame version..
   xor        ah, ah
   cmp        ax, word ptr cs:[pageable_frame_count]
   jb         ENOUGH_PAGES
@@ -1446,7 +1596,8 @@ ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
 
   push dx  
  
-  ror  ax, 2
+  ror  ax, 1
+  ror  ax, 1
   add  ax, INTEL_AB_PAGE_REGISTER_0
   mov  dx, ax
 
@@ -1581,6 +1732,70 @@ ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
   RETURN_RESULT_8B:
   mov        ah, 08Bh
   iret
+
+ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
+
+  ; page frame's pages are 258, 4258, 8258, c258. 
+
+  xor        ah, ah
+  cmp        ax, word ptr cs:[pageable_frame_count]
+  jb         ENOUGH_PAGES
+  jmp        RETURN_RESULT_8B
+
+  ENOUGH_PAGES:
+  cmp        dx,  1
+  jne        RETURN_RESULT_83
+  
+  ; al and bx are still the args
+
+  push dx  
+ 
+  ror ax, 2
+  add ax, STANDARD_BOARD_PAGE_REGISTER_0
+
+  ; 0-4 becomes 258, 4258, 8258, c258
+  mov dx, ax
+
+  cmp   bx, 0FFFFh   ; -1 check
+  je    handle_default_page_44h
+
+  mov   ax, bx
+  add   ax, STANDARD_BOARD_PAGE_OFFSET_AMT   ; turn on EMS ON bit
+  out   dx, al   ; write 8 bit page num. 
+
+  pop   dx
+  xor   ax, ax
+  iret
+
+  handle_default_page_44h:
+  ; mapping to page -1
+  mov   ax, STANDARD_BOARD_CHIPSET_UNMAP_VALUE ; "turn off ems for this page" value
+  out   dx, al   ; write 8 bit page num. 
+  
+  pop   dx
+  
+  ;xor   ax, ax   ; set to 0 above
+  iret
+
+  PAGE_OVERFLOW_3:
+  PAGE_UNDERFLOW_3:
+
+  mov        ah, 080h
+  iret
+
+  ; The memory manager couldn't find the EMM handle your program specified.
+  RETURN_RESULT_83:
+  mov        ah, 083h
+  iret
+
+  RETURN_RESULT_8A:
+  mov        ah, 08Ah
+  iret
+
+  RETURN_RESULT_8B:
+  mov        ah, 08Bh
+  iret
+
 
 
 ENDIF
@@ -2289,6 +2504,8 @@ ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
   string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Intel Above Board', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
   string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for SARC RC2016A', 0Dh, 0Ah,'$'
+ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Standard EMS Boards', 0Dh, 0Ah,'$'
 ENDIF
 
 
@@ -2591,18 +2808,144 @@ out NEAT_CHIPSET_CONFIG_REGISTER_READWRITE, al
 
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
 
-  mov   dx, INTEL_AB_PAGE_REGISTER_0
-  mov   ax, 80h 
+  
+  ; lets set default values for the conventional registers...
+
+  mov   dx, INTEL_AB_ENABLE_REGISTER
+  ; todo not sure how this really works. sometimes needs 40, sometimes 80?
+  mov   al, 0C0h
+  out   dx, al
+
+
+  mov   al, 090h
+  mov   dx, 00240h
   out   dx, al   ; write 8 bit page num. 
-  add   dh, 040h
+  mov   al, 091h
+  mov   dx, 04240h
+  out   dx, al   ; write 8 bit page num. 
+  mov   al, 092h
+  mov   dx, 08240h
+  out   dx, al   ; write 8 bit page num. 
+  mov   al, 093h
+  mov   dx, 0C240h
+  out   dx, al   ; write 8 bit page num. 
+
+  mov   al, 094h
+  mov   dx, 00241h
+  out   dx, al   ; write 8 bit page num. 
+  mov   al, 095h
+  mov   dx, 04241h
+  out   dx, al   ; write 8 bit page num. 
+  mov   al, 096h
+  mov   dx, 08241h
+  out   dx, al   ; write 8 bit page num. 
+  mov   al, 097h
+  mov   dx, 0C241h
+  out   dx, al   ; write 8 bit page num. 
+
+  mov   al, 098h
+  mov   dx, 00242h
+  out   dx, al   ; write 8 bit page num. 
+  mov   al, 099h
+  mov   dx, 04242h
+  out   dx, al   ; write 8 bit page num. 
+  mov   al, 09Ah
+  mov   dx, 08242h
+  out   dx, al   ; write 8 bit page num. 
+  mov   al, 09Bh
+  mov   dx, 0C242h
+  out   dx, al   ; write 8 bit page num. 
+
+
+  mov   al, 09Ch
+  mov   dx, 00243h
+  out   dx, al   ; write 8 bit page num. 
+  mov   al, 09Dh
+  mov   dx, 04243h
+  out   dx, al   ; write 8 bit page num. 
+  mov   al, 09Eh
+  mov   dx, 08243h
+  out   dx, al   ; write 8 bit page num. 
+  mov   al, 09Fh
+  mov   dx, 0C243h
+  out   dx, al   ; write 8 bit page num. 
+
+
+  mov   al, 080h
+  mov   dx, 00244h
+  out   dx, al   ; write 8 bit page num. 
+  mov   al, 081h
+  mov   dx, 04244h
+  out   dx, al   ; write 8 bit page num. 
+  mov   al, 082h
+  mov   dx, 08244h
+  out   dx, al   ; write 8 bit page num. 
+  mov   al, 083h
+  mov   dx, 0C244h
+  out   dx, al   ; write 8 bit page num. 
+
+  mov   al, 084h
+  mov   dx, 00245h
+  out   dx, al   ; write 8 bit page num. 
+  mov   al, 085h
+  mov   dx, 04245h
+  out   dx, al   ; write 8 bit page num. 
+  mov   al, 086h
+  mov   dx, 08245h
+  out   dx, al   ; write 8 bit page num. 
+  mov   al, 087h
+  mov   dx, 0C245h
+  out   dx, al   ; write 8 bit page num. 
+
+  mov   al, 08Ch
+  mov   dx, 00248h
+  out   dx, al   ; write 8 bit page num. 
+  mov   al, 08Dh
+  mov   dx, 04248h
+  out   dx, al   ; write 8 bit page num. 
+  mov   al, 08Eh
+  mov   dx, 08248h
+  out   dx, al   ; write 8 bit page num. 
+  mov   al, 08Fh
+  mov   dx, 0C248h
+  out   dx, al   ; write 8 bit page num. 
+
+
+COMMENT @
+
+  mov   al, 08Ch
+  mov   dx, 00248h
+  out   dx, al   ; write 8 bit page num. 
+  mov   al, 08Dh
+  mov   dx, 04248h
+  out   dx, al   ; write 8 bit page num. 
+  mov   al, 08Eh
+  mov   dx, 08248h
+  out   dx, al   ; write 8 bit page num. 
+  mov   al, 08Fh
+  mov   dx, 0C248h
+  out   dx, al   ; write 8 bit page num. 
+
+  mov   ah, 6
+  mov   al, 090h
+  mov   dx, INTEL_AB_4000_REGISTER
+  backfillouterloop:
+  mov   cx, 4
+  cmp   al, 0A0h
+  jne   enablebackfillloop
+  mov   al, 080h
+
+  enablebackfillloop:
+  out   dx, al
   inc   al
-  out   dx, al   ; write 8 bit page num. 
-  add   dh, 040h
-  inc   al
-  out   dx, al   ; write 8 bit page num. 
-  add   dh, 040h
-  inc   al
-  out   dx, al   ; write 8 bit page num. 
+  add   dx, 4000h
+  loop enablebackfillloop
+  sub   dx, 0C001h   
+  sub   ah, 1
+  jne   backfillouterloop
+@
+
+
 
   ; hard coded to d000 for now
   mov        word ptr [page_frame_segment], 0D000h
@@ -2666,6 +3009,35 @@ ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
   mov        word ptr [unallocated_page_count], SARC_RC2016_CONST_PAGE_COUNT
   mov        word ptr [total_page_count], SARC_RC2016_CONST_PAGE_COUNT
   mov        word ptr [pageable_frame_count], SARC_RC2016_PAGE_FRAME_COUNT
+
+  ; one handle for now
+  mov        word ptr [handle_count], 01h
+
+
+ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
+
+; offset pages by 2 MB
+
+  mov   dx, STANDARD_BOARD_PAGE_REGISTER_0
+  mov   ax, STANDARD_BOARD_PAGE_OFFSET_AMT
+  out   dx, al   ; write 8 bit page num. 
+  add   dh, 040h
+  inc   al
+  out   dx, al   ; write 8 bit page num. 
+  add   dh, 040h
+  inc   al
+  out   dx, al   ; write 8 bit page num. 
+  add   dh, 040h
+  inc   al
+  out   dx, al   ; write 8 bit page num. 
+
+  ; page frame d000 for now
+  mov        word ptr [page_frame_segment], 0D000h
+
+  ; 256 pages hardcoded for now
+  mov        word ptr [unallocated_page_count], STANDARD_BOARD_CONST_PAGE_COUNT
+  mov        word ptr [total_page_count], STANDARD_BOARD_CONST_PAGE_COUNT
+  mov        word ptr [pageable_frame_count], STANDARD_BOARD_PAGE_FRAME_COUNT
 
   ; one handle for now
   mov        word ptr [handle_count], 01h
