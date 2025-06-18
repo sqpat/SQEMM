@@ -11,8 +11,9 @@ NEAT_CHIPSET = 7
 INTEL_ABOVEBOARD = 8
 SARC_RC2016A = 9
 STANDARD_EMS_BOARD = 10
+FANTASY_EMS = 11
 
-COMPILE_CHIPSET = SCAMP_CHIPSET
+;COMPILE_CHIPSET = SCAMP_CHIPSET
 ;COMPILE_CHIPSET = SCAT_CHIPSET
 ;COMPILE_CHIPSET = HT18_CHIPSET
 ;COMPILE_CHIPSET = HT12_CHIPSET
@@ -22,6 +23,7 @@ COMPILE_CHIPSET = SCAMP_CHIPSET
 ;COMPILE_CHIPSET =  INTEL_ABOVEBOARD
 ;COMPILE_CHIPSET =  SARC_RC2016A
 ;COMPILE_CHIPSET = STANDARD_EMS_BOARD
+COMPILE_CHIPSET = FANTASY_EMS
 
 IF COMPILE_CHIPSET EQ LOTECH_BOARD
 	.8086
@@ -37,6 +39,7 @@ ENDIF
 
 
 
+
 CONST_HANDLE_TABLE_LENGTH = 0FFh
 CONST_PAGE_COUNT = 256
 ; 80h represents 2 MB offset beyond EMS start point
@@ -44,6 +47,12 @@ SCAMP_PAGE_OFFSET_AMT = 68h
 SCAMP_PAGE_SELECT_REGISTER = 0E8h
 SCAMP_PAGE_SET_REGISTER = 0EAh
 SCAMP_PAGE_FRAME_COUNT = 36
+
+FANTASY_PAGE_SELECT_REGISTER = 0E8h
+FANTASY_PAGE_SET_REGISTER = 0EAh
+FANTASY_PAGE_FRAME_COUNT = 36
+FANTASY_PAGE_OFFSET_AMT = 034h
+
 
 ; 18h for D000. 1Ch for E000 if we were to use that.
 SCAT_PAGE_REGISTER_OFFSET = 018h
@@ -275,6 +284,19 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
   dw 0D000h, 0000h, 0D400h, 0001h, 0D800h, 0002h, 0DC00h, 0003h
   dw 0E000h, 0004h, 0E400h, 0005h, 0E800h, 0006h, 0EC00h, 0007h
   dw 0C000h, 0008h, 0C400h, 0009h, 0C800h, 000Ah, 0CC00h, 000Bh 
+
+ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
+
+  dw 04000h, 000Ch, 04400h, 000Dh, 04800h, 000Eh, 04C00h, 000Fh
+  dw 05000h, 0010h, 05400h, 0011h, 05800h, 0012h, 05C00h, 0013h
+  dw 06000h, 0014h, 06400h, 0015h, 06800h, 0016h, 06C00h, 0017h
+  dw 07000h, 0018h, 07400h, 0019h, 07800h, 001Ah, 07C00h, 001Bh
+  dw 08000h, 001Ch, 08400h, 001Dh, 08800h, 001Eh, 08C00h, 001Fh
+  dw 09000h, 0020h, 09400h, 0021h, 09800h, 0022h, 09C00h, 0023h
+  dw 0D000h, 0000h, 0D400h, 0001h, 0D800h, 0002h, 0DC00h, 0003h
+  dw 0E000h, 0004h, 0E400h, 0005h, 0E800h, 0006h, 0EC00h, 0007h
+  dw 0C000h, 0008h, 0C400h, 0009h, 0C800h, 000Ah, 0CC00h, 000Bh 
+
 
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
 
@@ -519,6 +541,76 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
   pop bx
   pop cx
   iret
+
+ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
+
+
+  push cx
+  push bx
+  push si
+
+
+  ; physical page number mode
+  DO_NEXT_PAGE_5000:
+  ; next page in ax....
+  lodsw
+  xchg  ax, bx
+  lodsw
+  ; read two words - bx and ax
+
+  cmp   al, 12
+  ; default, lets assume backfill
+  jb PAGEFRAME_REGISTER_5000
+
+  out FANTASY_PAGE_SELECT_REGISTER, al   ; select EMS page
+ 
+  cmp   bx, 0FFFFh   ; -1 check
+  je    handle_default_page
+  ; default is not the -1 case
+  lea   ax, [bx + FANTASY_PAGE_OFFSET_AMT]   ; offset by default starting page
+  out   FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
+
+
+  loop       DO_NEXT_PAGE_5000
+  ; exits if we fall thru loop with no error
+  xor        ax, ax
+  pop si
+  pop bx
+  pop cx
+  iret
+
+
+  PAGEFRAME_REGISTER_5000:
+  
+  add   al, 4 ; need to add 4 for d000 case for FANTASY...  c000, e000  not supported
+  out   FANTASY_PAGE_SELECT_REGISTER, al   ; select EMS page
+  cmp   bx, 0FFFFh   ; -1 check
+  je    handle_default_page
+  lea   ax, [bx + FANTASY_PAGE_OFFSET_AMT]   ; offset by default starting page
+  out   FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
+
+  loop       DO_NEXT_PAGE_5000
+
+  ; exits if we fall thru loop with no error
+  xor        ax, ax
+  pop si
+  pop bx
+  pop cx
+  iret
+
+  handle_default_page:
+  ; mapping to page -1
+  xchg ax, bx
+  out  FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
+  loop       DO_NEXT_PAGE_5000
+  ; fall thru if done..
+
+  xor        ax, ax
+  pop si
+  pop bx
+  pop cx
+  iret
+
 
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
 
@@ -1169,6 +1261,77 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
   ; mapping to page -1
   ; add four to get the default page value for the page 
   out   SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
+  xor   ax, ax
+  iret
+
+
+
+
+  PAGE_OVERFLOW_3:
+  PAGE_UNDERFLOW_3:
+
+  mov        ah, 080h
+  iret
+
+  ; The memory manager couldn't find the EMM handle your program specified.
+  RETURN_RESULT_83:
+  mov        ah, 083h
+  iret
+
+  RETURN_RESULT_8A:
+  mov        ah, 08Ah
+  iret
+
+  RETURN_RESULT_8B:
+  mov        ah, 08Bh
+  iret
+
+ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
+
+  xor        ah, ah
+  cmp        ax, word ptr cs:[pageable_frame_count]
+  jb         ENOUGH_PAGES
+  jmp        RETURN_RESULT_8B
+
+  ENOUGH_PAGES:
+  cmp        dx,  1
+  jne        RETURN_RESULT_83
+  
+  ; al and bx are still the args
+
+  ; dumb hack. internally c000 - ec00 are pages 0-11 in order.
+  ; but if you want d000 to be page frame, outwardly we must expose it as 0-4.
+  ; so we are assuming 0-4 and adding by 4 to get the real internal offset
+  ; and assume 4-12 not used.
+
+  cmp   al, 12
+  jae   NOT_CONVENTIONAL_REGISTER
+  add   al, 4 ; need to add 4 for d000 case for scamp...  we do this branch knowing it may need to undone eventually
+  out   FANTASY_PAGE_SELECT_REGISTER, al   ; select EMS page
+  cmp   bx, 0FFFFh   ; -1 check
+  je    handle_default_page_44h
+  lea   ax, [bx + FANTASY_PAGE_OFFSET_AMT]   ; offset by default starting page
+  out   FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
+  xor   ax, ax
+  iret
+
+  NOT_CONVENTIONAL_REGISTER:
+
+
+  ; write ems port... select chipset register
+  out   FANTASY_PAGE_SELECT_REGISTER, al   ; select EMS page
+  out   FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
+
+
+  RETURN_RESULT_00:
+
+  xor   ax, ax
+  iret
+  
+  handle_default_page_44h:
+  ; mapping to page -1
+  ; add four to get the default page value for the page 
+  out   FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
   xor   ax, ax
   iret
 
@@ -2488,6 +2651,8 @@ string_driver_successfully_installed db 0Dh, 0Ah, 'SQEMM successfully initialize
 string_driver_failed_installing db 0Dh, 0Ah, ' Driver not installed.', 0Ah,  '$'
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
   string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for VLSI SCAMP', 0Dh, 0Ah,'$'
+ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Fantasy Card', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for C&T SCAT', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
@@ -2620,6 +2785,56 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
 
   ; note: we must treat 'set page to default/-1' case as these values
   ; and we must offset every page set offset by 28h otherwise to avoid these defaults.
+
+ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
+
+
+  ; hard coded to d000 for now
+  mov        word ptr [page_frame_segment], 0D000h
+
+  ; 256 pages hardcoded for now
+  mov        word ptr [unallocated_page_count], CONST_PAGE_COUNT
+  mov        word ptr [total_page_count], CONST_PAGE_COUNT
+  mov        word ptr [pageable_frame_count], FANTASY_PAGE_FRAME_COUNT
+
+  ; one handle for now
+  mov        word ptr [handle_count], 01h
+
+  ; set first four page registers for d000
+  xor   cx, cx
+  mov   cl, 4h  
+  mov   ax, 4
+
+  enablepageloop:
+  out   FANTASY_PAGE_SELECT_REGISTER, al
+  push  ax
+  mov   ax, 0FFFFh
+  out   FANTASY_PAGE_SET_REGISTER, ax
+  pop   ax
+  inc   ax
+  loop enablepageloop
+
+
+  ; NOTE: If we enable backfill, we must initialize page registers for backfill region
+  ;  4-28 to be 4-28
+
+  mov   ax, 0Ch
+  mov   cl, 18h  ; 24 registers, 0C to 23
+
+  ; 0c maps to 10, 
+  ; 0d maps to 11, 
+  ; ...
+  ; 23 maps to 27
+
+  enablebackfillloop:
+  out   FANTASY_PAGE_SELECT_REGISTER, al
+  push  ax
+  mov   ax, 0FFFFh
+  out   FANTASY_PAGE_SET_REGISTER, ax
+  pop   ax
+  inc   ax
+  loop enablebackfillloop
+
 
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
 
