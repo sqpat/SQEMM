@@ -1,0 +1,21 @@
+CCOPTS = -zp1 -oaxet -oi -zq -j -mm -0 -s -zdp -d__COMPILER_WATCOM
+
+GLOBOBJS = &
+ fanthi.obj
+
+fanthi.exe : $(GLOBOBJS)
+ wlink @fanthi.lnk
+ wstrip fanthi.exe
+ exe2bin fanthi.exe
+ move fanthi.bin fanthi.sys /Y
+
+.c.obj :
+ wcc $(CCOPTS) $[*
+
+.asm.obj :
+ tasm /m4 $[*
+
+clean : .SYMBOLIC
+ del *.obj
+ del *.err
+ del fanthi.sys
