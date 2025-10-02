@@ -20,10 +20,10 @@ FANTASY_EMS = 11
 ;COMPILE_CHIPSET = HEDAKA_CHIPSET
 ;COMPILE_CHIPSET = LOTECH_BOARD
 ;COMPILE_CHIPSET =  NEAT_CHIPSET
-;COMPILE_CHIPSET =  INTEL_ABOVEBOARD
+COMPILE_CHIPSET =  INTEL_ABOVEBOARD
 ;COMPILE_CHIPSET =  SARC_RC2016A
 ;COMPILE_CHIPSET = STANDARD_EMS_BOARD
-COMPILE_CHIPSET = FANTASY_EMS
+;COMPILE_CHIPSET = FANTASY_EMS
 
 IF COMPILE_CHIPSET EQ LOTECH_BOARD
 	.8086
@@ -132,10 +132,16 @@ NEAT_CONST_PAGE_COUNT = 128
 INTEL_AB_ENABLE_REGISTER = 0024Fh
 INTEL_AB_4000_REGISTER = 00240h
 
-INTEL_AB_PAGE_REGISTER_0 = 00248h
-INTEL_AB_PAGE_REGISTER_1 = 04248h
-INTEL_AB_PAGE_REGISTER_2 = 08248h
-INTEL_AB_PAGE_REGISTER_3 = 0C248h
+; 00246 = C000
+; 00247 = D000
+; 00248 = e000
+; 00249 Does not seem to do F000
+
+INTEL_AB_PAGE_REGISTER_0 = 00247h
+INTEL_AB_PAGE_REGISTER_1 = 04247h
+INTEL_AB_PAGE_REGISTER_2 = 08247h
+INTEL_AB_PAGE_REGISTER_3 = 0C278h
+; todo this is A0 instead of 98 because the card initializes conventional with gaps
 INTEL_AB_PAGE_OFFSET_AMT = 0A0h
 INTEL_AB_CHIPSET_UNMAP_VALUE = 00h
 INTEL_AB_PAGE_FRAME_COUNT = 28
@@ -3031,9 +3037,9 @@ ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
   mov   al, 0C0h
   out   dx, al
 
-
+; todo INC and constants
   mov   al, 090h
-  mov   dx, 00240h
+  mov   dx, INTEL_AB_4000_REGISTER ; 00240h
   out   dx, al   ; write 8 bit page num. 
   mov   al, 091h
   mov   dx, 04240h
@@ -3112,21 +3118,22 @@ ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
   mov   dx, 0C245h
   out   dx, al   ; write 8 bit page num. 
 
+COMMENT @
+
   mov   al, 08Ch
-  mov   dx, 00248h
+  mov   dx, 00247h
   out   dx, al   ; write 8 bit page num. 
   mov   al, 08Dh
-  mov   dx, 04248h
+  mov   dx, 04247h
   out   dx, al   ; write 8 bit page num. 
   mov   al, 08Eh
-  mov   dx, 08248h
+  mov   dx, 08247h
   out   dx, al   ; write 8 bit page num. 
   mov   al, 08Fh
-  mov   dx, 0C248h
+  mov   dx, 0C247h
   out   dx, al   ; write 8 bit page num. 
 
 
-COMMENT @
 
   mov   al, 08Ch
   mov   dx, 00248h
