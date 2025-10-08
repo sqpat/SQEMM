@@ -141,11 +141,12 @@ INTEL_AB_PAGE_REGISTER_0 = 00247h
 INTEL_AB_PAGE_REGISTER_1 = 04247h
 INTEL_AB_PAGE_REGISTER_2 = 08247h
 INTEL_AB_PAGE_REGISTER_3 = 0C278h
-; todo this is A0 instead of 98 because the card initializes conventional with gaps
+; this would be A0 instead of 98 because the card initializes conventional with gaps
+; however we repage 18-1F to 08-0F
 INTEL_AB_PAGE_OFFSET_AMT = 0A0h
 INTEL_AB_CHIPSET_UNMAP_VALUE = 00h
 INTEL_AB_PAGE_FRAME_COUNT = 28
-INTEL_AB_CONST_PAGE_COUNT = 96
+INTEL_AB_CONST_PAGE_COUNT = 104
 
 
 
@@ -350,13 +351,13 @@ ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
   dw 07000h, 000Ch, 07400h, 000Eh, 07800h, 000Eh, 07C00h, 000Fh
   dw 08000h, 0010h, 08400h, 0011h, 08800h, 0012h, 08C00h, 0013h
   dw 09000h, 0014h, 09400h, 0015h, 09800h, 0016h, 09C00h, 0017h
-  dw 0E000h, 0018h, 0E400h, 0019h, 0E800h, 001Ah, 0EC00h, 001Bh
+  dw 0D000h, 0018h, 0D400h, 0019h, 0D800h, 001Ah, 0DC00h, 001Bh
 
 default_page_struct:
   db 090h, 091h, 092h, 093h
   db 094h, 095h, 096h, 097h
-  db 098h, 099h, 09Ah, 09Bh
-  db 09Ch, 09Dh, 09Eh, 09Fh
+  db 088h, 089h, 08Ah, 08Bh
+  db 08Ch, 08Dh, 08Eh, 08Fh
   db 080h, 081h, 082h, 083h
   db 084h, 085h, 086h, 087h
   db 08Ch, 08Dh, 08Eh, 08Fh
@@ -1066,8 +1067,11 @@ ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
   ror  ax, 1
   add  ax, INTEL_AB_4000_REGISTER
 
-  xchg dx, ax
+  xchg  ax, dx
   add   al, INTEL_AB_PAGE_OFFSET_AMT
+  jnc   intel_ab_not_overflow
+  add   al, 088h  ; page ON 080h + 8 to get gap pages
+  intel_ab_not_overflow:
   out   dx, al   ; write 8 bit page num. 
 
   loop       DO_NEXT_PAGE_5000
@@ -1775,7 +1779,11 @@ ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
   je    handle_default_page_44h
 
   mov   ax, bx
-  add   ax, INTEL_AB_PAGE_OFFSET_AMT
+  add   al, INTEL_AB_PAGE_OFFSET_AMT
+  jnc   intel_ab_not_overflow_2
+  add   al, 088h  ; page ON 080h + 8 to get gap pages
+  intel_ab_not_overflow_2:
+
   out   dx, al   ; write 16 bit page num. 
   
   pop   dx
@@ -3038,6 +3046,19 @@ ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
   out   dx, al
 
 ; todo INC and constants
+
+; manually remap memory... 
+; intel above board sets up with:
+; 0x4000 = 0x10  0x4400 = 0x11   0x4800 = 0x12   0x4C00 = 0x13
+; 0x5000 = 0x14  0x5400 = 0x15   0x5800 = 0x16   0x5C00 = 0x17
+; 0x6000 = 0x18  0x6400 = 0x19   0x6800 = 0x1A   0x6C00 = 0x1B
+; 0x7000 = 0x1C  0x7400 = 0x1D   0x7800 = 0x1E   0x7C00 = 0x1F
+; 0x8000 = 0x00  0x8400 = 0x01   0x8800 = 0x02   0x8C00 = 0x03
+; 0x9000 = 0x04  0x9400 = 0x05   0x9800 = 0x06   0x9C00 = 0x07
+
+; observe gap of 0x8-0xF
+; in theory we should sti/cli and memcpy but lets assume nothing important is in 6000-8000
+
   mov   al, 090h
   mov   dx, INTEL_AB_4000_REGISTER ; 00240h
   out   dx, al   ; write 8 bit page num. 
@@ -3119,7 +3140,7 @@ ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
   out   dx, al   ; write 8 bit page num. 
 
 COMMENT @
-
+; enable upper pages code
   mov   al, 08Ch
   mov   dx, 00247h
   out   dx, al   ; write 8 bit page num. 
