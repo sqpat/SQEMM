@@ -485,6 +485,7 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
 
 
   ; physical page number mode
+  cli
   DO_NEXT_PAGE_5000:
   ; next page in ax....
   lodsw
@@ -507,6 +508,7 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
 
 
   loop       DO_NEXT_PAGE_5000
+  sti
   ; exits if we fall thru loop with no error
   xor        ax, ax
   pop si
@@ -526,6 +528,7 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
   out   SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
 
   loop       DO_NEXT_PAGE_5000
+  sti
 
   ; exits if we fall thru loop with no error
   xor        ax, ax
@@ -542,6 +545,7 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
   out  SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
   loop       DO_NEXT_PAGE_5000
   ; fall thru if done..
+  sti
 
   xor        ax, ax
   pop si
@@ -558,6 +562,7 @@ ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
 
 
   ; physical page number mode
+  sti
   DO_NEXT_PAGE_5000:
   ; next page in ax....
   lodsw
@@ -579,6 +584,7 @@ ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
 
 
   loop       DO_NEXT_PAGE_5000
+  sti
   ; exits if we fall thru loop with no error
   xor        ax, ax
   pop si
@@ -597,6 +603,7 @@ ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
   out   FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
 
   loop       DO_NEXT_PAGE_5000
+  sti
 
   ; exits if we fall thru loop with no error
   xor        ax, ax
@@ -610,6 +617,7 @@ ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
   xchg ax, bx
   out  FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
   loop       DO_NEXT_PAGE_5000
+  sti
   ; fall thru if done..
 
   xor        ax, ax
@@ -628,6 +636,7 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
 
 
   ; physical page number mode
+  cli
   DO_NEXT_PAGE_5000:
   ; next page in ax....
   lodsw
@@ -647,6 +656,7 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   out   dx, ax   ; write 16 bit page num. 
 
   loop       DO_NEXT_PAGE_5000
+  sti
 
   ; exit fall thru
   xor ax, ax
@@ -661,6 +671,7 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   mov   ax, SCAT_CHIPSET_UNMAP_VALUE
   out   dx, ax   ; write 16 bit page num. 
   loop       DO_NEXT_PAGE_5000
+  sti
 
 
   ; exit fall thru
@@ -680,6 +691,7 @@ ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
 
 
   ; physical page number mode
+  cli
   DO_NEXT_PAGE_5000:
   ; next page in ax....
   lodsw
@@ -699,6 +711,7 @@ ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
   out   dx, ax   ; write 16 bit page num. 
 
   loop       DO_NEXT_PAGE_5000
+  sti
 
   ; exit fall thru
   xor ax, ax
@@ -713,6 +726,7 @@ ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
   mov   ax, HT18_CHIPSET_UNMAP_VALUE
   out   dx, ax   ; write 16 bit page num. 
   loop       DO_NEXT_PAGE_5000
+  sti
 
 
   ; exit fall thru
@@ -732,6 +746,7 @@ ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
 
 
   ; physical page number mode
+  cli
   DO_NEXT_PAGE_5000:
 
   ; preselect the register for the page on/off 
@@ -786,6 +801,7 @@ ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
   pop cx
 
   loop       DO_NEXT_PAGE_5000
+  sti
 
   ; exit fall thru
   xor ax, ax
@@ -808,6 +824,7 @@ ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
   pop cx
 
   loop       DO_NEXT_PAGE_5000
+  sti
 
 
   ; exit fall thru
@@ -827,6 +844,7 @@ ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
 
 
   ; physical page number mode
+  cli
   DO_NEXT_PAGE_5000:
   ; next page in ax....
   lodsw
@@ -847,6 +865,7 @@ ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
   out   dx, al   ; write 8 bit page num. 
 
   loop       DO_NEXT_PAGE_5000
+  sti
 
   ; exit fall thru
   xor ax, ax
@@ -860,6 +879,7 @@ ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
   mov   ax, HEDAKA_CHIPSET_UNMAP_VALUE
   out   dx, al   ; write 8 bit page num. 
   loop       DO_NEXT_PAGE_5000
+  sti
 
 
   ; exit fall thru
@@ -877,6 +897,7 @@ ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
 
 
   ; physical page number mode
+  cli
   DO_NEXT_PAGE_5000:
   ; next page in ax....
 
@@ -888,6 +909,7 @@ ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
   out   dx, al   ; write 8 bit page num. 
 
   loop       DO_NEXT_PAGE_5000
+  sti
 
 
   ; exit fall thru
@@ -907,7 +929,9 @@ ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
 
 
   ; physical page number mode
+  cli
   DO_NEXT_PAGE_5000:
+
   ; next page in ax....
   lodsw
   mov        dx, ax
@@ -927,6 +951,7 @@ ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
   out   dx, al   ; write 8 bit page num. 
 
   loop       DO_NEXT_PAGE_5000
+  sti
 
   ; exit fall thru
   xor ax, ax
@@ -940,6 +965,7 @@ ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
   mov   ax, NEAT_CHIPSET_UNMAP_VALUE
   out   dx, al   ; write 8 bit page num. 
   loop       DO_NEXT_PAGE_5000
+  sti
 
 
   ; exit fall thru
@@ -957,6 +983,7 @@ ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
   push dx
 
   ; physical page number mode
+  cli
   DO_NEXT_PAGE_5000:
   ; next page in ax....
 
@@ -998,6 +1025,7 @@ ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
  
 
   loop       DO_NEXT_PAGE_5000
+  sti
 
 
   ; exit fall thru
@@ -1029,6 +1057,7 @@ ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
 
 
   loop       DO_NEXT_PAGE_5000
+  sti
 
   ; exit fall thru
   xor ax, ax
@@ -1046,6 +1075,7 @@ ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
   push dx
 
   ; physical page number mode
+  cli
   DO_NEXT_PAGE_5000:
   ; next page in ax....
 
@@ -1075,6 +1105,7 @@ ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
   out   dx, al   ; write 8 bit page num. 
 
   loop       DO_NEXT_PAGE_5000
+  sti
 
 
   ; exit fall thru
@@ -1103,6 +1134,7 @@ ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
 
   out   dx, al   ; write 8 bit page num. 
   loop  DO_NEXT_PAGE_5000
+  sti
 
 
   ; exit fall thru
@@ -1117,6 +1149,7 @@ ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
   add   al, 070h
   out   dx, al   ; write 8 bit page num. 
   loop  DO_NEXT_PAGE_5000
+  sti
 
 
   ; exit fall thru
@@ -1143,6 +1176,7 @@ COMMENT @
 
   out   dx, al   ; write 8 bit page num. 
   loop  DO_NEXT_PAGE_5000
+  sti
 
 
   ; exit fall thru
@@ -1162,6 +1196,7 @@ ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
 
 
   ; physical page number mode
+  cli
   DO_NEXT_PAGE_5000:
   ; next page in ax....
   lodsw
@@ -1182,6 +1217,7 @@ ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
   out   dx, al   ; write 8 bit page num. 
 
   loop       DO_NEXT_PAGE_5000
+  sti
 
   ; exit fall thru
   xor ax, ax
@@ -1195,6 +1231,7 @@ ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
   mov   ax, STANDARD_BOARD_CHIPSET_UNMAP_VALUE
   out   dx, al   ; write 8 bit page num. 
   loop       DO_NEXT_PAGE_5000
+  sti
 
 
   ; exit fall thru
@@ -1236,6 +1273,7 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
   ; so we are assuming 0-4 and adding by 4 to get the real internal offset
   ; and assume 4-12 not used.
 
+  cli
   cmp   ax, 12
   jae   NOT_CONVENTIONAL_REGISTER
   add   ax, 4 ; need to add 4 for d000 case for scamp...  we do this branch knowing it may need to undone eventually
@@ -1245,6 +1283,7 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
   mov   ax, bx  
   add   ax, SCAMP_PAGE_OFFSET_AMT   ; offset by default starting page
   out   SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
+  sti
   xor   ax, ax
   iret
 
@@ -1258,6 +1297,8 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
   mov   ax, bx 
   add   ax, SCAMP_PAGE_OFFSET_AMT   ; offset by default starting page
   out   SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
+  sti
+
 
 
   RETURN_RESULT_00:
@@ -1271,6 +1312,7 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
   ; mapping to page -1
   ; add four to get the default page value for the page 
   out   SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
+  sti
   xor   ax, ax
   iret
 
@@ -1314,6 +1356,7 @@ ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
   ; so we are assuming 0-4 and adding by 4 to get the real internal offset
   ; and assume 4-12 not used.
 
+  cli
   cmp   al, 12
   jae   NOT_CONVENTIONAL_REGISTER
   add   al, 4 ; need to add 4 for d000 case for scamp...  we do this branch knowing it may need to undone eventually
@@ -1322,6 +1365,7 @@ ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
   je    handle_default_page_44h
   lea   ax, [bx + FANTASY_PAGE_OFFSET_AMT]   ; offset by default starting page
   out   FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
+  sti
   xor   ax, ax
   iret
 
@@ -1331,6 +1375,7 @@ ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
   ; write ems port... select chipset register
   out   FANTASY_PAGE_SELECT_REGISTER, al   ; select EMS page
   out   FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
+  sti
 
 
   RETURN_RESULT_00:
@@ -1342,6 +1387,7 @@ ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
   ; mapping to page -1
   ; add four to get the default page value for the page 
   out   FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
+  sti
   xor   ax, ax
   iret
 
@@ -1388,6 +1434,7 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
  
   mov   dx, SCAT_PAGE_SELECT_REGISTER
   add   al, SCAT_PAGE_REGISTER_OFFSET ; convert 0-4 to 18-1c
+  cli
   out   dx, al   ; select EMS page
   mov   dx, SCAT_PAGE_SET_REGISTER
   cmp   bx, 0FFFFh   ; -1 check
@@ -1396,9 +1443,11 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   mov   ax, SCAT_PAGE_OFFSET_AMT   ; offset by default starting page
   add   ax, bx
   out   dx, ax   ; write 16 bit page num. 
+  sti
   
   pop   dx
   xor   ax, ax
+
   iret
 
 
@@ -1406,6 +1455,7 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   ; mapping to page -1
   mov   ax, SCAT_CHIPSET_UNMAP_VALUE ; "turn off ems for this page" value
   out   dx, ax   ; write 16 bit page num. 
+  sti
   
   pop   dx
   xor   ax, ax
@@ -1452,6 +1502,7 @@ ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
  
   mov   dx, HT18_PAGE_SELECT_REGISTER
   add   al, HT18_PAGE_REGISTER_OFFSET ; convert 0-4 to 1c-1f
+  cli
   out   dx, al   ; select EMS page
   mov   dx, HT18_PAGE_SET_REGISTER
   cmp   bx, 0FFFFh   ; -1 check
@@ -1460,6 +1511,7 @@ ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
   mov   ax, HT18_PAGE_OFFSET_AMT   ; offset by default starting page
   add   ax, bx
   out   dx, ax   ; write 16 bit page num. 
+  sti
   
   pop   dx
   xor   ax, ax
@@ -1470,6 +1522,7 @@ ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
   ; mapping to page -1
   mov   ax, HT18_CHIPSET_UNMAP_VALUE ; "turn off ems for this page" value
   out   dx, ax   ; write 16 bit page num. 
+  sti
   
   pop   dx
   xor   ax, ax
@@ -1515,6 +1568,7 @@ ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
 
   mov dx, HT12_CHIPSET_CONFIG_REGISTER_SELECT
   mov ax, HT12_EMS_CONFIG_REGISTER
+  cli
   out dx, al
   
   mov dx, HT12_CHIPSET_CONFIG_REGISTER_READWRITE
@@ -1538,6 +1592,7 @@ ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
   mov ax, bx
   add al, HT12_PAGE_OFFSET_AMT
   out dx, al ; write page
+  sti
 
   pop dx
   pop cx
@@ -1554,7 +1609,9 @@ ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
   not dx
   and al, dl   ; turn off page bit
   mov dx, HT12_CHIPSET_CONFIG_REGISTER_READWRITE
+
   out dx, al  ; page is now turned off
+  sti
 
   pop dx
   pop cx
@@ -1602,13 +1659,14 @@ ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
 
   ; 0-4 becomes 0208h, 4208h, 8208h, c208h
   mov dx, ax
-
+  cli
   cmp   bx, 0FFFFh   ; -1 check
   je    handle_default_page_44h
 
   mov ax, bx
   add    ax, HEDAKA_PAGE_OFFSET_AMT   ; turn on EMS ON bit and add conventional offset
   out   dx, al   ; write 16 bit page num. 
+  sti
 
   pop   dx
   xor   ax, ax
@@ -1619,6 +1677,7 @@ ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
   ; mapping to page -1
   mov   ax, HEDAKA_CHIPSET_UNMAP_VALUE ; "turn off ems for this page" value
   out   dx, al   ; write 16 bit page num. 
+  sti
   
   pop   dx
   ;xor   ax, ax   ; already 0 above
@@ -1666,6 +1725,7 @@ ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
 
   ; since FF works as an unmap, lets just write that.
 
+  cli
   out   dx, al   ; write 16 bit page num. 
   
   pop   dx
@@ -1720,6 +1780,7 @@ ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
   mov   ax, bx
   add   ax, NEAT_PAGE_OFFSET_AMT   ; turn on EMS ON bit
   out   dx, al   ; write 8 bit page num. 
+  sti
 
   pop   dx
   xor   ax, ax
@@ -1729,6 +1790,7 @@ ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
   ; mapping to page -1
   mov   ax, NEAT_CHIPSET_UNMAP_VALUE ; "turn off ems for this page" value
   out   dx, al   ; write 8 bit page num. 
+  sti
   
   pop   dx
   xor   ax, ax  
@@ -1780,11 +1842,13 @@ ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
 
   mov   ax, bx
   add   al, INTEL_AB_PAGE_OFFSET_AMT
+  cli
   jnc   intel_ab_not_overflow_2
   add   al, 088h  ; page ON 080h + 8 to get gap pages
   intel_ab_not_overflow_2:
 
   out   dx, al   ; write 16 bit page num. 
+  sti
   
   pop   dx
   xor   ax, ax  
@@ -1794,6 +1858,7 @@ ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
   ; mapping to page -1
   mov   ax, INTEL_AB_CHIPSET_UNMAP_VALUE ; "turn off ems for this page" value
   out   dx, al   ; write 8 bit page num. 
+  sti
   
   pop   dx
   xor   ax, ax  
@@ -1840,6 +1905,7 @@ ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
   xchg ah, al
  
 
+  cli
   out  SARC_RC2016_CHIPSET_INDEX_PORT, al
   inc  al     
   xchg ah, al  
@@ -1871,6 +1937,7 @@ ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
   sar ax, 2
   add al, SARC_RC2016_PAGE_OFFSET_AMT
   out SARC_RC2016_CHIPSET_VALUE_PORT, al
+  sti
 
   xor   ax, ax  
   iret
@@ -1888,6 +1955,7 @@ ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
   xor   ax, ax
 
   out  SARC_RC2016_CHIPSET_VALUE_PORT, al
+  sti
 
   iret
 
@@ -1932,13 +2000,14 @@ ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
 
   ; 0-4 becomes 258, 4258, 8258, c258
   mov dx, ax
-
+  cli
   cmp   bx, 0FFFFh   ; -1 check
   je    handle_default_page_44h
 
   mov   ax, bx
   add   ax, STANDARD_BOARD_PAGE_OFFSET_AMT   ; turn on EMS ON bit
   out   dx, al   ; write 8 bit page num. 
+  sti
 
   pop   dx
   xor   ax, ax
@@ -1948,6 +2017,7 @@ ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
   ; mapping to page -1
   mov   ax, STANDARD_BOARD_CHIPSET_UNMAP_VALUE ; "turn off ems for this page" value
   out   dx, al   ; write 8 bit page num. 
+  sti
   
   pop   dx
   
@@ -2209,6 +2279,7 @@ EMS_FUNCTION_04Fh:
 ; note: not really implemented yet
 EMS_FUNCTION_05001h:
 
+cli
 DO_NEXT_PAGE_5001:
 ; next page in ax....
 lodsw
@@ -2236,6 +2307,7 @@ out  SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num.
 
 
 loop       DO_NEXT_PAGE_5001
+sti
 xor        ax, ax
 pop        bx
 jmp        RETURNINTERRUPTRESULT
@@ -3058,7 +3130,7 @@ ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
 
 ; observe gap of 0x8-0xF
 ; in theory we should sti/cli and memcpy but lets assume nothing important is in 6000-8000
-
+  cli
   mov   al, 090h
   mov   dx, INTEL_AB_4000_REGISTER ; 00240h
   out   dx, al   ; write 8 bit page num. 
@@ -3188,6 +3260,7 @@ COMMENT @
   jne   backfillouterloop
 @
 
+  sti
 
 
   ; hard coded to d000 for now
