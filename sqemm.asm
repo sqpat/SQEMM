@@ -12,6 +12,7 @@ INTEL_ABOVEBOARD = 8
 SARC_RC2016A = 9
 STANDARD_EMS_BOARD = 10
 FANTASY_EMS = 11
+RODNEY_EMS = 12
 
 ;COMPILE_CHIPSET = SCAMP_CHIPSET
 ;COMPILE_CHIPSET = SCAT_CHIPSET
@@ -20,10 +21,10 @@ FANTASY_EMS = 11
 ;COMPILE_CHIPSET = HEDAKA_CHIPSET
 ;COMPILE_CHIPSET = LOTECH_BOARD
 ;COMPILE_CHIPSET =  NEAT_CHIPSET
-COMPILE_CHIPSET =  INTEL_ABOVEBOARD
+;COMPILE_CHIPSET =  INTEL_ABOVEBOARD
 ;COMPILE_CHIPSET =  SARC_RC2016A
 ;COMPILE_CHIPSET = STANDARD_EMS_BOARD
-;COMPILE_CHIPSET = FANTASY_EMS
+COMPILE_CHIPSET = RODNEY_EMS
 
 IF COMPILE_CHIPSET EQ LOTECH_BOARD
 	.8086
@@ -52,6 +53,15 @@ FANTASY_PAGE_SELECT_REGISTER = 0E8h
 FANTASY_PAGE_SET_REGISTER = 0EAh
 FANTASY_PAGE_FRAME_COUNT = 36
 FANTASY_PAGE_OFFSET_AMT = 034h
+
+RODNEY_PAGE_SELECT_REGISTER = 0E8h
+RODNEY_PAGE_SET_REGISTER = 0EAh
+RODNEY_PAGE_FRAME_COUNT = 32
+; start at the 1 MB offset
+; 8000 is to mark bit 15 for free "ems enabled"
+RODNEY_PAGE_OFFSET_AMT = 08040h
+; 34h for D000. 38h for E000 if we were to use that.
+RODNEY_PAGE_REGISTER_OFFSET = 034h
 
 
 ; 18h for D000. 1Ch for E000 if we were to use that.
@@ -303,6 +313,17 @@ ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
   dw 0D000h, 0000h, 0D400h, 0001h, 0D800h, 0002h, 0DC00h, 0003h
   dw 0E000h, 0004h, 0E400h, 0005h, 0E800h, 0006h, 0EC00h, 0007h
   dw 0C000h, 0008h, 0C400h, 0009h, 0C800h, 000Ah, 0CC00h, 000Bh 
+
+  ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
+
+  dw 04000h, 0010h, 04400h, 0011h, 04800h, 0012h, 04C00h, 0013h
+  dw 05000h, 0014h, 05400h, 0015h, 05800h, 0016h, 05C00h, 0017h
+  dw 06000h, 0018h, 06400h, 0019h, 06800h, 001Ah, 06C00h, 001Bh
+  dw 07000h, 001Ch, 07400h, 001Eh, 07800h, 001Eh, 07C00h, 001Fh
+  dw 08000h, 0020h, 08400h, 0021h, 08800h, 0022h, 08C00h, 0023h
+  dw 09000h, 0024h, 09400h, 0025h, 09800h, 0026h, 09C00h, 0027h
+  dw 0D000h, 0034h, 0D400h, 0035h, 0D800h, 0036h, 0DC00h, 0037h
+  dw 0E000h, 0038h, 0E400h, 0036h, 0E800h, 0037h, 0EC00h, 0038h
 
 
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
@@ -626,6 +647,54 @@ ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
   pop cx
   iret
 
+ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
+
+  push cx
+  push bx
+  push si
+
+
+  ; physical page number mode
+  cli
+  DO_NEXT_PAGE_5000:
+  ; next page in ax....
+  lodsw
+  xchg   ax, bx
+  lodsw
+  ; read two words - bx and ax
+
+  
+  out   RODNEY_PAGE_SELECT_REGISTER, al   ; select EMS page
+  cmp   bx, 0FFFFh   ; -1 check
+  je    handle_default_page
+
+  lea   ax, [bx + RODNEY_PAGE_OFFSET_AMT]   ; offset by default starting page
+  out   RODNEY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
+
+  loop       DO_NEXT_PAGE_5000
+  sti
+
+  ; exit fall thru
+  xor ax, ax
+  pop si
+  pop bx
+  pop cx
+  iret
+
+  handle_default_page:
+  ; mapping to page -1
+  xor   ax, ax ; turn off bit 15
+  out   RODNEY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
+  loop  DO_NEXT_PAGE_5000
+  sti
+
+
+  ; exit fall thru
+  xor ax, ax
+  pop si
+  pop bx
+  pop cx
+  iret
 
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
 
@@ -1259,8 +1328,7 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
 
   xor        ah, ah
   cmp        ax, word ptr cs:[pageable_frame_count]
-  jb         ENOUGH_PAGES
-  jmp        RETURN_RESULT_8B
+  jnb        RETURN_RESULT_8B
 
   ENOUGH_PAGES:
   cmp        dx,  1
@@ -1342,8 +1410,7 @@ ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
 
   xor        ah, ah
   cmp        ax, word ptr cs:[pageable_frame_count]
-  jb         ENOUGH_PAGES
-  jmp        RETURN_RESULT_8B
+  jnb        RETURN_RESULT_8B
 
   ENOUGH_PAGES:
   cmp        dx,  1
@@ -1374,6 +1441,7 @@ ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
 
   ; write ems port... select chipset register
   out   FANTASY_PAGE_SELECT_REGISTER, al   ; select EMS page
+  mov   ax, bx
   out   FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
   sti
 
@@ -1413,6 +1481,62 @@ ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
   mov        ah, 08Bh
   iret
 
+
+ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
+
+  xor        ah, ah
+  cmp        ax, word ptr cs:[pageable_frame_count]
+  jnb        RETURN_RESULT_8B
+
+  ENOUGH_PAGES:
+  cmp        dx,  1
+  jne        RETURN_RESULT_83
+  
+  ; al and bx are the args
+
+  add   al, RODNEY_PAGE_REGISTER_OFFSET   ; convert 0-4 to 34h-37h
+
+  cli
+  out   RODNEY_PAGE_SELECT_REGISTER, al   ; select EMS page
+  cmp   bx, 0FFFFh   ; -1 check
+  je    handle_default_page_44h
+  lea   ax, [bx + RODNEY_PAGE_OFFSET_AMT]   ; offset by default starting page
+  out   RODNEY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
+  sti
+  RETURN_RESULT_00:
+  xor   ax, ax
+  iret
+
+
+  handle_default_page_44h:
+  ; undo mapping by turning off bit 7 in EBh
+  xor   ax, ax
+  out   RODNEY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
+  sti
+  ; return 0
+  iret
+
+
+  PAGE_OVERFLOW_3:
+  PAGE_UNDERFLOW_3:
+
+  mov        ah, 080h
+  iret
+
+  ; The memory manager couldn't find the EMM handle your program specified.
+  RETURN_RESULT_83:
+  mov        ah, 083h
+  iret
+
+  RETURN_RESULT_8A:
+  mov        ah, 08Ah
+  iret
+
+  RETURN_RESULT_8B:
+  mov        ah, 08Bh
+  iret
+
+
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
 
   ; note: scat maps 0-4 not to the page frame but rather to 4000-4c00
@@ -1421,8 +1545,7 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
 
   xor        ah, ah
   cmp        ax, word ptr cs:[pageable_frame_count]
-  jb         ENOUGH_PAGES
-  jmp        RETURN_RESULT_8B
+  jnb        RETURN_RESULT_8B
 
   ENOUGH_PAGES:
   cmp        dx,  1
@@ -1489,8 +1612,7 @@ ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
 
   xor        ah, ah
   cmp        ax, word ptr cs:[pageable_frame_count]
-  jb         ENOUGH_PAGES
-  jmp        RETURN_RESULT_8B
+  jnb        RETURN_RESULT_8B
 
   ENOUGH_PAGES:
   cmp        dx,  1
@@ -1551,8 +1673,7 @@ ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
 
   xor        ah, ah
   cmp        ax, word ptr cs:[pageable_frame_count]
-  jb         ENOUGH_PAGES
-  jmp        RETURN_RESULT_8B
+  jnb        RETURN_RESULT_8B
 
   ENOUGH_PAGES:
   cmp        dx,  1
@@ -1643,8 +1764,7 @@ ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
 
   xor        ah, ah
   cmp        ax, word ptr cs:[pageable_frame_count]
-  jb         ENOUGH_PAGES
-  jmp        RETURN_RESULT_8B
+  jnb        RETURN_RESULT_8B
 
   ENOUGH_PAGES:
   cmp        dx,  1
@@ -1708,8 +1828,7 @@ ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
 
   xor        ah, ah
   cmp        ax, word ptr cs:[pageable_frame_count]
-  jb         ENOUGH_PAGES
-  jmp        RETURN_RESULT_8B
+  jnb        RETURN_RESULT_8B
 
   ENOUGH_PAGES:
   cmp        dx,  1
@@ -1757,8 +1876,7 @@ ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
 
   xor        ah, ah
   cmp        ax, word ptr cs:[pageable_frame_count]
-  jb         ENOUGH_PAGES
-  jmp        RETURN_RESULT_8B
+  jnb        RETURN_RESULT_8B
 
   ENOUGH_PAGES:
   cmp        dx,  1
@@ -1820,8 +1938,7 @@ ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
 ; still only working in page frame version..
   xor        ah, ah
   cmp        ax, word ptr cs:[pageable_frame_count]
-  jb         ENOUGH_PAGES
-  jmp        RETURN_RESULT_8B
+  jnb        RETURN_RESULT_8B
 
   ENOUGH_PAGES:
   cmp        dx,  1
@@ -1887,8 +2004,7 @@ ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
 
   xor        ah, ah
   cmp        ax, word ptr cs:[pageable_frame_count]
-  jb         ENOUGH_PAGES
-  jmp        RETURN_RESULT_8B
+  jnb        RETURN_RESULT_8B
 
   ENOUGH_PAGES:
   cmp        dx,  1
@@ -1984,8 +2100,7 @@ ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
 
   xor        ah, ah
   cmp        ax, word ptr cs:[pageable_frame_count]
-  jb         ENOUGH_PAGES
-  jmp        RETURN_RESULT_8B
+  jnb        RETURN_RESULT_8B
 
   ENOUGH_PAGES:
   cmp        dx,  1
@@ -2739,6 +2854,8 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
   string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for VLSI SCAMP', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
   string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Fantasy Card', 0Dh, 0Ah,'$'
+ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Rodneys 286 Chipset', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for C&T SCAT', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
@@ -2871,6 +2988,22 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
 
   ; note: we must treat 'set page to default/-1' case as these values
   ; and we must offset every page set offset by 28h otherwise to avoid these defaults.
+
+ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
+
+  ; hard coded to d000 for now
+  mov        word ptr [page_frame_segment], 0D000h
+
+  ; 256 pages hardcoded for now
+  mov        word ptr [unallocated_page_count], CONST_PAGE_COUNT
+  mov        word ptr [total_page_count], CONST_PAGE_COUNT
+  mov        word ptr [pageable_frame_count], RODNEY_PAGE_FRAME_COUNT
+
+  ; one handle for now
+  mov        word ptr [handle_count], 01h
+
+  ; no initial setup?
+
 
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
 
