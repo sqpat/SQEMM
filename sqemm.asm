@@ -55,6 +55,7 @@ FANTASY_PAGE_FRAME_COUNT = 36
 FANTASY_PAGE_OFFSET_AMT = 034h
 
 RODNEY_PAGE_SELECT_REGISTER = 0E8h
+RODNEY_EMS_ENABLE_REGISTER = 0E9h
 RODNEY_PAGE_SET_REGISTER = 0EAh
 RODNEY_PAGE_FRAME_COUNT = 32
 ; start at the 1 MB offset
@@ -3003,6 +3004,19 @@ ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
   mov        word ptr [handle_count], 01h
 
   ; no initial setup?
+
+  mov       cx, 040h
+  xor       ax, ax
+  setdefaultpageloop:
+  
+  mov       ax, cx
+  dec       ax
+  out       RODNEY_PAGE_SELECT_REGISTER, al ; n
+  xor       ax, ax
+  out       RODNEY_PAGE_SET_REGISTER, ax   ; 0
+  loop      setdefaultpageloop
+
+  out       RODNEY_EMS_ENABLE_REGISTER, al
 
 
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
