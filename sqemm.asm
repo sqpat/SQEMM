@@ -324,7 +324,7 @@ ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
   dw 08000h, 0020h, 08400h, 0021h, 08800h, 0022h, 08C00h, 0023h
   dw 09000h, 0024h, 09400h, 0025h, 09800h, 0026h, 09C00h, 0027h
   dw 0D000h, 0034h, 0D400h, 0035h, 0D800h, 0036h, 0DC00h, 0037h
-  dw 0E000h, 0038h, 0E400h, 0036h, 0E800h, 0037h, 0EC00h, 0038h
+  dw 0E000h, 0038h, 0E400h, 0039h, 0E800h, 003Ah, 0EC00h, 003Bh
 
 
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
@@ -584,7 +584,7 @@ ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
 
 
   ; physical page number mode
-  sti
+  cli
   DO_NEXT_PAGE_5000:
   ; next page in ax....
   lodsw
@@ -660,7 +660,7 @@ ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
   DO_NEXT_PAGE_5000:
   ; next page in ax....
   lodsw
-  xchg   ax, bx
+  xchg  ax, bx
   lodsw
   ; read two words - bx and ax
 
@@ -688,6 +688,7 @@ ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
   out   RODNEY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
   loop  DO_NEXT_PAGE_5000
   sti
+  ; fall thru if done..
 
 
   ; exit fall thru
@@ -3003,21 +3004,17 @@ ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
   ; one handle for now
   mov        word ptr [handle_count], 01h
 
-  ; no initial setup?
 
   mov       cx, 040h
-  xor       ax, ax
   setdefaultpageloop:
-  
   mov       ax, cx
   dec       ax
-  out       RODNEY_PAGE_SELECT_REGISTER, al ; n
+  out       RODNEY_PAGE_SELECT_REGISTER, al ; 040h to 1 loop becomes 03Fh to 0
   xor       ax, ax
   out       RODNEY_PAGE_SET_REGISTER, ax   ; 0
   loop      setdefaultpageloop
 
   out       RODNEY_EMS_ENABLE_REGISTER, al
-
 
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
 
