@@ -75,9 +75,21 @@ POPA_MACRO MACRO
 ENDM
 
 .MODEL  tiny
-	
-.DATA
 
+
+DOS_DRIVER_REQUEST_HEADER STRUC 
+
+    ; cmd struct 8 bytes
+    drrh_length_of_record  db ?      ; 0    
+    drrh_unit_code         db ?      ; 1
+    drrh_command_code      db ?      ; 2
+    drrh_status            dw ?      ; 3
+    drrh_reserved          dd ?      ; 5
+    drrh_link              dd ?      ; 9
+DOS_DRIVER_REQUEST_HEADER ENDS       ; 0Dh
+
+
+.DATA
 
 
 
@@ -232,7 +244,7 @@ STANDARD_BOARD_CONST_PAGE_COUNT = 128
 .CODE
 
 
-;00000h ; magic ID?
+;00000h ; pointer to the next header.
 dw 0FFFFh
 dw 0FFFFh
 dw 8000h
@@ -243,7 +255,7 @@ dw OFFSET EMS_DRIVER_INIT
 dw OFFSET EMS_DRIVER_CALL
 
 ;0000Ah
-db 'EMMXXXX0 SQEMM EMS Driver'
+db 'EMMXXXX0'
 
 ALIGN 2
 ;00048h
@@ -255,7 +267,7 @@ dw OFFSET DRIVER_INIT
 ; 0004Ah
 EMS_DRIVER_INIT:
 public EMS_DRIVER_INIT
-; store 32 bit pointer to reques theader
+; store 32 bit pointer to request header
 mov  word ptr cs:[request_header_pointer], bx        
 mov  word ptr cs:[request_header_pointer+2], es        
 retf 
@@ -267,17 +279,17 @@ push  ds
 
 lds  bx, dword ptr cs:[request_header_pointer]  ; todo no ds?
 
-cmp  byte ptr ds:[bx + 2], 0
+cmp  byte ptr ds:[bx + DOS_DRIVER_REQUEST_HEADER.drrh_command_code], 0
 je   do_init
-cmp  byte ptr ds:[bx + 2], 10
+cmp  byte ptr ds:[bx + DOS_DRIVER_REQUEST_HEADER.drrh_command_code], 10
 
 
-mov  word ptr ds:[bx + 3], 08103h
+mov  word ptr ds:[bx + DOS_DRIVER_REQUEST_HEADER.drrh_status], 08103h
 
 jne  RETURN_UNRECOGNIZED_COMMAND
 
 RETURN_SUCCESS:
-mov  word ptr ds:[bx + 3], 0100h
+mov  word ptr ds:[bx + DOS_DRIVER_REQUEST_HEADER.drrh_status], 0100h
 
 RETURN_UNRECOGNIZED_COMMAND:
 pop  ds
@@ -2871,6 +2883,8 @@ end_of_driver_label:
 string_driver_exists db 0Dh, 0Ah, 'EMS Driver already loaded (chaining not supported).',0Dh, 0Ah, '$'
 string_driver_successfully_installed db 0Dh, 0Ah, 'SQEMM successfully initialized.', 0Ah, 0Dh, '$'
 string_driver_failed_installing db 0Dh, 0Ah, ' Driver not installed.', 0Ah,  '$'
+string_bad_page_frame_param db 0Dh, 0Ah, 'Bad Page Frame Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
+
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
   string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for VLSI SCAMP', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
@@ -2926,6 +2940,9 @@ mov        dx, OFFSET string_driver_exists
 jmp        DRIVER_NOT_INSTALLED_2
 
 EMS_INTERRUPT_FREE:
+
+
+
 
 
 ; CHIPSET SPECIFIC START
@@ -3083,14 +3100,75 @@ ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
 
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
 
+  ;call trigger_debugger
+
+  mov   ah, "F" 
+  call  parse_driver_params
+  ; todo: read chipset and use that instead?
+  mov   ax, 0100h            ; corresponds to 0D000h
+  jnc   set_page_frame   ; param not found, use default
+
+  mov   ax, word ptr es:[di]
+  sub   al, 'C'
+  jb    bad_page_frame_param
+  cmp   al, 'E'-'C'
+  ja    bad_page_frame_param
+  xchg  al, ah
+  sub   al, '0'
+  je    set_page_frame
+  cmp   al, 4
+  je    set_page_frame
+  cmp   al, 8
+  je    set_page_frame
+  cmp   al, 'C' - '0'
+  mov   al, 12
+  je    set_page_frame
+
+  bad_page_frame_param:
+  ; bad page frame param! error?
+  mov  DX, OFFSET string_bad_page_frame_param
+  jmp  DRIVER_NOT_INSTALLED_2
+
+  set_page_frame:
+
+  ; ah is 0 1 or 2    (C D or E)
+  ; al is 0 4 8 or 12
+  mov   bx, ax ; backup
+
+  shl   ah, 4  ; 0 1 2 to 00 10 20  (C D E)
+  or    al, ah
+  add   al, 0C0h
+  mov   byte ptr ds:[page_frame_segment+1], al 
+
+
+
+
   ; enable writes to registers...
   mov al, SCAT_EMS_CONFIG_REGISTER
   out SCAT_CHIPSET_CONFIG_REGISTER_SELECT, al
-  mov al, 0C0h   ; enable EMS, and make registers writeable
-  out SCAT_CHIPSET_CONFIG_REGISTER_READWRITE, al
+  in   al, SCAT_CHIPSET_CONFIG_REGISTER_READWRITE
+  or   al, 0C0h   ; enable EMS, and make registers writeable
+  out  SCAT_CHIPSET_CONFIG_REGISTER_READWRITE, al
 
-  ; hard coded to d000 for now
-  mov        word ptr ds:[page_frame_segment], 0D000h
+  xchg ax, bx  ; retrieve page
+
+  shr  al, 2   ; 0 4 8 C to 0 1 2 3
+  shl  ah, 2   ; 0 1 2 to 0 4 8  (C D 0)
+  or   al, ah  ; combine
+  add  al, 094h  ; 14h = page index for 0C000h in SCAT chipset. 080h = autoincrement flag for SCAT chipsrt
+
+  mov  dx, SCAT_PAGE_SELECT_REGISTER
+  out  dx, al
+
+  mov  dx, SCAT_PAGE_SET_REGISTER 
+  mov  ax, 08040h  ; 080h flag to enable ems. 40h to map to page at 1 MB (64 * 16384)
+  out  dx, ax ; map page 0 to 1MB + 0*16384
+  inc  ax 
+  out  dx, ax ; map page 1 to 1MB + 1*16384
+  inc  ax 
+  out  dx, ax ; map page 2 to 1MB + 2*16384
+  inc  ax 
+  out  dx, ax ; map page 3 to 1MB + 3*16384
 
   ; 256 pages hardcoded for now
   mov        word ptr ds:[unallocated_page_count], CONST_PAGE_COUNT
@@ -3567,6 +3645,47 @@ mov        word ptr ds:[bx + 010h], cs
 ;mov        word ptr ds:[bx + 017h], 00
 ret
 
+; TODO check for equals
+; TODO convert to upper.
+; TODO find real end of the line (not 127).
+
+parse_driver_params:
+
+; character to search for passed in ah
+; search for "-X" where X is ah
+; return pointer in es:di
+; return found == true in carry flag.
+push       cx
+
+mov        cx, 127 ; max param length
+les        di, dword ptr cs:[request_header_pointer]
+les        di, es:[di + 012h]  ; todo whats this offset
+
+mov        al, "-"
+
+search_for_next_param:
+repne      scasb      
+clc        ; return not found by default
+jcxz       done_not_found
+cmp        byte ptr es:[di], ah
+jne        search_for_next_param
+inc        di ; skip character
+stc   ; carry on if found.
+done_not_found:
+pop        cx
+
+ret
+COMMENT @
+trigger_debugger:
+push       es
+push       ax
+mov        ax, 09000h
+mov        es, ax
+mov        word ptr es:[0000], ax
+pop        ax
+pop        es
+ret
+@
 
 
 
