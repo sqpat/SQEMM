@@ -124,6 +124,8 @@ SCAT_PAGE_C000_REGISTER_OFFSET = 014h
 SCAT_CHIPSET_AUTOINCREMENT_FLAG = 080h
 SCAT_CHIPSET_CONFIG_REGISTER_SELECT = 022h
 SCAT_CHIPSET_CONFIG_REGISTER_READWRITE = 023h
+SCAT_DRAM_CONFIGURATION_REGISTER = 04Dh
+SCAT_EXTENDED_BOUNDARY_REGISTER = 04Eh
 SCAT_EMS_CONFIG_REGISTER = 04Fh
 SCAT_PAGE_SELECT_REGISTER = 020Ah
 SCAT_PAGE_SET_REGISTER = 0208h
@@ -457,7 +459,7 @@ temporary_jump_addr dw 0000h
 handle_count dw 0000h
 
 ; stores total logical page count
-total_page_count dw 0000h
+total_EMS_page_count dw 0000h
 
 ; stores unallocated logical page count 
 unallocated_page_count dw 0000h;
@@ -739,9 +741,11 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   lodsw
   ; read two words - bx and ax
 
+SELFMODIFY_SCAT_set_page_select_register_3:
   mov   dx, SCAT_PAGE_SELECT_REGISTER
   
   out   dx, al   ; select EMS page
+SELFMODIFY_SCAT_set_page_set_register_3:
   mov   dx, SCAT_PAGE_SET_REGISTER
   cmp   bx, 0FFFFh   ; -1 check
   je    handle_default_page
@@ -1581,11 +1585,13 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
 
   push dx  
  
+SELFMODIFY_SCAT_set_page_select_register_2:
   mov   dx, SCAT_PAGE_SELECT_REGISTER
   SELFMODIFY_SCAT_add_page_frame_register_offset:
   add   al, SCAT_PAGE_C000_REGISTER_OFFSET ; convert 0-4 to 18-1c
   cli
   out   dx, al   ; select EMS page
+SELFMODIFY_SCAT_set_page_set_register_2:
   mov   dx, SCAT_PAGE_SET_REGISTER
   cmp   bx, 0FFFFh   ; -1 check
   je    handle_default_page_44h
@@ -2245,7 +2251,7 @@ jmp        RETURNINTERRUPTRESULT0
 EMS_FUNCTION_042h:
 ;      FUNCTION 3    GET UNALLOCATED PAGE COUNT
 mov        dx, word ptr cs:[unallocated_page_count]
-mov        bx, word ptr cs:[total_page_count]
+mov        bx, word ptr cs:[total_EMS_page_count]
 jmp        RETURNINTERRUPTRESULT0
 
 ;          4  Allocate Pages                                 43h      
@@ -2260,7 +2266,7 @@ je         ARG_BX_IS_0
 
 cmp        bx, word ptr ds:[unallocated_page_count]
 ja         ARG_BX_ABOVE_PAGE_COUNT
-cmp        bx, word ptr ds:[total_page_count]
+cmp        bx, word ptr ds:[total_EMS_page_count]
 ja         ARG_BX_ABOVE_TOTAL_PAGE_COUNT
 
 cmp        word ptr ds:[handle_count], 0
@@ -2329,7 +2335,7 @@ cmp dx, 1
 jne  NO_EMM_HANDLE_FOUND
 
 GOOD_EMM_HANDLE:
-mov        dx, word ptr ds:[total_page_count]
+mov        dx, word ptr ds:[total_EMS_page_count]
 
 add        word ptr ds:[unallocated_page_count], dx
 inc        word ptr ds:[handle_count]  ; handle freed, increment handle count
@@ -2977,7 +2983,7 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
 
   ; 256 pages hardcoded for now
   mov        word ptr ds:[unallocated_page_count], PAGE_COUNT_4_MB
-  mov        word ptr ds:[total_page_count], PAGE_COUNT_4_MB
+  mov        word ptr ds:[total_EMS_page_count], PAGE_COUNT_4_MB
   mov        word ptr ds:[pageable_frame_count], SCAMP_PAGE_FRAME_COUNT
 
   ; one handle for now
@@ -3045,7 +3051,7 @@ ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
 
   ; 256 pages hardcoded for now
   mov        word ptr ds:[unallocated_page_count], PAGE_COUNT_4_MB
-  mov        word ptr ds:[total_page_count], PAGE_COUNT_4_MB
+  mov        word ptr ds:[total_EMS_page_count], PAGE_COUNT_4_MB
   mov        word ptr ds:[pageable_frame_count], RODNEY_PAGE_FRAME_COUNT
 
   ; one handle for now
@@ -3071,7 +3077,7 @@ ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
 
   ; 256 pages hardcoded for now
   mov        word ptr ds:[unallocated_page_count], PAGE_COUNT_4_MB
-  mov        word ptr ds:[total_page_count], PAGE_COUNT_4_MB
+  mov        word ptr ds:[total_EMS_page_count], PAGE_COUNT_4_MB
   mov        word ptr ds:[pageable_frame_count], FANTASY_PAGE_FRAME_COUNT
 
   ; one handle for now
@@ -3115,10 +3121,30 @@ ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
 
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
 
+  ; determine port via chipset register.
+
+  mov   al, SCAT_EMS_CONFIG_REGISTER   ; 
+  out   SCAT_CHIPSET_CONFIG_REGISTER_SELECT, al
+  in    al, SCAT_CHIPSET_CONFIG_REGISTER_READWRITE
+  test  al, 1
+  je    use_default_ports
+  ; use port 218/21A not 208/20A
+  mov   al, 010h
+
+  add   byte ptr ds:[SELFMODIFY_SCAT_set_page_set_register_1+1], al
+  add   byte ptr ds:[SELFMODIFY_SCAT_set_page_set_register_2+1], al
+  add   byte ptr ds:[SELFMODIFY_SCAT_set_page_set_register_3+1], al
+  add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_1+1], al
+  add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_2+1], al
+  add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_3+1], al
+
+  use_default_ports:
+
 
   mov   ah, "F" 
   call  parse_driver_params
-  ; todo: read chipset and use that instead?
+
+  ; chipset has no real default or set param, so use D000 by default if none defined.
   mov   ax, 0100h            ; corresponds to 0D000h
   jnc   set_page_frame   ; param not found, use default
 
@@ -3173,9 +3199,11 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset+1], al
   or   al, SCAT_CHIPSET_AUTOINCREMENT_FLAG
 
+SELFMODIFY_SCAT_set_page_select_register_1:
   mov  dx, SCAT_PAGE_SELECT_REGISTER
   out  dx, al
 
+SELFMODIFY_SCAT_set_page_set_register_1:
   mov  dx, SCAT_PAGE_SET_REGISTER 
   mov  ax, 08040h  ; 080h flag to enable ems. 40h to map to page at 1 MB (64 * 16384)
   out  dx, ax ; map page 0 to 1MB + 0*16384
@@ -3188,41 +3216,68 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
 
 
   mov   ah, "C" ; page count
-  mov   dx, PAGE_COUNT_4_MB
-  call  parse_driver_params_get_int
+  call  parse_driver_params_get_int  ; no default. instead fetch from chipswt
   
-  jnc   skip_page_count_bounds_check
-  ; todo proper bounds check by checking chipset params?
-  cmp   ax,  960   ; (SCAT ems 15 mb maximum)
-  jb    page_count_bounds_ok
+  jc    found_chipset_bounds_value
+
+  call  get_SCAT_chipset_bounds_value
+
+  xchg  ax, dx
+
+  call  get_SCAT_chipset_total_memory_pages
+  sub   ax, dx
+
+  found_chipset_bounds_value:
+
+  xchg  ax, dx
+  call  get_SCAT_chipset_bounds_value
+  add   ax, dx
+  xchg  ax, cx   ; cx = bounds + page count
+  call  get_SCAT_chipset_total_memory_pages
+
+  cmp   cx, ax
+  xchg  ax, dx
+  jbe   page_count_bounds_ok
 
   mov  DX, OFFSET string_bad_page_count_param
   jmp  DRIVER_NOT_INSTALLED_2
 
-
   page_count_bounds_ok:
-  skip_page_count_bounds_check:
 
-  mov        word ptr ds:[unallocated_page_count], ax
-  mov        word ptr ds:[total_page_count], ax
-  mov        word ptr ds:[pageable_frame_count], SCAT_PAGE_FRAME_COUNT ; todo... should we decrease based on stuff like ROMS etc?
+  mov   word ptr ds:[unallocated_page_count], ax
+  mov   word ptr ds:[total_EMS_page_count], ax
+  mov   word ptr ds:[pageable_frame_count], SCAT_PAGE_FRAME_COUNT ; todo... should we decrease based on stuff like ROMS etc?
 
   mov   ah, "O"  ; page offset
-  mov   dx, OFFSET_2_MB  ; todo why does SCAT use 2 mb and not 1...?
-  call  parse_driver_params_get_int
+  call  parse_driver_params_get_int  ; no default. instead fetch from chipswt
 
-  jnc   skip_page_offset_bounds_check
-  push  ax
-  add   ax, word ptr ds:[total_page_count]
-  cmp   ax, 1024  ; total memory over 16MB? todo look up actual memory in chipset?
-  pop   ax
+  jc    found_page_offset_bounds
+
+  mov   bx, 08000h
+  mov   es, bx
+  mov   word ptr es:[12], ax
+
+
+  call  get_SCAT_chipset_bounds_value
+  found_page_offset_bounds:
+
+  ; ax has offset..
+
+  xchg  ax, dx
+  call  get_SCAT_chipset_total_memory_pages
+
+  mov   cx, dx
+  add   cx, word ptr ds:[total_EMS_page_count] ; cx = ems page count + offset
+  cmp   cx, ax                             ; compare to total ems pages
+  xchg  ax, dx  ; get page offset back in ax
   jbe   done_with_page_offset_bounds_check
+
+  ; overーallocated?
 
   mov  DX, OFFSET string_bad_page_offset_param
   jmp  DRIVER_NOT_INSTALLED_2
 
   done_with_page_offset_bounds_check:
-  skip_page_offset_bounds_check:
 
   or    ax, SCAT_PAGE_ENABLE_BIT
   
@@ -3250,7 +3305,7 @@ ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
 
   ; 256 pages hardcoded for now
   mov        word ptr ds:[unallocated_page_count], PAGE_COUNT_4_MB
-  mov        word ptr ds:[total_page_count], PAGE_COUNT_4_MB
+  mov        word ptr ds:[total_EMS_page_count], PAGE_COUNT_4_MB
   mov        word ptr ds:[pageable_frame_count], HT18_PAGE_FRAME_COUNT
 
   ; one handle for now
@@ -3307,7 +3362,7 @@ ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
 
   ; 256 pages hardcoded for now
   mov        word ptr ds:[unallocated_page_count], PAGE_COUNT_4_MB
-  mov        word ptr ds:[total_page_count], PAGE_COUNT_4_MB
+  mov        word ptr ds:[total_EMS_page_count], PAGE_COUNT_4_MB
   mov        word ptr ds:[pageable_frame_count], HT12_PAGE_FRAME_COUNT
 
   ; one handle for now
@@ -3335,7 +3390,7 @@ ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
 
   ; 256 pages hardcoded for now
   mov        word ptr ds:[unallocated_page_count], HEDAKA_CONST_PAGE_COUNT
-  mov        word ptr ds:[total_page_count], HEDAKA_CONST_PAGE_COUNT
+  mov        word ptr ds:[total_EMS_page_count], HEDAKA_CONST_PAGE_COUNT
   mov        word ptr ds:[pageable_frame_count], HEDAKA_PAGE_FRAME_COUNT
 
   ; one handle for now
@@ -3361,7 +3416,7 @@ ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
 
   ; 256 pages hardcoded for now
   mov        word ptr ds:[unallocated_page_count], PAGE_COUNT_4_MB
-  mov        word ptr ds:[total_page_count], PAGE_COUNT_4_MB
+  mov        word ptr ds:[total_EMS_page_count], PAGE_COUNT_4_MB
   mov        word ptr ds:[pageable_frame_count], LOTECH_PAGE_FRAME_COUNT
 
   ; one handle for now
@@ -3394,7 +3449,7 @@ out NEAT_CHIPSET_CONFIG_REGISTER_READWRITE, al
 
   ; 256 pages hardcoded for now
   mov        word ptr ds:[unallocated_page_count], NEAT_CONST_PAGE_COUNT
-  mov        word ptr ds:[total_page_count], NEAT_CONST_PAGE_COUNT
+  mov        word ptr ds:[total_EMS_page_count], NEAT_CONST_PAGE_COUNT
   mov        word ptr ds:[pageable_frame_count], NEAT_PAGE_FRAME_COUNT
 
   ; one handle for now
@@ -3561,7 +3616,7 @@ COMMENT @
 
   ; 128 pages hardcoded for now
   mov        word ptr ds:[unallocated_page_count], INTEL_AB_CONST_PAGE_COUNT
-  mov        word ptr ds:[total_page_count], INTEL_AB_CONST_PAGE_COUNT
+  mov        word ptr ds:[total_EMS_page_count], INTEL_AB_CONST_PAGE_COUNT
   mov        word ptr ds:[pageable_frame_count], INTEL_AB_PAGE_FRAME_COUNT
 
   ; one handle for now
@@ -3616,7 +3671,7 @@ ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
 
   ; 128 pages hardcoded for now
   mov        word ptr ds:[unallocated_page_count], SARC_RC2016_CONST_PAGE_COUNT
-  mov        word ptr ds:[total_page_count], SARC_RC2016_CONST_PAGE_COUNT
+  mov        word ptr ds:[total_EMS_page_count], SARC_RC2016_CONST_PAGE_COUNT
   mov        word ptr ds:[pageable_frame_count], SARC_RC2016_PAGE_FRAME_COUNT
 
   ; one handle for now
@@ -3645,7 +3700,7 @@ ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
 
   ; 256 pages hardcoded for now
   mov        word ptr ds:[unallocated_page_count], STANDARD_BOARD_CONST_PAGE_COUNT
-  mov        word ptr ds:[total_page_count], STANDARD_BOARD_CONST_PAGE_COUNT
+  mov        word ptr ds:[total_EMS_page_count], STANDARD_BOARD_CONST_PAGE_COUNT
   mov        word ptr ds:[pageable_frame_count], STANDARD_BOARD_PAGE_FRAME_COUNT
 
   ; one handle for now
@@ -3802,6 +3857,129 @@ stc
 xchg      ax, dx
 pop       dx  
 ret
+
+
+
+IF COMPILE_CHIPSET EQ SCAT_CHIPSET
+  scat_chipset_offset_lookup_table:
+  dw  0,    64,  80,  96
+  dw  128, 256, 384, 512
+  dw  640, 768, 896,   0
+  dw    0,   0,   0,   0
+
+
+  ; 0000 No Boundary
+  ; 0001 1MB
+  ; 0010 1.25MB
+  ; 0011 1.5MB
+  ; 0100 2MB
+  ; 0101 4MB
+  ; 0110 6MB
+  ; 0111 8MB
+  ; 1000 10MB
+  ; 1001 12MB
+  ; 1010 14MB
+  ; 1011 No Boundary
+  ; 1100 No Boundary
+  ; 1101 No Boundary
+  ; 1110 No Boundary
+  ; 1111 ???? (spec doesnt say)
+
+
+  get_SCAT_chipset_bounds_value:
+
+  mov   al, SCAT_EXTENDED_BOUNDARY_REGISTER   ; 
+  out   SCAT_CHIPSET_CONFIG_REGISTER_SELECT, al
+  in    al, SCAT_CHIPSET_CONFIG_REGISTER_READWRITE
+  and   ax, 15
+  shl   ax, 1
+  xchg  ax, bx
+  mov   bx, word ptr ds:[scat_chipset_offset_lookup_table+bx]
+  xchg  ax, bx
+
+
+  ret
+
+  scat_chipset_ems_plus_xms_table:
+
+  dw   0,   0,   0,  24
+  dw   0,  32,  64, 192
+  dw  64, 192, 320, 448
+  dw 576, 704, 832, 960
+
+
+  ; 0000 0
+  ; 0001 0
+  ; 0010 0
+  ; 0011 384kb
+  ; 0100 0
+  ; 0101 512kb
+  ; 0110 1MB
+  ; 0111 3MB
+  ; 1000 1MB
+  ; 1001 3MB
+  ; 1010 5MB
+  ; 1011 7MB
+  ; 1100 9MB
+  ; 1101 11MB
+  ; 1110 13MB
+  ; 1111 15MB
+
+  get_SCAT_chipset_total_ems_xms_pages:
+
+  mov   al, SCAT_DRAM_CONFIGURATION_REGISTER   ; 
+  out   SCAT_CHIPSET_CONFIG_REGISTER_SELECT, al
+  in    al, SCAT_CHIPSET_CONFIG_REGISTER_READWRITE
+  and   ax, 15
+  shl   ax, 1
+  xchg  ax, bx
+  mov   bx, word ptr ds:[scat_chipset_ems_plus_xms_table+bx]
+  xchg  ax, bx
+
+
+  ret
+
+
+  scat_chipset_total_memory_table:
+
+  dw   0,  32,  40,  64
+  dw  64,  96, 128, 256
+  dw 128, 256, 384, 512
+  dw 640, 768, 896, 1024
+
+
+  ; 0000 0
+  ; 0001 512k
+  ; 0010 640k
+  ; 0011 1MB
+  ; 0100 1MB
+  ; 0101 1.5MB
+  ; 0110 2MB
+  ; 0111 4MB
+  ; 1000 2MB
+  ; 1001 4MB
+  ; 1010 6MB
+  ; 1011 8MB
+  ; 1100 10MB
+  ; 1101 12MB
+  ; 1110 14MB
+  ; 1111 16MB
+
+  get_SCAT_chipset_total_memory_pages:
+
+  mov   al, SCAT_DRAM_CONFIGURATION_REGISTER   ; 
+  out   SCAT_CHIPSET_CONFIG_REGISTER_SELECT, al
+  in    al, SCAT_CHIPSET_CONFIG_REGISTER_READWRITE
+  and   ax, 15
+  shl   ax, 1
+  xchg  ax, bx
+  mov   bx, word ptr ds:[scat_chipset_total_memory_table+bx]
+  xchg  ax, bx
+
+
+  ret
+
+ENDIF
 
 
 COMMENT @
