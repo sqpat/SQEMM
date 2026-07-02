@@ -118,7 +118,8 @@ RODNEY_PAGE_REGISTER_OFFSET = 034h
 
 
 ; 18h for D000. 1Ch for E000 if we were to use that.
-SCAT_PAGE_REGISTER_OFFSET = 018h
+SCAT_PAGE_C000_REGISTER_OFFSET = 014h
+SCAT_CHIPSET_AUTOINCREMENT_FLAG = 080h
 SCAT_CHIPSET_CONFIG_REGISTER_SELECT = 022h
 SCAT_CHIPSET_CONFIG_REGISTER_READWRITE = 023h
 SCAT_EMS_CONFIG_REGISTER = 04Fh
@@ -280,18 +281,18 @@ push  ds
 lds  bx, dword ptr cs:[request_header_pointer]  ; todo no ds?
 
 cmp  byte ptr ds:[bx + DOS_DRIVER_REQUEST_HEADER.drrh_command_code], 0
+SELFMODIFY_prevent_double_init:
 je   do_init
+SELFMODIFY_prevent_double_init_AFTER:
 cmp  byte ptr ds:[bx + DOS_DRIVER_REQUEST_HEADER.drrh_command_code], 10
 
 
-mov  word ptr ds:[bx + DOS_DRIVER_REQUEST_HEADER.drrh_status], 08103h
 
 jne  RETURN_UNRECOGNIZED_COMMAND
 
 RETURN_SUCCESS:
 mov  word ptr ds:[bx + DOS_DRIVER_REQUEST_HEADER.drrh_status], 0100h
 
-RETURN_UNRECOGNIZED_COMMAND:
 pop  ds
 pop  bx
 retf
@@ -306,6 +307,11 @@ call  DRIVER_INIT
 POPA_MACRO
 retf
 
+RETURN_UNRECOGNIZED_COMMAND:
+mov  word ptr ds:[bx + DOS_DRIVER_REQUEST_HEADER.drrh_status], 08103h
+pop  ds
+pop  bx
+retf
  
 
 
@@ -1573,7 +1579,8 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   push dx  
  
   mov   dx, SCAT_PAGE_SELECT_REGISTER
-  add   al, SCAT_PAGE_REGISTER_OFFSET ; convert 0-4 to 18-1c
+  SELFMODIFY_SCAT_add_page_frame_register_offset:
+  add   al, SCAT_PAGE_C000_REGISTER_OFFSET ; convert 0-4 to 18-1c
   cli
   out   dx, al   ; select EMS page
   mov   dx, SCAT_PAGE_SET_REGISTER
@@ -2911,14 +2918,16 @@ ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
   string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Standard EMS Boards', 0Dh, 0Ah,'$'
 ENDIF
 
-
+_INIT_PARAM_command_line_length:
+dw 0
 
 
 
 DRIVER_INIT:
 push       cs
 pop        ds
-mov        word ptr ds:[pointer_to_ems_init], OFFSET RETURN_UNRECOGNIZED_COMMAND     ; overwrite pointer to this init function with pointer to "failed to install" (03fa5h)
+; selfmodify to disable double init.
+mov        byte ptr ds:[SELFMODIFY_prevent_double_init+1], OFFSET RETURN_UNRECOGNIZED_COMMAND - SELFMODIFY_prevent_double_init_AFTER     ; overwrite pointer to this init function with pointer to "failed to install" (03fa5h)
 mov        dx, OFFSET string_main_header
 
 mov        ah, 9  ; PRINT_STRING
@@ -2930,7 +2939,7 @@ int        021h
 mov        di, 0Ah
 mov        si, di
 mov        cx, 8
-rep cmpsb
+rep        cmpsb
  
 jne        EMS_INTERRUPT_FREE
 ; an ems driver is already installed
@@ -2941,8 +2950,9 @@ jmp        DRIVER_NOT_INSTALLED_2
 
 EMS_INTERRUPT_FREE:
 
+;call  trigger_debugger
 
-
+call  process_command_line
 
 
 ; CHIPSET SPECIFIC START
@@ -3100,7 +3110,6 @@ ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
 
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
 
-  ;call trigger_debugger
 
   mov   ah, "F" 
   call  parse_driver_params
@@ -3155,7 +3164,9 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   shr  al, 2   ; 0 4 8 C to 0 1 2 3
   shl  ah, 2   ; 0 1 2 to 0 4 8  (C D 0)
   or   al, ah  ; combine
-  add  al, 094h  ; 14h = page index for 0C000h in SCAT chipset. 080h = autoincrement flag for SCAT chipsrt
+  add  al, SCAT_PAGE_C000_REGISTER_OFFSET
+  mov  byte ptr cs:[SELFMODIFY_SCAT_add_page_frame_register_offset+1], al
+  or   al, SCAT_CHIPSET_AUTOINCREMENT_FLAG
 
   mov  dx, SCAT_PAGE_SELECT_REGISTER
   out  dx, al
@@ -3633,7 +3644,7 @@ int        021h
 
 mov        dx, OFFSET string_driver_failed_installing
 
-; todo whats this
+
 DRIVER_NOT_INSTALLED_2:
 mov        ah, 9  ; PRINT_STRING
 int        021h
@@ -3644,10 +3655,37 @@ mov        word ptr ds:[bx + 0eh], OFFSET end_of_driver_label
 mov        word ptr ds:[bx + 010h], cs
 ;mov        word ptr ds:[bx + 017h], 00
 ret
+; idea was to capitalize, find end of command line
+; turns out ms-dos pre-capitalizes it all? (what about other DOS?) consider removing. 
+process_command_line:
 
-; TODO check for equals
-; TODO convert to upper.
-; TODO find real end of the line (not 127).
+push       ds
+lds        si, dword ptr cs:[request_header_pointer]
+lds        si, ds:[si + 012h]  ; todo whats this offset
+xor        cx, cx
+
+parse_next_character:
+lodsb
+cmp        al, 0Dh
+je         done_processing_command_line
+inc        cx
+
+; capitalize character
+cmp        al, 061h
+jb         no_upper
+cmp        al, 07Ah
+ja         no_upper
+sub        al, 020h
+mov        byte ptr ds:[si-1], al
+no_upper:
+
+jmp        parse_next_character
+
+done_processing_command_line:
+mov        word ptr cs:[_INIT_PARAM_command_line_length], cx
+pop        ds
+ret
+
 
 parse_driver_params:
 
@@ -3657,7 +3695,7 @@ parse_driver_params:
 ; return found == true in carry flag.
 push       cx
 
-mov        cx, 127 ; max param length
+mov        cx, word ptr cs:[_INIT_PARAM_command_line_length] ; max param length
 les        di, dword ptr cs:[request_header_pointer]
 les        di, es:[di + 012h]  ; todo whats this offset
 
@@ -3670,6 +3708,10 @@ jcxz       done_not_found
 cmp        byte ptr es:[di], ah
 jne        search_for_next_param
 inc        di ; skip character
+cmp        byte ptr es:[di], "="
+jne        not_equals
+inc        di
+not_equals:
 stc   ; carry on if found.
 done_not_found:
 pop        cx
