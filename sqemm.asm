@@ -263,35 +263,35 @@ retf
 
 EMS_DRIVER_CALL:
 push  bx
-push  es
+push  ds
 
-les  bx, dword ptr cs:[request_header_pointer]  ; todo no ds?
+lds  bx, dword ptr cs:[request_header_pointer]  ; todo no ds?
 
-cmp  byte ptr es:[bx + 2], 0
+cmp  byte ptr ds:[bx + 2], 0
 je   do_init
-cmp  byte ptr es:[bx + 2], 10
+cmp  byte ptr ds:[bx + 2], 10
 
 
-mov  word ptr es:[bx + 3], 08103h
+mov  word ptr ds:[bx + 3], 08103h
 
 jne  RETURN_UNRECOGNIZED_COMMAND
 
 RETURN_SUCCESS:
-mov  word ptr es:[bx + 3], 0100h
+mov  word ptr ds:[bx + 3], 0100h
 
 RETURN_UNRECOGNIZED_COMMAND:
-pop  es
+pop  ds
 pop  bx
 retf
 
 do_init:
-PUSHA_MACRO
-push  ds
-call  DRIVER_INIT
-pop   ds
-POPA_MACRO
-pop  es
+pop  ds
 pop  bx
+PUSHA_MACRO
+
+call  DRIVER_INIT
+
+POPA_MACRO
 retf
 
  
@@ -478,22 +478,6 @@ dw  OFFSET EMS_FUNCTION_05bh
 dw  OFFSET EMS_FUNCTION_05ch
 dw  OFFSET EMS_FUNCTION_05dh
 
-
-
-; BEEP function. unused?
-;BEEP:
-;push ax
-;mov  ax, 0e07h
-;int  010h
-;pop  ax
-;ret  
-
- 
-       
-   
-
- 
-  
 
 
  
@@ -1255,7 +1239,7 @@ COMMENT @
   xchg  ax, si
   ; load zero page for this page
   
-  mov  dl, byte ptr [default_page_struct + si]
+  mov  dl, byte ptr ds:[default_page_struct + si]
   xchg  ax, si  ; put si back. ax has page index still
   xchg  ax, dx  ; now ax gets page value
 
@@ -2252,12 +2236,12 @@ push       bx
 cmp        bx, 0
 je         ARG_BX_IS_0
 
-cmp        bx, word ptr [unallocated_page_count]
+cmp        bx, word ptr ds:[unallocated_page_count]
 ja         ARG_BX_ABOVE_PAGE_COUNT
-cmp        bx, word ptr [total_page_count]
+cmp        bx, word ptr ds:[total_page_count]
 ja         ARG_BX_ABOVE_TOTAL_PAGE_COUNT
 
-cmp        word ptr [handle_count], 0
+cmp        word ptr ds:[handle_count], 0
 je         NO_HANDLES_LEFT
 
 jmp         FOUND_PAGES_FOR_ALLOCATION
@@ -2282,9 +2266,9 @@ jmp        RETURNINTERRUPTRESULT_87
 FOUND_PAGES_FOR_ALLOCATION:
 
 ALLOCATE_SUCCESS:
-sub word ptr [unallocated_page_count], bx
+sub word ptr ds:[unallocated_page_count], bx
 
-dec word ptr [handle_count]
+dec word ptr ds:[handle_count]
 pop        bx
 mov        dx, 0001h   ; force handle 1.
 
@@ -2323,10 +2307,10 @@ cmp dx, 1
 jne  NO_EMM_HANDLE_FOUND
 
 GOOD_EMM_HANDLE:
-mov        dx, word ptr [total_page_count]
+mov        dx, word ptr ds:[total_page_count]
 
-add        word ptr [unallocated_page_count], dx
-inc        word ptr [handle_count]  ; handle freed, increment handle count
+add        word ptr ds:[unallocated_page_count], dx
+inc        word ptr ds:[handle_count]  ; handle freed, increment handle count
 
 pop        dx
 pop        bx
@@ -2574,9 +2558,9 @@ pop        ds
 mov        si, OFFSET mappable_phys_page_struct
 mov        cx, word ptr cs:[pageable_frame_count]
 LOOP_05800h:
-mov        ax, word ptr [si]
+mov        ax, word ptr ds:[si]
 stosw
-mov        ax, word ptr [si + 2]
+mov        ax, word ptr ds:[si + 2]
 stosw
 add        si, 4
 loop       LOOP_05800h
@@ -2863,7 +2847,23 @@ pop        si
 pop        cx
 iret
 
-;db 'SQEMM PROGRAM END'
+;db 'SQEMM END'
+
+
+;;; END RESIDENT EMS DRIVER SECTION
+;;; END RESIDENT EMS DRIVER SECTION
+;;; END RESIDENT EMS DRIVER SECTION
+
+
+;;; BEGIN INIT CODE. This section is not resident after initialization
+;;; BEGIN INIT CODE. This section is not resident after initialization
+;;; BEGIN INIT CODE. This section is not resident after initialization
+;;; BEGIN INIT CODE. This section is not resident after initialization
+
+
+
+
+
 
 end_of_driver_label:
 
@@ -2907,7 +2907,9 @@ pop        ds
 mov        word ptr ds:[pointer_to_ems_init], OFFSET RETURN_UNRECOGNIZED_COMMAND     ; overwrite pointer to this init function with pointer to "failed to install" (03fa5h)
 mov        dx, OFFSET string_main_header
 
-call       PRINT_STRING
+mov        ah, 9  ; PRINT_STRING
+int        021h
+
 ; get interrupt vector. check it's header/string
 mov        ax, 03567h
 int        021h
@@ -2939,25 +2941,22 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
 
 
   ; hard coded to d000 for now
-  mov        word ptr [page_frame_segment], 0D000h
+  mov        word ptr ds:[page_frame_segment], 0D000h
 
   ; 256 pages hardcoded for now
-  mov        word ptr [unallocated_page_count], CONST_PAGE_COUNT
-  mov        word ptr [total_page_count], CONST_PAGE_COUNT
-  mov        word ptr [pageable_frame_count], SCAMP_PAGE_FRAME_COUNT
+  mov        word ptr ds:[unallocated_page_count], CONST_PAGE_COUNT
+  mov        word ptr ds:[total_page_count], CONST_PAGE_COUNT
+  mov        word ptr ds:[pageable_frame_count], SCAMP_PAGE_FRAME_COUNT
 
   ; one handle for now
-  mov        word ptr [handle_count], 01h
+  mov        word ptr ds:[handle_count], 01h
 
 
   ; enable d000 register and backfill
 
   mov        al, 0Bh
   out        0ECh, al
-  xchg ax, ax
-  xchg ax, ax
-  xchg ax, ax
-  xchg ax, ax
+  mul        al  ; delay
   ;mov        al, 0A0h   ; turn on ems 
   mov        al, 0E0h   ; turn on ems, backfill
   out        0EDh, al
@@ -2965,10 +2964,7 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
 
   mov        al, 0Ch
   out        0ECh, al
-  xchg ax, ax
-  xchg ax, ax
-  xchg ax, ax
-  xchg ax, ax
+  mul        al  ; delay
   mov        al, 0F0h  ; turn on d000 as page frame
   out        0EDh, al
 
@@ -3013,15 +3009,15 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
 ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
 
   ; hard coded to d000 for now
-  mov        word ptr [page_frame_segment], 0D000h
+  mov        word ptr ds:[page_frame_segment], 0D000h
 
   ; 256 pages hardcoded for now
-  mov        word ptr [unallocated_page_count], CONST_PAGE_COUNT
-  mov        word ptr [total_page_count], CONST_PAGE_COUNT
-  mov        word ptr [pageable_frame_count], RODNEY_PAGE_FRAME_COUNT
+  mov        word ptr ds:[unallocated_page_count], CONST_PAGE_COUNT
+  mov        word ptr ds:[total_page_count], CONST_PAGE_COUNT
+  mov        word ptr ds:[pageable_frame_count], RODNEY_PAGE_FRAME_COUNT
 
   ; one handle for now
-  mov        word ptr [handle_count], 01h
+  mov        word ptr ds:[handle_count], 01h
 
 
   mov       cx, 040h
@@ -3039,15 +3035,15 @@ ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
 
 
   ; hard coded to d000 for now
-  mov        word ptr [page_frame_segment], 0D000h
+  mov        word ptr ds:[page_frame_segment], 0D000h
 
   ; 256 pages hardcoded for now
-  mov        word ptr [unallocated_page_count], CONST_PAGE_COUNT
-  mov        word ptr [total_page_count], CONST_PAGE_COUNT
-  mov        word ptr [pageable_frame_count], FANTASY_PAGE_FRAME_COUNT
+  mov        word ptr ds:[unallocated_page_count], CONST_PAGE_COUNT
+  mov        word ptr ds:[total_page_count], CONST_PAGE_COUNT
+  mov        word ptr ds:[pageable_frame_count], FANTASY_PAGE_FRAME_COUNT
 
   ; one handle for now
-  mov        word ptr [handle_count], 01h
+  mov        word ptr ds:[handle_count], 01h
 
   ; set first four page registers for d000
   xor   cx, cx
@@ -3094,15 +3090,15 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   out SCAT_CHIPSET_CONFIG_REGISTER_READWRITE, al
 
   ; hard coded to d000 for now
-  mov        word ptr [page_frame_segment], 0D000h
+  mov        word ptr ds:[page_frame_segment], 0D000h
 
   ; 256 pages hardcoded for now
-  mov        word ptr [unallocated_page_count], CONST_PAGE_COUNT
-  mov        word ptr [total_page_count], CONST_PAGE_COUNT
-  mov        word ptr [pageable_frame_count], SCAT_PAGE_FRAME_COUNT
+  mov        word ptr ds:[unallocated_page_count], CONST_PAGE_COUNT
+  mov        word ptr ds:[total_page_count], CONST_PAGE_COUNT
+  mov        word ptr ds:[pageable_frame_count], SCAT_PAGE_FRAME_COUNT
 
   ; one handle for now
-  mov        word ptr [handle_count], 01h
+  mov        word ptr ds:[handle_count], 01h
 
 ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
 
@@ -3116,15 +3112,15 @@ ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
   out dx, al
 
   ; hard coded to d000 for now
-  mov        word ptr [page_frame_segment], 0D000h
+  mov        word ptr ds:[page_frame_segment], 0D000h
 
   ; 256 pages hardcoded for now
-  mov        word ptr [unallocated_page_count], CONST_PAGE_COUNT
-  mov        word ptr [total_page_count], CONST_PAGE_COUNT
-  mov        word ptr [pageable_frame_count], HT18_PAGE_FRAME_COUNT
+  mov        word ptr ds:[unallocated_page_count], CONST_PAGE_COUNT
+  mov        word ptr ds:[total_page_count], CONST_PAGE_COUNT
+  mov        word ptr ds:[pageable_frame_count], HT18_PAGE_FRAME_COUNT
 
   ; one handle for now
-  mov        word ptr [handle_count], 01h
+  mov        word ptr ds:[handle_count], 01h
 
 ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
 
@@ -3173,15 +3169,15 @@ ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
 
 
   ; hard coded to d000 for now
-  mov        word ptr [page_frame_segment], 0D000h
+  mov        word ptr ds:[page_frame_segment], 0D000h
 
   ; 256 pages hardcoded for now
-  mov        word ptr [unallocated_page_count], CONST_PAGE_COUNT
-  mov        word ptr [total_page_count], CONST_PAGE_COUNT
-  mov        word ptr [pageable_frame_count], HT12_PAGE_FRAME_COUNT
+  mov        word ptr ds:[unallocated_page_count], CONST_PAGE_COUNT
+  mov        word ptr ds:[total_page_count], CONST_PAGE_COUNT
+  mov        word ptr ds:[pageable_frame_count], HT12_PAGE_FRAME_COUNT
 
   ; one handle for now
-  mov        word ptr [handle_count], 01h
+  mov        word ptr ds:[handle_count], 01h
 
 ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
 
@@ -3201,15 +3197,15 @@ ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
   out   dx, al   ; write 8 bit page num. 
 
   ; hard coded to d000 for now
-  mov        word ptr [page_frame_segment], 0D000h
+  mov        word ptr ds:[page_frame_segment], 0D000h
 
   ; 256 pages hardcoded for now
-  mov        word ptr [unallocated_page_count], HEDAKA_CONST_PAGE_COUNT
-  mov        word ptr [total_page_count], HEDAKA_CONST_PAGE_COUNT
-  mov        word ptr [pageable_frame_count], HEDAKA_PAGE_FRAME_COUNT
+  mov        word ptr ds:[unallocated_page_count], HEDAKA_CONST_PAGE_COUNT
+  mov        word ptr ds:[total_page_count], HEDAKA_CONST_PAGE_COUNT
+  mov        word ptr ds:[pageable_frame_count], HEDAKA_PAGE_FRAME_COUNT
 
   ; one handle for now
-  mov        word ptr [handle_count], 01h
+  mov        word ptr ds:[handle_count], 01h
 
 ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
 
@@ -3227,15 +3223,15 @@ ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
   out   dx, al   ; write 8 bit page num. 
 
   ; hard coded to d000 for now
-  mov        word ptr [page_frame_segment], 0D000h
+  mov        word ptr ds:[page_frame_segment], 0D000h
 
   ; 256 pages hardcoded for now
-  mov        word ptr [unallocated_page_count], CONST_PAGE_COUNT
-  mov        word ptr [total_page_count], CONST_PAGE_COUNT
-  mov        word ptr [pageable_frame_count], LOTECH_PAGE_FRAME_COUNT
+  mov        word ptr ds:[unallocated_page_count], CONST_PAGE_COUNT
+  mov        word ptr ds:[total_page_count], CONST_PAGE_COUNT
+  mov        word ptr ds:[pageable_frame_count], LOTECH_PAGE_FRAME_COUNT
 
   ; one handle for now
-  mov        word ptr [handle_count], 01h
+  mov        word ptr ds:[handle_count], 01h
 
 ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
 
@@ -3260,15 +3256,15 @@ out NEAT_CHIPSET_CONFIG_REGISTER_READWRITE, al
   out   dx, al   ; write 8 bit page num. 
 
   ; page frame d000 for now
-  mov        word ptr [page_frame_segment], 0D000h
+  mov        word ptr ds:[page_frame_segment], 0D000h
 
   ; 256 pages hardcoded for now
-  mov        word ptr [unallocated_page_count], NEAT_CONST_PAGE_COUNT
-  mov        word ptr [total_page_count], NEAT_CONST_PAGE_COUNT
-  mov        word ptr [pageable_frame_count], NEAT_PAGE_FRAME_COUNT
+  mov        word ptr ds:[unallocated_page_count], NEAT_CONST_PAGE_COUNT
+  mov        word ptr ds:[total_page_count], NEAT_CONST_PAGE_COUNT
+  mov        word ptr ds:[pageable_frame_count], NEAT_PAGE_FRAME_COUNT
 
   ; one handle for now
-  mov        word ptr [handle_count], 01h
+  mov        word ptr ds:[handle_count], 01h
 
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
 
@@ -3427,15 +3423,15 @@ COMMENT @
 
 
   ; hard coded to d000 for now
-  mov        word ptr [page_frame_segment], 0D000h
+  mov        word ptr ds:[page_frame_segment], 0D000h
 
   ; 128 pages hardcoded for now
-  mov        word ptr [unallocated_page_count], INTEL_AB_CONST_PAGE_COUNT
-  mov        word ptr [total_page_count], INTEL_AB_CONST_PAGE_COUNT
-  mov        word ptr [pageable_frame_count], INTEL_AB_PAGE_FRAME_COUNT
+  mov        word ptr ds:[unallocated_page_count], INTEL_AB_CONST_PAGE_COUNT
+  mov        word ptr ds:[total_page_count], INTEL_AB_CONST_PAGE_COUNT
+  mov        word ptr ds:[pageable_frame_count], INTEL_AB_PAGE_FRAME_COUNT
 
   ; one handle for now
-  mov        word ptr [handle_count], 01h
+  mov        word ptr ds:[handle_count], 01h
 
 ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
 
@@ -3482,15 +3478,15 @@ ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
   
 
   ; hard coded to d000 for now
-  mov        word ptr [page_frame_segment], 0D000h
+  mov        word ptr ds:[page_frame_segment], 0D000h
 
   ; 128 pages hardcoded for now
-  mov        word ptr [unallocated_page_count], SARC_RC2016_CONST_PAGE_COUNT
-  mov        word ptr [total_page_count], SARC_RC2016_CONST_PAGE_COUNT
-  mov        word ptr [pageable_frame_count], SARC_RC2016_PAGE_FRAME_COUNT
+  mov        word ptr ds:[unallocated_page_count], SARC_RC2016_CONST_PAGE_COUNT
+  mov        word ptr ds:[total_page_count], SARC_RC2016_CONST_PAGE_COUNT
+  mov        word ptr ds:[pageable_frame_count], SARC_RC2016_PAGE_FRAME_COUNT
 
   ; one handle for now
-  mov        word ptr [handle_count], 01h
+  mov        word ptr ds:[handle_count], 01h
 
 
 ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
@@ -3511,15 +3507,15 @@ ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
   out   dx, al   ; write 8 bit page num. 
 
   ; page frame d000 for now
-  mov        word ptr [page_frame_segment], 0D000h
+  mov        word ptr ds:[page_frame_segment], 0D000h
 
   ; 256 pages hardcoded for now
-  mov        word ptr [unallocated_page_count], STANDARD_BOARD_CONST_PAGE_COUNT
-  mov        word ptr [total_page_count], STANDARD_BOARD_CONST_PAGE_COUNT
-  mov        word ptr [pageable_frame_count], STANDARD_BOARD_PAGE_FRAME_COUNT
+  mov        word ptr ds:[unallocated_page_count], STANDARD_BOARD_CONST_PAGE_COUNT
+  mov        word ptr ds:[total_page_count], STANDARD_BOARD_CONST_PAGE_COUNT
+  mov        word ptr ds:[pageable_frame_count], STANDARD_BOARD_PAGE_FRAME_COUNT
 
   ; one handle for now
-  mov        word ptr [handle_count], 01h
+  mov        word ptr ds:[handle_count], 01h
 
 ENDIF
 
@@ -3529,17 +3525,17 @@ ENDIF
 
 
 ; set interrupt vector  067h
-
 mov        dx, OFFSET MAIN_EMS_INTERRUPT_VECTOR
 mov        ax, 02567h
-
 int        021h
 
 DRIVER_INSTALLED:
 
 mov        dx, OFFSET string_driver_successfully_installed
 
-call       PRINT_STRING
+mov        ah, 9  ; PRINT_STRING
+int        021h
+
 lds        bx, dword ptr ds:[request_header_pointer]
 mov        word ptr es:[bx + 3], 0100h
 
@@ -3553,13 +3549,17 @@ ret
 ; DRIVER NOT INSTALLED
 ; preloaded with string 'reason' for the print string
 DRIVER_NOT_INSTALLED:
-call       PRINT_STRING 
+mov        ah, 9  ; PRINT_STRING
+int        021h
+
 
 mov        dx, OFFSET string_driver_failed_installing
 
 ; todo whats this
 DRIVER_NOT_INSTALLED_2:
-call       PRINT_STRING
+mov        ah, 9  ; PRINT_STRING
+int        021h
+
 lds        bx, [request_header_pointer]
 mov        word ptr ds:[bx + 3], 0810ch
 mov        word ptr ds:[bx + 0eh], OFFSET end_of_driver_label
@@ -3567,17 +3567,6 @@ mov        word ptr ds:[bx + 010h], cs
 ;mov        word ptr ds:[bx + 017h], 00
 ret
 
-; prints string ending in '$' in DS:DX
-PRINT_STRING:
-push       ds
-push       ax
-push       cs
-pop        ds
-mov        ah, 9
-int        021h
-pop        ax
-pop        ds
-ret
 
 
 
