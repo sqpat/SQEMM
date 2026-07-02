@@ -15,7 +15,7 @@ FANTASY_EMS = 11
 RODNEY_EMS = 12
 
 ;COMPILE_CHIPSET = SCAMP_CHIPSET
-;COMPILE_CHIPSET = SCAT_CHIPSET
+COMPILE_CHIPSET = SCAT_CHIPSET
 ;COMPILE_CHIPSET = HT18_CHIPSET
 ;COMPILE_CHIPSET = HT12_CHIPSET
 ;COMPILE_CHIPSET = HEDAKA_CHIPSET
@@ -24,7 +24,16 @@ RODNEY_EMS = 12
 ;COMPILE_CHIPSET =  INTEL_ABOVEBOARD
 ;COMPILE_CHIPSET =  SARC_RC2016A
 ;COMPILE_CHIPSET = STANDARD_EMS_BOARD
-COMPILE_CHIPSET = RODNEY_EMS
+;COMPILE_CHIPSET = RODNEY_EMS
+
+
+
+COMPILE_386  = 3
+COMPILE_286  = 2
+COMPILE_186  = 1
+COMPILE_8086 = 0
+
+COMPISA = COMPILE_8086
 
 IF COMPILE_CHIPSET EQ LOTECH_BOARD
 	.8086
@@ -32,9 +41,40 @@ ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
 	.8086
 ELSE
 	.286
+  COMPISA = COMPILE_186
 ENDIF
 
-	.MODEL  tiny
+
+PUSHA_MACRO MACRO
+
+  IF COMPISA GE COMPILE_186
+    pusha
+  ELSE
+    push  ax	
+    push  cx
+    push  dx
+    push  bx
+    push  si
+    push  di
+  ENDIF
+ENDM
+
+
+POPA_MACRO MACRO
+
+  IF COMPISA GE COMPILE_186
+    popa
+  ELSE
+    pop   di
+    pop   si
+    pop   bx
+    pop   dx
+    pop   cx
+    pop   ax	
+  ENDIF
+ENDM
+
+.MODEL  tiny
 	
 .DATA
 
@@ -192,7 +232,7 @@ STANDARD_BOARD_CONST_PAGE_COUNT = 128
 .CODE
 
 
-;00000h
+;00000h ; magic ID?
 dw 0FFFFh
 dw 0FFFFh
 dw 8000h
@@ -203,82 +243,61 @@ dw OFFSET EMS_DRIVER_INIT
 dw OFFSET EMS_DRIVER_CALL
 
 ;0000Ah
-db 'EMMXXXX0 DTK VL82C311 Expended Memory Manager V 1.03  06/29/92'
+db 'EMMXXXX0 SQEMM EMS Driver'
 
+ALIGN 2
 ;00048h
-pointer_to_ems_init dw OFFSET DRIVER_INIT
-
-;0004Ah various pointers to various possible entry points - most go to "unrecognized command"
-dw OFFSET RETURN_UNRECOGNIZED_COMMAND 
-dw OFFSET RETURN_UNRECOGNIZED_COMMAND 
-dw OFFSET RETURN_UNRECOGNIZED_COMMAND 
-dw OFFSET RETURN_UNRECOGNIZED_COMMAND 
-dw OFFSET RETURN_UNRECOGNIZED_COMMAND 
-;00054h Seems to be the pointer used in ems_driver_call?
-dw OFFSET RETURN_UNRECOGNIZED_COMMAND 
-dw OFFSET RETURN_UNRECOGNIZED_COMMAND 
-dw OFFSET RETURN_UNRECOGNIZED_COMMAND 
-dw OFFSET RETURN_UNRECOGNIZED_COMMAND 
-dw OFFSET RETURN_SUCCESS 
-dw OFFSET RETURN_UNRECOGNIZED_COMMAND 
-dw OFFSET RETURN_UNRECOGNIZED_COMMAND
+pointer_to_ems_init:
+dw OFFSET DRIVER_INIT
 
 
-; 00062h
+
+; 0004Ah
 EMS_DRIVER_INIT:
+public EMS_DRIVER_INIT
 ; store 32 bit pointer to reques theader
 mov  word ptr cs:[request_header_pointer], bx        
 mov  word ptr cs:[request_header_pointer+2], es        
 retf 
 
-; todo clean this up
+
 EMS_DRIVER_CALL:
-push dx
-push cx
-push bx
-push ax
-push si
-push di
-push ds
-push es
-push bp
-push cs
-pop  ds 
-mov  bx, ds:word ptr [request_header_pointer]
-mov  es, ds:word ptr [request_header_pointer+2]
-mov  ax, word ptr es:[bx + 2]
-mov  ah, 0
-cmp  al, 0ch
-jb   CHECK_SOMETHING_IN_PARAMS ; not sure what we're checking or doing here exactly...
-mov  al, 0ch
-CHECK_SOMETHING_IN_PARAMS:
-shl  ax, 1
-mov  si, OFFSET pointer_to_ems_init
-add  si, ax
-call word ptr [si]
-pop  bp
-pop  es
-pop  ds
-pop  di
-pop  si
-pop  ax
-pop  bx
-pop  cx
-pop  dx
-retf
-;0009Fh
+push  bx
+push  es
+
+les  bx, dword ptr cs:[request_header_pointer]  ; todo no ds?
+
+cmp  byte ptr es:[bx + 2], 0
+je   do_init
+cmp  byte ptr es:[bx + 2], 10
+
+
+mov  word ptr es:[bx + 3], 08103h
+
+jne  RETURN_UNRECOGNIZED_COMMAND
+
 RETURN_SUCCESS:
-mov  word ptr [bx + 3], 0100h
-ret  
-;000a5h
+mov  word ptr es:[bx + 3], 0100h
 
 RETURN_UNRECOGNIZED_COMMAND:
-mov  word ptr [bx + 3], 08103h
-ret  
+pop  es
+pop  bx
+retf
+
+do_init:
+PUSHA_MACRO
+push  ds
+call  DRIVER_INIT
+pop   ds
+POPA_MACRO
+pop  es
+pop  bx
+retf
+
  
 
 
- 
+ALIGN 2 
 
 ; Two-word pairs. first word is page frame (04000h, 04400h... etc) up to f000.  
 ;                 second word its physical ems index port
@@ -2883,16 +2902,16 @@ ENDIF
 
 
 DRIVER_INIT:
-mov        ax, cs
-mov        ds, ax
-mov        word ptr [pointer_to_ems_init], OFFSET RETURN_UNRECOGNIZED_COMMAND     ; overwrite pointer to this init function with pointer to "failed to install" (03fa5h)
-lea        dx, [string_main_header]
+push       cs
+pop        ds
+mov        word ptr ds:[pointer_to_ems_init], OFFSET RETURN_UNRECOGNIZED_COMMAND     ; overwrite pointer to this init function with pointer to "failed to install" (03fa5h)
+mov        dx, OFFSET string_main_header
 
 call       PRINT_STRING
 ; get interrupt vector. check it's header/string
 mov        ax, 03567h
 int        021h
-mov        di, 0ah
+mov        di, 0Ah
 mov        si, di
 mov        cx, 8
 rep cmpsb
@@ -2900,7 +2919,7 @@ rep cmpsb
 jne        EMS_INTERRUPT_FREE
 ; an ems driver is already installed
 
-lea        dx, [string_driver_exists]
+mov        dx, OFFSET string_driver_exists
 
 jmp        DRIVER_NOT_INSTALLED_2
 
@@ -3511,24 +3530,24 @@ ENDIF
 
 ; set interrupt vector  067h
 
-lea        dx, MAIN_EMS_INTERRUPT_VECTOR
-mov        al, 067h
-mov        ah, 025h
+mov        dx, OFFSET MAIN_EMS_INTERRUPT_VECTOR
+mov        ax, 02567h
+
 int        021h
 
 DRIVER_INSTALLED:
 
-lea        dx, [string_driver_successfully_installed]
+mov        dx, OFFSET string_driver_successfully_installed
 
 call       PRINT_STRING
-les        bx, [request_header_pointer]
+lds        bx, dword ptr ds:[request_header_pointer]
 mov        word ptr es:[bx + 3], 0100h
 
 ; 0Eh: MS-DOS 5 set pointer to end of memory used by driver
 ; 10h: the segment for above
-mov        word ptr es:[bx + 0eh], offset  end_of_driver_label
-mov        word ptr es:[bx + 010h], cs
-;mov        word ptr es:[bx + 017h], 00
+mov        word ptr ds:[bx + 0eh], OFFSET  end_of_driver_label
+mov        word ptr ds:[bx + 010h], cs
+;mov        word ptr ds:[bx + 017h], 00
 ret
 
 ; DRIVER NOT INSTALLED
@@ -3536,16 +3555,16 @@ ret
 DRIVER_NOT_INSTALLED:
 call       PRINT_STRING 
 
-lea        dx, [string_driver_failed_installing]
+mov        dx, OFFSET string_driver_failed_installing
 
 ; todo whats this
 DRIVER_NOT_INSTALLED_2:
 call       PRINT_STRING
-les        bx, [request_header_pointer]
-mov        word ptr es:[bx + 3], 0810ch
-mov        word ptr es:[bx + 0eh], offset end_of_driver_label
-mov        word ptr es:[bx + 010h], cs
-;mov        word ptr es:[bx + 017h], 00
+lds        bx, [request_header_pointer]
+mov        word ptr ds:[bx + 3], 0810ch
+mov        word ptr ds:[bx + 0eh], OFFSET end_of_driver_label
+mov        word ptr ds:[bx + 010h], cs
+;mov        word ptr ds:[bx + 017h], 00
 ret
 
 ; prints string ending in '$' in DS:DX
