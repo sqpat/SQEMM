@@ -94,7 +94,9 @@ DOS_DRIVER_REQUEST_HEADER ENDS       ; 0Dh
 
 
 CONST_HANDLE_TABLE_LENGTH = 0FFh
-CONST_PAGE_COUNT = 256
+PAGE_COUNT_4_MB = 256
+OFFSET_1_MB = 64
+OFFSET_2_MB = 128
 ; 80h represents 2 MB offset beyond EMS start point
 SCAMP_PAGE_OFFSET_AMT = 68h
 SCAMP_PAGE_SELECT_REGISTER = 0E8h
@@ -129,6 +131,7 @@ SCAT_PAGE_FRAME_COUNT = 32
 
 ; 8000 is to mark bit 15 for free "ems enabled"
 ; 0080 is [currently hardcoded] 2 MB offset for beginning of EMS pagination,
+SCAT_PAGE_ENABLE_BIT = 08000h
 SCAT_PAGE_OFFSET_AMT = 08080h
 SCAT_CHIPSET_UNMAP_VALUE = 03FFh
 
@@ -732,7 +735,7 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   DO_NEXT_PAGE_5000:
   ; next page in ax....
   lodsw
-  mov        bx, ax
+  xchg  ax, bx
   lodsw
   ; read two words - bx and ax
 
@@ -742,9 +745,9 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   mov   dx, SCAT_PAGE_SET_REGISTER
   cmp   bx, 0FFFFh   ; -1 check
   je    handle_default_page
+  SELFMODIFY_SCAT_add_page_offset_and_enable_1:
+  lea   ax, [BX + SCAT_PAGE_OFFSET_AMT]   ; offset by default starting page
 
-  mov   ax, SCAT_PAGE_OFFSET_AMT   ; offset by default starting page
-  add   ax, bx
   out   dx, ax   ; write 16 bit page num. 
 
   loop       DO_NEXT_PAGE_5000
@@ -1587,8 +1590,8 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   cmp   bx, 0FFFFh   ; -1 check
   je    handle_default_page_44h
   
-  mov   ax, SCAT_PAGE_OFFSET_AMT   ; offset by default starting page
-  add   ax, bx
+  SELFMODIFY_SCAT_add_page_offset_and_enable_2:
+  lea   ax, [BX + SCAT_PAGE_OFFSET_AMT]   ; offset by default starting page
   out   dx, ax   ; write 16 bit page num. 
   sti
   
@@ -2890,8 +2893,9 @@ end_of_driver_label:
 string_driver_exists db 0Dh, 0Ah, 'EMS Driver already loaded (chaining not supported).',0Dh, 0Ah, '$'
 string_driver_successfully_installed db 0Dh, 0Ah, 'SQEMM successfully initialized.', 0Ah, 0Dh, '$'
 string_driver_failed_installing db 0Dh, 0Ah, ' Driver not installed.', 0Ah,  '$'
-string_bad_page_frame_param db 0Dh, 0Ah, 'Bad Page Frame Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
-string_bad_page_count_param db 0Dh, 0Ah, 'Bad Page Count Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
+string_bad_page_frame_param db 0Dh, 0Ah,  'Bad Page Frame Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
+string_bad_page_count_param db 0Dh, 0Ah,  'Bad Page Count Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
+string_bad_page_offset_param db 0Dh, 0Ah, 'Bad Page Offset Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
 
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
   string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for VLSI SCAMP', 0Dh, 0Ah,'$'
@@ -2972,8 +2976,8 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
   mov        word ptr ds:[page_frame_segment], 0D000h
 
   ; 256 pages hardcoded for now
-  mov        word ptr ds:[unallocated_page_count], CONST_PAGE_COUNT
-  mov        word ptr ds:[total_page_count], CONST_PAGE_COUNT
+  mov        word ptr ds:[unallocated_page_count], PAGE_COUNT_4_MB
+  mov        word ptr ds:[total_page_count], PAGE_COUNT_4_MB
   mov        word ptr ds:[pageable_frame_count], SCAMP_PAGE_FRAME_COUNT
 
   ; one handle for now
@@ -3040,8 +3044,8 @@ ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
   mov        word ptr ds:[page_frame_segment], 0D000h
 
   ; 256 pages hardcoded for now
-  mov        word ptr ds:[unallocated_page_count], CONST_PAGE_COUNT
-  mov        word ptr ds:[total_page_count], CONST_PAGE_COUNT
+  mov        word ptr ds:[unallocated_page_count], PAGE_COUNT_4_MB
+  mov        word ptr ds:[total_page_count], PAGE_COUNT_4_MB
   mov        word ptr ds:[pageable_frame_count], RODNEY_PAGE_FRAME_COUNT
 
   ; one handle for now
@@ -3066,8 +3070,8 @@ ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
   mov        word ptr ds:[page_frame_segment], 0D000h
 
   ; 256 pages hardcoded for now
-  mov        word ptr ds:[unallocated_page_count], CONST_PAGE_COUNT
-  mov        word ptr ds:[total_page_count], CONST_PAGE_COUNT
+  mov        word ptr ds:[unallocated_page_count], PAGE_COUNT_4_MB
+  mov        word ptr ds:[total_page_count], PAGE_COUNT_4_MB
   mov        word ptr ds:[pageable_frame_count], FANTASY_PAGE_FRAME_COUNT
 
   ; one handle for now
@@ -3166,7 +3170,7 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   shl  ah, 2   ; 0 1 2 to 0 4 8  (C D 0)
   or   al, ah  ; combine
   add  al, SCAT_PAGE_C000_REGISTER_OFFSET
-  mov  byte ptr cs:[SELFMODIFY_SCAT_add_page_frame_register_offset+1], al
+  mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset+1], al
   or   al, SCAT_CHIPSET_AUTOINCREMENT_FLAG
 
   mov  dx, SCAT_PAGE_SELECT_REGISTER
@@ -3183,8 +3187,8 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   out  dx, ax ; map page 3 to 1MB + 3*16384
 
 
-  mov   ah, "C"
-  mov   dx, 256 ; CONST_PAGE_COUNT
+  mov   ah, "C" ; page count
+  mov   dx, PAGE_COUNT_4_MB
   call  parse_driver_params_get_int
   
   jnc   skip_page_count_bounds_check
@@ -3202,6 +3206,30 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   mov        word ptr ds:[unallocated_page_count], ax
   mov        word ptr ds:[total_page_count], ax
   mov        word ptr ds:[pageable_frame_count], SCAT_PAGE_FRAME_COUNT ; todo... should we decrease based on stuff like ROMS etc?
+
+  mov   ah, "O"  ; page offset
+  mov   dx, OFFSET_2_MB  ; todo why does SCAT use 2 mb and not 1...?
+  call  parse_driver_params_get_int
+
+  jnc   skip_page_offset_bounds_check
+  push  ax
+  add   ax, word ptr ds:[total_page_count]
+  cmp   ax, 1024  ; total memory over 16MB? todo look up actual memory in chipset?
+  pop   ax
+  jbe   done_with_page_offset_bounds_check
+
+  mov  DX, OFFSET string_bad_page_offset_param
+  jmp  DRIVER_NOT_INSTALLED_2
+
+  done_with_page_offset_bounds_check:
+  skip_page_offset_bounds_check:
+
+  or    ax, SCAT_PAGE_ENABLE_BIT
+  
+  mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_1+2], ax
+  mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_2+2], ax
+
+
 
   ; one handle for now
   mov        word ptr ds:[handle_count], 01h
@@ -3221,8 +3249,8 @@ ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
   mov        word ptr ds:[page_frame_segment], 0D000h
 
   ; 256 pages hardcoded for now
-  mov        word ptr ds:[unallocated_page_count], CONST_PAGE_COUNT
-  mov        word ptr ds:[total_page_count], CONST_PAGE_COUNT
+  mov        word ptr ds:[unallocated_page_count], PAGE_COUNT_4_MB
+  mov        word ptr ds:[total_page_count], PAGE_COUNT_4_MB
   mov        word ptr ds:[pageable_frame_count], HT18_PAGE_FRAME_COUNT
 
   ; one handle for now
@@ -3278,8 +3306,8 @@ ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
   mov        word ptr ds:[page_frame_segment], 0D000h
 
   ; 256 pages hardcoded for now
-  mov        word ptr ds:[unallocated_page_count], CONST_PAGE_COUNT
-  mov        word ptr ds:[total_page_count], CONST_PAGE_COUNT
+  mov        word ptr ds:[unallocated_page_count], PAGE_COUNT_4_MB
+  mov        word ptr ds:[total_page_count], PAGE_COUNT_4_MB
   mov        word ptr ds:[pageable_frame_count], HT12_PAGE_FRAME_COUNT
 
   ; one handle for now
@@ -3332,8 +3360,8 @@ ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
   mov        word ptr ds:[page_frame_segment], 0D000h
 
   ; 256 pages hardcoded for now
-  mov        word ptr ds:[unallocated_page_count], CONST_PAGE_COUNT
-  mov        word ptr ds:[total_page_count], CONST_PAGE_COUNT
+  mov        word ptr ds:[unallocated_page_count], PAGE_COUNT_4_MB
+  mov        word ptr ds:[total_page_count], PAGE_COUNT_4_MB
   mov        word ptr ds:[pageable_frame_count], LOTECH_PAGE_FRAME_COUNT
 
   ; one handle for now
