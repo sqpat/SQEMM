@@ -2891,6 +2891,7 @@ string_driver_exists db 0Dh, 0Ah, 'EMS Driver already loaded (chaining not suppo
 string_driver_successfully_installed db 0Dh, 0Ah, 'SQEMM successfully initialized.', 0Ah, 0Dh, '$'
 string_driver_failed_installing db 0Dh, 0Ah, ' Driver not installed.', 0Ah,  '$'
 string_bad_page_frame_param db 0Dh, 0Ah, 'Bad Page Frame Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
+string_bad_page_count_param db 0Dh, 0Ah, 'Bad Page Count Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
 
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
   string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for VLSI SCAMP', 0Dh, 0Ah,'$'
@@ -3181,10 +3182,26 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   inc  ax 
   out  dx, ax ; map page 3 to 1MB + 3*16384
 
-  ; 256 pages hardcoded for now
-  mov        word ptr ds:[unallocated_page_count], CONST_PAGE_COUNT
-  mov        word ptr ds:[total_page_count], CONST_PAGE_COUNT
-  mov        word ptr ds:[pageable_frame_count], SCAT_PAGE_FRAME_COUNT
+
+  mov   ah, "C"
+  mov   dx, 256 ; CONST_PAGE_COUNT
+  call  parse_driver_params_get_int
+  
+  jnc   skip_page_count_bounds_check
+  ; todo proper bounds check by checking chipset params?
+  cmp   ax,  960   ; (SCAT ems 15 mb maximum)
+  jb    page_count_bounds_ok
+
+  mov  DX, OFFSET string_bad_page_count_param
+  jmp  DRIVER_NOT_INSTALLED_2
+
+
+  page_count_bounds_ok:
+  skip_page_count_bounds_check:
+
+  mov        word ptr ds:[unallocated_page_count], ax
+  mov        word ptr ds:[total_page_count], ax
+  mov        word ptr ds:[pageable_frame_count], SCAT_PAGE_FRAME_COUNT ; todo... should we decrease based on stuff like ROMS etc?
 
   ; one handle for now
   mov        word ptr ds:[handle_count], 01h
@@ -3717,6 +3734,48 @@ done_not_found:
 pop        cx
 
 ret
+
+; pass in param in ah
+; pass in default value on failure in dx.
+; still returns carry on success
+
+parse_driver_params_get_int:
+push      dx
+call      parse_driver_params
+jnc       arg_parsed_fail
+xor       ax, ax  ; zero ah
+cwd               ; dx is running total
+loop_next_char:
+mov       al, byte ptr es:[di]
+cmp       al, " "
+je        arg_parsed_success
+cmp       al, 0Dh ; end of line. do we also check for 0Ah? 
+je        arg_parsed_success
+sub       al, "0"
+jb        arg_parsed_fail
+cmp       al, 9
+ja        arg_parsed_fail
+push      ax     ; store value
+mov       al, 10
+mul       dx       ; shift running total one decimal digit over
+xchg      ax, dx   ; result in dx
+pop       ax     ; restore value
+add       dx, ax ; add new digit
+inc       di
+jmp       loop_next_char
+
+arg_parsed_fail:
+clc
+pop       ax
+ret
+
+arg_parsed_success:
+stc
+xchg      ax, dx
+pop       dx  
+ret
+
+
 COMMENT @
 trigger_debugger:
 push       es
