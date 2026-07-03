@@ -3000,6 +3000,16 @@ EMS_INTERRUPT_FREE:
 ;call  trigger_debugger
 
 call  process_command_line
+mov   ah, "Q" ; quiet mode?
+call  parse_driver_params
+
+jnc   quiet_mode_off
+
+RET_OPCODE = 0C3h
+
+mov   byte ptr ds:[print_driver_param], RET_OPCODE
+
+quiet_mode_off:
 
 
 ; CHIPSET SPECIFIC START
