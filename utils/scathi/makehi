@@ -1,0 +1,21 @@
+CCOPTS = -zp1 -oaxet -oi -zq -j -mm -0 -s -zdp -d__COMPILER_WATCOM
+
+GLOBOBJS = &
+ scathi.obj
+
+scathi.exe : $(GLOBOBJS)
+ wlink @scathi.lnk
+ wstrip scathi.exe
+ exe2bin scathi.exe
+ move scathi.bin scathi.sys /Y
+
+.c.obj :
+ wcc $(CCOPTS) $[*
+
+.asm.obj :
+ tasm /m4 $[*
+
+clean : .SYMBOLIC
+ del *.obj
+ del *.err
+ del scathi.sys

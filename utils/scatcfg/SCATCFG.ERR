@@ -1,0 +1,27 @@
+scatcfg.c(254): Warning! E1181: Parameter 1, sign specifier mismatch
+scatcfg.c(254): Note! I2003: source conversion type is 'signed char *'
+scatcfg.c(254): Note! I2004: target conversion type is 'char const *'
+scatcfg.c(254): Warning! E1181: Parameter 2, sign specifier mismatch
+scatcfg.c(254): Note! I2003: source conversion type is 'signed char *'
+scatcfg.c(254): Note! I2004: target conversion type is 'char const *'
+scatcfg.c(254): Note! I2002: 'strcasecmp' defined in: C:\WATCOM\H\strings.h(61)
+scatcfg.c(348): Warning! E1181: Parameter 1, sign specifier mismatch
+scatcfg.c(348): Note! I2003: source conversion type is 'char *'
+scatcfg.c(348): Note! I2004: target conversion type is 'signed char *'
+scatcfg.c(348): Note! I2002: 'checkparm' defined in: scatcfg.c(248)
+scatcfg.c(354): Warning! E1181: Parameter 1, sign specifier mismatch
+scatcfg.c(354): Note! I2003: source conversion type is 'char *'
+scatcfg.c(354): Note! I2004: target conversion type is 'signed char *'
+scatcfg.c(354): Note! I2002: 'checkparm' defined in: scatcfg.c(248)
+scatcfg.c(368): Warning! E1181: Parameter 1, sign specifier mismatch
+scatcfg.c(368): Note! I2003: source conversion type is 'char *'
+scatcfg.c(368): Note! I2004: target conversion type is 'signed char *'
+scatcfg.c(368): Note! I2002: 'checkparm' defined in: scatcfg.c(248)
+scatcfg.c(382): Warning! E1181: Parameter 1, sign specifier mismatch
+scatcfg.c(382): Note! I2003: source conversion type is 'char *'
+scatcfg.c(382): Note! I2004: target conversion type is 'signed char *'
+scatcfg.c(382): Note! I2002: 'checkparm' defined in: scatcfg.c(248)
+scatcfg.c(396): Warning! E1181: Parameter 1, sign specifier mismatch
+scatcfg.c(396): Note! I2003: source conversion type is 'char *'
+scatcfg.c(396): Note! I2004: target conversion type is 'signed char *'
+scatcfg.c(396): Note! I2002: 'checkparm' defined in: scatcfg.c(248)

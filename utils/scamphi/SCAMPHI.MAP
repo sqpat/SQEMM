@@ -1,0 +1,52 @@
+Open Watcom Linker Version 2.0 beta Sep  3 2024 02:05:05 (32-bit)
+Copyright (c) 2002-2024 The Open Watcom Contributors. All Rights Reserved.
+Portions Copyright (c) 1985-2002 Sybase, Inc. All Rights Reserved.
+Created on:       26/05/25 23:32:21
+Executable Image: scamphi.exe
+creating a DOS executable
+
+
+                        +------------+
+                        |   Groups   |
+                        +------------+
+
+Group                           Address              Size
+=====                           =======              ====
+
+DGROUP                          0000:0000            00000050
+
+
+
+                        +--------------+
+                        |   Segments   |
+                        +--------------+
+
+Segment                Class          Group          Address         Size
+=======                =====          =====          =======         ====
+
+_TEXT                  CODE           DGROUP         0000:0000       00000050
+_DATA                  DATA           DGROUP         0005:0000       00000000
+
+
+                        +----------------+
+                        |   Memory Map   |
+                        +----------------+
+
+* = unreferenced symbol
++ = symbol only referenced locally
+
+Address        Symbol
+=======        ======
+
+Warning! W1014: stack segment not found
+Warning! W1023: no starting address found, using 0000:0000
+
+
+                        +-----------------------+
+                        |   Linker Statistics   |
+                        +-----------------------+
+
+Stack size:  09e8 (2536.)
+Memory size:  0050 (80.)
+Entry point address: 0000:0000
+Link time: 00:00.00
