@@ -74,6 +74,30 @@ POPA_MACRO MACRO
   ENDIF
 ENDM
 
+
+; optimized for speed
+SHIFT_MACRO MACRO instruction, register, count
+
+
+IF COMPISA GE COMPILE_386
+	&instruction &register, &count
+
+ELSEIF COMPISA GE COMPILE_186
+	IF COUNT GE 4
+		&instruction &register, &count
+	ELSE
+		REPT &count
+			&instruction &register, 1
+		ENDM
+	ENDIF
+ELSE
+	REPT &count
+		&instruction &register, 1
+	ENDM
+ENDIF
+
+ENDM
+
 .MODEL  tiny
 
 
@@ -2903,6 +2927,18 @@ string_bad_page_frame_param db 0Dh, 0Ah,  'Bad Page Frame Param in Driver Parame
 string_bad_page_count_param db 0Dh, 0Ah,  'Bad Page Count Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
 string_bad_page_offset_param db 0Dh, 0Ah, 'Bad Page Offset Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
 
+string_good_port_param                      db            "Using Port:  "
+string_good_port_param_EDIT_OFFSET          db            "0208", 0Dh, 0Ah,'$'
+string_good_page_frame_param                db            "Page Frame:  "
+string_good_page_frame_param_EDIT_OFFSET    db            "D000", 0Dh, 0Ah,'$'
+string_good_page_count_param                db            "Page Count:  "
+string_good_page_count_param_EDIT_OFFSET    db            "0256", 0Dh, 0Ah,'$'
+string_good_page_offset_param               db            "Page Offset: "
+string_good_page_offset_param_EDIT_OFFSET   db            "0128", 0Dh, 0Ah,'$'
+
+
+
+
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
   string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for VLSI SCAMP', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
@@ -3127,6 +3163,7 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   out   SCAT_CHIPSET_CONFIG_REGISTER_SELECT, al
   in    al, SCAT_CHIPSET_CONFIG_REGISTER_READWRITE
   test  al, 1
+  mov   ax, 0208h  ; defau
   je    use_default_ports
   ; use port 218/21A not 208/20A
   mov   al, 010h
@@ -3137,8 +3174,14 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_1+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_2+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_3+1], al
+  mov   ax, 0218h
 
   use_default_ports:
+
+  stc   ; hex print
+  mov   di, OFFSET string_good_port_param_EDIT_OFFSET
+  mov   dx, OFFSET string_good_port_param
+  call  print_driver_param
 
 
   mov   ah, "F" 
@@ -3179,6 +3222,14 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
   or    al, ah
   add   al, 0C0h
   mov   byte ptr ds:[page_frame_segment+1], al 
+
+  mov   ah, al
+  xor   al, al
+
+  stc   ; hex print
+  mov   di, OFFSET string_good_page_frame_param_EDIT_OFFSET
+  mov   dx, OFFSET string_good_page_frame_param
+  call  print_driver_param
 
 
 
@@ -3246,16 +3297,19 @@ SELFMODIFY_SCAT_set_page_set_register_1:
 
   mov   word ptr ds:[unallocated_page_count], ax
   mov   word ptr ds:[total_EMS_page_count], ax
+
+
+  mov   di, OFFSET string_good_page_count_param_EDIT_OFFSET
+  mov   dx, OFFSET string_good_page_count_param
+  call  print_driver_param_4_char_int
+
+
   mov   word ptr ds:[pageable_frame_count], SCAT_PAGE_FRAME_COUNT ; todo... should we decrease based on stuff like ROMS etc?
 
   mov   ah, "O"  ; page offset
   call  parse_driver_params_get_int  ; no default. instead fetch from chipswt
 
   jc    found_page_offset_bounds
-
-  mov   bx, 08000h
-  mov   es, bx
-  mov   word ptr es:[12], ax
 
 
   call  get_SCAT_chipset_bounds_value
@@ -3278,6 +3332,14 @@ SELFMODIFY_SCAT_set_page_set_register_1:
   jmp  DRIVER_NOT_INSTALLED_2
 
   done_with_page_offset_bounds_check:
+
+  push  ax
+
+  mov   di, OFFSET string_good_page_offset_param_EDIT_OFFSET
+  mov   dx, OFFSET string_good_page_offset_param
+  call  print_driver_param_4_char_int
+
+  pop   ax
 
   or    ax, SCAT_PAGE_ENABLE_BIT
   
@@ -3858,6 +3920,85 @@ xchg      ax, dx
 pop       dx  
 ret
 
+print_driver_param_4_char_int:
+  mov      cx, 3
+  clc
+
+print_driver_param:
+
+; ax = number to convert to edit offset
+; ds:di = edit offset
+; ds:dx = print offset (synergy with dos interrupt)
+; carry flag on = print hex. off = print int.
+; cx has number of digits for decimal print. hex always prints 4.
+  push      bx
+  push      ds
+  pop       es  ; enable stosw
+  jc        do_print_driver_param_hex
+
+; put AX decimal value in es:di
+  push      dx
+  add       di, cx  ; cx has max digit count. iter backwards. 
+  std               ; assume no dir flag coming in 
+  
+  mov       bx, 10
+
+  do_next_digit:
+  xor       dx, dx
+  div       bx
+  xchg      ax, dx  ; get   remainder in ax
+  add       al, '0' ; ASCIIfy
+  stosb             ; print remainder from ax
+  xchg      ax, dx  ; get   quotient back in ax
+  loop   do_next_digit
+  clc
+  pop       dx
+  jmp   done_editing_string
+do_print_driver_param_hex:
+
+; thanks zero318 for original impl
+; put AX hex value in es:di
+
+  MOV  BX, AX
+  AND  AX, 0F0Fh
+  XOR  BX, AX
+  SHIFT_MACRO SHR BX 4
+  XCHG AL, BH
+  CMP  AL, 10
+  SBB  CL, CL
+  CMP  AH, 10
+  SBB  CH, CH
+  AND  CX, (("0" XOR ("A" - 10)) AND 0FFh) OR (("0" XOR ("A" - 10)) SHL 8)
+  XOR  CX, (("A" - 10) AND 0FFh) OR (("A" - 10) SHL 8)
+  ADD  AX, CX
+  STOSW
+  CMP  BL, 10
+  SBB  AL, AL
+  CMP  BH, 10
+  SBB  AH, AH
+  AND  AX, (("0" XOR ("A" - 10)) AND 0FFh) OR (("0" XOR ("A" - 10)) SHL 8)
+  XOR  AX, (("A" - 10) AND 0FFh) OR (("A" - 10) SHL 8)
+  ADD  AX, BX
+  STOSW
+done_editing_string:
+    
+  mov        ah, 9  ; PRINT_STRING
+  int        021h
+  pop        bx
+  ret
+
+
+
+;;; END GENERIC INIT CODE. This section is not resident after initialization
+;;; END GENERIC INIT CODE. This section is not resident after initialization
+;;; END GENERIC INIT CODE. This section is not resident after initialization
+;;; END GENERIC INIT CODE. This section is not resident after initialization
+
+
+;;; BEGIN CHIPSET SPECIFIC FUNCTION INIT DEFINITIONS. This section is not resident after initialization
+;;; BEGIN CHIPSET SPECIFIC FUNCTION INIT DEFINITIONS. This section is not resident after initialization
+;;; BEGIN CHIPSET SPECIFIC FUNCTION INIT DEFINITIONS. This section is not resident after initialization
+;;; BEGIN CHIPSET SPECIFIC FUNCTION INIT DEFINITIONS. This section is not resident after initialization
 
 
 IF COMPILE_CHIPSET EQ SCAT_CHIPSET
