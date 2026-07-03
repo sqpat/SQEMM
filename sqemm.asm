@@ -2927,14 +2927,17 @@ string_bad_page_frame_param db 0Dh, 0Ah,  'Bad Page Frame Param in Driver Parame
 string_bad_page_count_param db 0Dh, 0Ah,  'Bad Page Count Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
 string_bad_page_offset_param db 0Dh, 0Ah, 'Bad Page Offset Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
 
+string_parsed_parameter                     db            " (Parsed Parameter)", 0Dh, 0Ah,'$'
+string_unparsed_parameter                   db            " (User Parameter)", 0Dh, 0Ah,'$'
+
 string_good_port_param                      db            "Using Port:  "
-string_good_port_param_EDIT_OFFSET          db            "0208", 0Dh, 0Ah,'$'
+string_good_port_param_EDIT_OFFSET          db            "0208",'$'
 string_good_page_frame_param                db            "Page Frame:  "
-string_good_page_frame_param_EDIT_OFFSET    db            "D000", 0Dh, 0Ah,'$'
+string_good_page_frame_param_EDIT_OFFSET    db            "D000",'$'
 string_good_page_count_param                db            "Page Count:  "
-string_good_page_count_param_EDIT_OFFSET    db            "0256", 0Dh, 0Ah,'$'
+string_good_page_count_param_EDIT_OFFSET    db            "0256",'$'
 string_good_page_offset_param               db            "Page Offset: "
-string_good_page_offset_param_EDIT_OFFSET   db            "0128", 0Dh, 0Ah,'$'
+string_good_page_offset_param_EDIT_OFFSET   db            "0128",'$'
 
 
 
@@ -2967,7 +2970,7 @@ ENDIF
 
 _INIT_PARAM_command_line_length:
 dw 0
-
+_INIT_PARAM_last_parsed_param:
 
 
 DRIVER_INIT:
@@ -3872,6 +3875,7 @@ les        di, dword ptr cs:[request_header_pointer]
 les        di, es:[di + 012h]  ; todo whats this offset
 
 mov        al, "-"
+mov        word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET string_unparsed_parameter ; default not found
 
 search_for_next_param:
 repne      scasb      
@@ -3885,6 +3889,7 @@ jne        not_equals
 inc        di
 not_equals:
 stc   ; carry on if found.
+mov       word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET string_parsed_parameter
 done_not_found:
 pop        cx
 
@@ -3994,7 +3999,12 @@ done_editing_string:
     
   mov        ah, 9  ; PRINT_STRING
   int        021h
+
+  mov        dx, word ptr ds:[_INIT_PARAM_last_parsed_param]
+  mov        ah, 9  ; PRINT_STRING
+  int        021h
   pop        bx
+
   ret
 
 
