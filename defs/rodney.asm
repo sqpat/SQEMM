@@ -1,0 +1,9 @@
+RODNEY_PAGE_SELECT_REGISTER = 0E8h
+RODNEY_EMS_ENABLE_REGISTER = 0E9h
+RODNEY_PAGE_SET_REGISTER = 0EAh
+RODNEY_PAGE_FRAME_COUNT = 32
+; start at the 1 MB offset
+; 8000 is to mark bit 15 for free "ems enabled"
+RODNEY_PAGE_OFFSET_AMT = 08040h
+; 34h for D000. 38h for E000 if we were to use that.
+RODNEY_PAGE_REGISTER_OFFSET = 034h

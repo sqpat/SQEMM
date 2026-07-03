@@ -1,0 +1,11 @@
+HEDAKA_PAGE_REGISTER_0 = 00208h
+HEDAKA_PAGE_REGISTER_1 = 04208h
+HEDAKA_PAGE_REGISTER_2 = 08208h
+HEDAKA_PAGE_REGISTER_3 = 0C208h
+; A8 puts us right after 9c00... 
+; chipset doesnt seem to allow for more than 2MB EMS addressable INCLUDING conventional memory (?)
+HEDAKA_PAGE_OFFSET_AMT = 0B8h
+HEDAKA_PAGE_FRAME_COUNT = 4
+; no real unmap support?
+HEDAKA_CHIPSET_UNMAP_VALUE = 7Fh
+HEDAKA_CONST_PAGE_COUNT = 72

@@ -1,0 +1,53 @@
+
+  mov   ax, SARC_RC2016_PAGE_REGISTER_0
+  out   SARC_RC2016_CHIPSET_INDEX_PORT, al  
+  mov   ax, SARC_RC2016_BASE_PAGE_REGISTER_0
+  out   SARC_RC2016_CHIPSET_VALUE_PORT, al  
+
+  mov   ax, SARC_RC2016_PAGE_REGISTER_0 + 1
+  out   SARC_RC2016_CHIPSET_INDEX_PORT, al  
+  mov   ax, SARC_RC2016_PAGE_OFFSET_AMT
+  out   SARC_RC2016_CHIPSET_VALUE_PORT, al  
+
+  mov   ax, SARC_RC2016_PAGE_REGISTER_1
+  out   SARC_RC2016_CHIPSET_INDEX_PORT, al  
+  mov   ax, SARC_RC2016_BASE_PAGE_REGISTER_0+1
+  out   SARC_RC2016_CHIPSET_VALUE_PORT, al  
+
+  mov   ax, SARC_RC2016_PAGE_REGISTER_1 + 1
+  out   SARC_RC2016_CHIPSET_INDEX_PORT, al  
+  mov   ax, SARC_RC2016_PAGE_OFFSET_AMT
+  out   SARC_RC2016_CHIPSET_VALUE_PORT, al  
+
+  mov   ax, SARC_RC2016_PAGE_REGISTER_2
+  out   SARC_RC2016_CHIPSET_INDEX_PORT, al  
+  mov   ax, SARC_RC2016_BASE_PAGE_REGISTER_0+2
+  out   SARC_RC2016_CHIPSET_VALUE_PORT, al  
+
+  mov   ax, SARC_RC2016_PAGE_REGISTER_2 + 1
+  out   SARC_RC2016_CHIPSET_INDEX_PORT, al  
+  mov   ax, SARC_RC2016_PAGE_OFFSET_AMT
+  out   SARC_RC2016_CHIPSET_VALUE_PORT, al  
+
+  mov   ax, SARC_RC2016_PAGE_REGISTER_3
+  out   SARC_RC2016_CHIPSET_INDEX_PORT, al  
+  mov   ax, SARC_RC2016_BASE_PAGE_REGISTER_0+3
+  out   SARC_RC2016_CHIPSET_VALUE_PORT, al  
+
+  mov   ax, SARC_RC2016_PAGE_REGISTER_3 + 1
+  out   SARC_RC2016_CHIPSET_INDEX_PORT, al  
+  mov   ax, SARC_RC2016_PAGE_OFFSET_AMT
+  out   SARC_RC2016_CHIPSET_VALUE_PORT, al  
+
+  
+
+  ; hard coded to d000 for now
+  mov        word ptr ds:[_RESIDENT_VARIABLE_page_frame_segment+1], 0D000h
+
+  ; 128 pages hardcoded for now
+  mov        word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count+1], SARC_RC2016_CONST_PAGE_COUNT
+  mov        word ptr ds:[_RESIDENT_VARIABLE_total_EMS_page_count+1], SARC_RC2016_CONST_PAGE_COUNT
+  mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count+1], SARC_RC2016_PAGE_FRAME_COUNT
+
+  ; one handle for now
+  mov        word ptr ds:[_RESIDENT_VARIABLE_handle_count+1], 01h
