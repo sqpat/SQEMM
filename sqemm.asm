@@ -2316,7 +2316,7 @@ iret
 ;          8  Save Page Map                                  47h       
 
 EMS_FUNCTION_047h:
-; TODO NOT DONE
+; TODO NOT DONE, should be done
 
 xchg       ax, bx
 iret
@@ -2326,30 +2326,12 @@ iret
 ;          9  Restore Page Map                               48h       
 
 EMS_FUNCTION_048h:
-; TODO NOT DONE
+; TODO NOT DONE, should be done
 
 xchg       ax, bx
 iret
 
 
-
-;          10 Reserved                                       49h       
-
-
-EMS_FUNCTION_049h:
-; TODO NOT DONE
-
-xchg       ax, bx
-iret
-
-
-;          11 Reserved                                       4Ah       
-
-EMS_FUNCTION_04Ah:
-; TODO NOT DONE
-
-xchg       ax, bx
-iret
 
 
 ;          12 Get Handle Count                               4Bh       
@@ -2375,7 +2357,7 @@ iret
 ;          14 Get All Handle Pages                           4Dh       
 ; we write all handles and their page counts to es:di
 EMS_FUNCTION_04Dh:
-; TODO NOT DONE
+; TODO NOT DONE, should be done
 
 xchg       ax, bx
 iret
@@ -2388,7 +2370,7 @@ iret
 ;             Get Size of Page Map Save Array                4E03h     
 
 EMS_FUNCTION_04Eh:
-; TODO NOT DONE
+; TODO NOT DONE, should be done
 
 xchg       ax, bx
 iret
@@ -2398,7 +2380,7 @@ iret
 ;             Set Partial Page Map                           4F01h     
 ;             Get Size of Partial Page Map Save Array        4F02h     
 EMS_FUNCTION_04Fh:
-; TODO NOT DONE
+; TODO NOT DONE, should be done
 
 xchg       ax, bx
 iret
@@ -2430,36 +2412,6 @@ iret
 
 
 
-;          19 Get Handle Attribute                           5200h     
-;             Set Handle Attribute                           5201h     
-;             Get Handle Attribute Capability                5202h     
-
-; it seems this is mostly unsupported.
-EMS_FUNCTION_052h:
-; TODO NOT DONE 
-xchg       ax, bx
-iret
-
-
-;          20 Get Handle Name                                5300h     
-;             Set Handle Name                                5301h     
-
-       
-EMS_FUNCTION_053h:
-; TODO NOT DONE 
-xchg       ax, bx
-iret
-
-
-;          21 Get Handle Directory                           5400h     
-;             Search for Named Handle                        5401h     
-;             Get Total Handles                              5402h     
-
-
-EMS_FUNCTION_054h:
-; TODO NOT DONE 
-xchg       ax, bx
-iret
 
 
 ;      22 Alter Page Map & Jump
@@ -2468,7 +2420,7 @@ iret
 ;             (Segment address mode)                         5501h     
 
 EMS_FUNCTION_055h:
-; TODO NOT DONE 
+; TODO NOT DONE, should be done
 xchg       ax, bx
 iret
  
@@ -2487,7 +2439,7 @@ iret
 ;             Get Page Map Stack Space Size                  5602h     
 
 EMS_FUNCTION_056h:
-; TODO NOT DONE 
+; TODO NOT DONE, should be done
 xchg       ax, bx
 iret
 
@@ -2509,7 +2461,7 @@ iret
 ;          DS:SI = pointer to move_source_dest structure
 ;     FUNCTION 24   MOVE/EXCHANGE MEMORY REGION
 EMS_FUNCTION_057h:
-; TODO NOT DONE 
+; TODO NOT DONE, should be done
 xchg       ax, bx
 iret
 
@@ -2552,54 +2504,25 @@ func_58_invalid_subfunction:
 mov        ah, 08fh
 iret
 
-;          26 Get Hardware Configuration Array               5900h     
-;             Get Unallocated Raw Page Count                 5901h     
+
+; reserved, dont implement
+EMS_FUNCTION_049h:
+EMS_FUNCTION_04Ah:
+
+; Do not implement OS level 4.0 functions for single application driver.
+EMS_FUNCTION_052h:
+EMS_FUNCTION_053h:
+EMS_FUNCTION_054h:
 
 EMS_FUNCTION_059h:
-; TODO NOT DONE 
-xchg       ax, bx
-iret
 
-
-;          27 Allocate Standard Pages                        5A00h     
-;             Allocate Raw Pages                             5A01h     
-
-EMS_FUNCTION_05ah:
-; TODO NOT DONE 
-xchg       ax, bx
-iret
-
-;          28 Get Alternate Map Register Set                 5B00h     
-;             Set Alternate Map Register Set                 5B01h     
-;             Get Alternate Map Save Array Size              5B02h     
-;             Allocate Alternate Map Register Set            5B03h     
-;             Deallocate Alternate Map Register Set          5B04h     
-;             Allocate DMA Register Set                      5B05h     
-;             Enable DMA on Alternate Map Register Set       5B06h     
-;             Disable DMA on Alternate Map Register Set      5B07h     
-;             Deallocate DMA Register Set                    5B08h     
-
-
-
+EMS_FUNCTION_05Ah:
 EMS_FUNCTION_05Bh:
-; TODO NOT DONE 
-xchg       ax, bx
-iret
-
-;          29 Prepare Expanded Memory Hardware for Warmboot  5Ch       
-
 EMS_FUNCTION_05Ch:
-; TODO NOT DONE 
-xchg       ax, bx
-iret
-
-;          30 Enable OS/E Function Set                       5D00h     
-;             Disable OS/E Function Set                      5D01h     
-;             Return OS/E Access Key                         5D02h     
-
 
 EMS_FUNCTION_05Dh:
-; TODO NOT DONE 
+
+; TODO NOT DONE , wont be done
 xchg       ax, bx
 iret
 
