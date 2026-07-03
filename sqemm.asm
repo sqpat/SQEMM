@@ -464,7 +464,7 @@ ENDIF
 
 
 
-
+ALIGN 2
 
 ;  32-bit pointer to arguments to driver
 request_header_pointer dd 00000000h 
@@ -476,8 +476,7 @@ request_header_pointer dd 00000000h
 
 ; segment of pageframe
 page_frame_segment dw 0000h 
-; used to hold a jump addr. could maybe be combined with another temp
-temporary_jump_addr dw 0000h
+
  
 ; number of ems handles..
 handle_count dw 0000h
@@ -493,7 +492,7 @@ pageable_frame_count dw 0000h
 
 
 ; EMS Function pointer table
-EMS_FUNCTION_POINTERS:
+_EMS_FUNCTION_POINTERTABLE:
 dw  OFFSET EMS_FUNCTION_040h
 dw  OFFSET EMS_FUNCTION_041h
 dw  OFFSET EMS_FUNCTION_042h
@@ -525,8 +524,15 @@ dw  OFFSET EMS_FUNCTION_05bh
 dw  OFFSET EMS_FUNCTION_05ch
 dw  OFFSET EMS_FUNCTION_05dh
 
+_current_call_subfunction_value:
+db  0
+ALIGN 2
 
 
+func_44_no_emm_handle_found:
+mov        ah, 083h  ; The memory manager couldn't find the EMM handle your program specified.
+iret
+ALIGN 2
  
 
 
@@ -539,14 +545,19 @@ jne      NOT_FUNC_50h
 
 ; CHIPSET SPECIFIC START
 
-; implement the inlined function 50 and/or 44 for pagination
-; namely, change the registers that are being written to,
-; properly handle the 'unmap' case with bx = FFFF/-1, and
-; otherwise offset registers if necessary. For example, in the
-; case of SCAMP we must offset page registers by 50h or so to
-; avoid them mapping to default conventional memory ranges.
+; DRIVER PHILOSOPHY
+; most calls are remaps, and those are the most crucial to performance
+; check for those first if/else type
+; then jump to table to handle the rest.
+; pagination functions are very chipset if/else implementations, most of the others are simple
+
 
 EMS_FUNCTION_050h:
+
+;          17 Map/Unmap Multiple Handle Pages
+;             (Physical page number mode)                    5000h     
+;             (Segment address mode)                         5001h     
+
 
 
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
@@ -1376,6 +1387,27 @@ NOT_FUNC_50h:
   ; page one function
 
 
+
+;          5  Map/Unmap Handle Page                          44h      
+
+
+;          AL = physical_page_number
+;                     Contains the number of the physical page into which the
+;                     logical page number is to be mapped.  Physical pages are
+;                     numbered zero relative.
+;          BX = logical_page_number
+;                     Contains the number of the logical page to be mapped at the
+;                     physical page within the page frame.  Logical pages are
+;                     numbered zero relative.  The logical page must be in the
+;                     range zero through (number of pages allocated to the EMM
+;                     handle - 1).  However, if BX contains logical page number
+;                     FFFFh, the physical page specified in AL will be unmapped
+;                     (be made inaccessible for reading or writing).
+;          DX = emm_handle
+
+
+; INLINED UP ABOVE
+
 EMS_FUNCTION_044h:
 
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
@@ -1386,7 +1418,7 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
 
   ENOUGH_PAGES:
   cmp        dx,  1
-  jne        RETURN_RESULT_83
+  jne        func_44_no_emm_handle_found
   
   ; al and bx are still the args
 
@@ -1447,15 +1479,7 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
   mov        ah, 080h
   iret
 
-  ; The memory manager couldn't find the EMM handle your program specified.
-  RETURN_RESULT_83:
-  mov        ah, 083h
-  iret
-
-  RETURN_RESULT_8A:
-  mov        ah, 08Ah
-  iret
-
+  
   RETURN_RESULT_8B:
   mov        ah, 08Bh
   iret
@@ -1468,7 +1492,7 @@ ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
 
   ENOUGH_PAGES:
   cmp        dx,  1
-  jne        RETURN_RESULT_83
+  jne        func_44_no_emm_handle_found
   
   ; al and bx are still the args
 
@@ -1522,15 +1546,8 @@ ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
   mov        ah, 080h
   iret
 
-  ; The memory manager couldn't find the EMM handle your program specified.
-  RETURN_RESULT_83:
-  mov        ah, 083h
-  iret
 
-  RETURN_RESULT_8A:
-  mov        ah, 08Ah
-  iret
-
+  
   RETURN_RESULT_8B:
   mov        ah, 08Bh
   iret
@@ -1544,7 +1561,7 @@ ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
 
   ENOUGH_PAGES:
   cmp        dx,  1
-  jne        RETURN_RESULT_83
+  jne        func_44_no_emm_handle_found
   
   ; al and bx are the args
 
@@ -1577,14 +1594,8 @@ ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
   mov        ah, 080h
   iret
 
-  ; The memory manager couldn't find the EMM handle your program specified.
-  RETURN_RESULT_83:
-  mov        ah, 083h
-  iret
 
-  RETURN_RESULT_8A:
-  mov        ah, 08Ah
-  iret
+
 
   RETURN_RESULT_8B:
   mov        ah, 08Bh
@@ -1603,7 +1614,7 @@ ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
 
   ENOUGH_PAGES:
   cmp        dx,  1
-  jne        RETURN_RESULT_83
+  jne        func_44_no_emm_handle_found
   
   ; al and bx are still the args
 
@@ -1647,15 +1658,8 @@ SELFMODIFY_SCAT_set_page_set_register_2:
   mov        ah, 080h
   iret
 
-  ; The memory manager couldn't find the EMM handle your program specified.
-  RETURN_RESULT_83:
-  mov        ah, 083h
-  iret
 
-  RETURN_RESULT_8A:
-  mov        ah, 08Ah
-  iret
-
+  
   RETURN_RESULT_8B:
   mov        ah, 08Bh
   iret
@@ -1673,7 +1677,7 @@ ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
 
   ENOUGH_PAGES:
   cmp        dx,  1
-  jne        RETURN_RESULT_83
+  jne        func_44_no_emm_handle_found
   
   ; al and bx are still the args
 
@@ -1713,15 +1717,8 @@ ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
   mov        ah, 080h
   iret
 
-  ; The memory manager couldn't find the EMM handle your program specified.
-  RETURN_RESULT_83:
-  mov        ah, 083h
-  iret
 
-  RETURN_RESULT_8A:
-  mov        ah, 08Ah
-  iret
-
+  
   RETURN_RESULT_8B:
   mov        ah, 08Bh
   iret
@@ -1734,7 +1731,7 @@ ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
 
   ENOUGH_PAGES:
   cmp        dx,  1
-  jne        RETURN_RESULT_83
+  jne        func_44_no_emm_handle_found
   
   ; al and bx are still the args
 
@@ -1802,14 +1799,6 @@ ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
   mov        ah, 080h
   iret
 
-  ; The memory manager couldn't find the EMM handle your program specified.
-  RETURN_RESULT_83:
-  mov        ah, 083h
-  iret
-
-  RETURN_RESULT_8A:
-  mov        ah, 08Ah
-  iret
 
   RETURN_RESULT_8B:
   mov        ah, 08Bh
@@ -1825,7 +1814,7 @@ ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
 
   ENOUGH_PAGES:
   cmp        dx,  1
-  jne        RETURN_RESULT_83
+  jne        func_44_no_emm_handle_found
   
   ; al and bx are still the args
 
@@ -1866,14 +1855,7 @@ ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
   mov        ah, 080h
   iret
 
-  ; The memory manager couldn't find the EMM handle your program specified.
-  RETURN_RESULT_83:
-  mov        ah, 083h
-  iret
 
-  RETURN_RESULT_8A:
-  mov        ah, 08Ah
-  iret
 
   RETURN_RESULT_8B:
   mov        ah, 08Bh
@@ -1889,7 +1871,7 @@ ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
 
   ENOUGH_PAGES:
   cmp        dx,  1
-  jne        RETURN_RESULT_83
+  jne        func_44_no_emm_handle_found
   
   ; al and bx are still the args
 
@@ -1914,14 +1896,7 @@ ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
   mov        ah, 080h
   iret
 
-  ; The memory manager couldn't find the EMM handle your program specified.
-  RETURN_RESULT_83:
-  mov        ah, 083h
-  iret
 
-  RETURN_RESULT_8A:
-  mov        ah, 08Ah
-  iret
 
   RETURN_RESULT_8B:
   mov        ah, 08Bh
@@ -1937,7 +1912,7 @@ ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
 
   ENOUGH_PAGES:
   cmp        dx,  1
-  jne        RETURN_RESULT_83
+  jne        func_44_no_emm_handle_found
   
   ; al and bx are still the args
 
@@ -1977,14 +1952,7 @@ ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
   mov        ah, 080h
   iret
 
-  ; The memory manager couldn't find the EMM handle your program specified.
-  RETURN_RESULT_83:
-  mov        ah, 083h
-  iret
 
-  RETURN_RESULT_8A:
-  mov        ah, 08Ah
-  iret
 
   RETURN_RESULT_8B:
   mov        ah, 08Bh
@@ -1999,7 +1967,7 @@ ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
 
   ENOUGH_PAGES:
   cmp        dx,  1
-  jne        RETURN_RESULT_83
+  jne        func_44_no_emm_handle_found
   
   ; al and bx are still the args
 
@@ -2044,14 +2012,8 @@ ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
   mov        ah, 080h
   iret
 
-  ; The memory manager couldn't find the EMM handle your program specified.
-  RETURN_RESULT_83:
-  mov        ah, 083h
-  iret
+  
 
-  RETURN_RESULT_8A:
-  mov        ah, 08Ah
-  iret
 
   RETURN_RESULT_8B:
   mov        ah, 08Bh
@@ -2065,7 +2027,7 @@ ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
 
   ENOUGH_PAGES:
   cmp        dx,  1
-  jne        RETURN_RESULT_83
+  jne        func_44_no_emm_handle_found
   
   
   ; al and bx are still the args
@@ -2138,14 +2100,8 @@ ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
   mov        ah, 080h
   iret
 
-  ; The memory manager couldn't find the EMM handle your program specified.
-  RETURN_RESULT_83:
-  mov        ah, 083h
-  iret
 
-  RETURN_RESULT_8A:
-  mov        ah, 08Ah
-  iret
+  
 
   RETURN_RESULT_8B:
   mov        ah, 08Bh
@@ -2161,7 +2117,7 @@ ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
 
   ENOUGH_PAGES:
   cmp        dx,  1
-  jne        RETURN_RESULT_83
+  jne        func_44_no_emm_handle_found
   
   ; al and bx are still the args
 
@@ -2202,15 +2158,7 @@ ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
   mov        ah, 080h
   iret
 
-  ; The memory manager couldn't find the EMM handle your program specified.
-  RETURN_RESULT_83:
-  mov        ah, 083h
-  iret
-
-  RETURN_RESULT_8A:
-  mov        ah, 08Ah
-  iret
-
+  
   RETURN_RESULT_8B:
   mov        ah, 08Bh
   iret
@@ -2224,205 +2172,213 @@ NOT_FUNC_44h:
 
 ; CHIPSET SPECIFIC END
 
+; no pushes, etc done yet!
 
-push       cx
-push       si
-push       di
-push       bp
-push       ds
-push       es
-cld        
 
-; don't support OS function types
-cmp        ah, 05dh
-ja         RETURN_RESULT_84
+; don't support oob function types
+mov        byte ptr cs:[_current_call_subfunction_value], al
+mov        al, ah
+cmp        al, 05dh
+ja         bad_function
 
-; don't support 'GET STATUS' call
-cmp        ah, 040h
-jb         RETURN_RESULT_84
+; don't support calls below 040h
+sub        al, 040h
+jb         bad_function
 
 ; subtract 040h - things are now 040h indexed..
 
-sub        ah, 040h
-push       bx
-mov        bl, ah
-xor        bh, bh
-shl        bx, 1          ; get word offset of AH - 040h
-mov        bx, word ptr cs:[bx + offset EMS_FUNCTION_POINTERS]
-mov        word ptr cs:[temporary_jump_addr], bx
-pop        bx
-jmp        word ptr cs:[temporary_jump_addr]
+cbw
+xchg       ax, bx
+shl        bx, 1          
+jmp        word ptr cs:[bx + offset _EMS_FUNCTION_POINTERTABLE] ; ax has bx value!
 
 ; The function code passed to the memory manager is not defined.
-RETURN_RESULT_84:
-jmp        RETURNINTERRUPTRESULT_84
+bad_function:
+; The function code passed to the memory manager is not defined.
+mov        ah, 084h
+iret
 
 ; MAIN EMS FUNCTIONS BELOW
 
 ;          1  Get Status                                     40h      
 
 EMS_FUNCTION_040h:
-jmp        RETURNINTERRUPTRESULT0
+xchg       ax, bx
+; ah is already 0 because bh was 0 from jump table lookup
+iret
 
 ;          2  Get Page Frame Segment Address                 41h       
 
 EMS_FUNCTION_041h:
-mov        bx, word ptr cs:[page_frame_segment]
-jmp        RETURNINTERRUPTRESULT0
+mov        ax, word ptr cs:[page_frame_segment]
+xchg       ax, bx
+; ah is already 0 because bh was 0 from jump table lookup
+iret
 
 ;          3  Get Unallocated Page Count                     42h       
 
 EMS_FUNCTION_042h:
 ;      FUNCTION 3    GET UNALLOCATED PAGE COUNT
 mov        dx, word ptr cs:[unallocated_page_count]
-mov        bx, word ptr cs:[total_EMS_page_count]
-jmp        RETURNINTERRUPTRESULT0
+mov        ax, word ptr cs:[total_EMS_page_count]
+xchg       ax, bx
+; ah is already 0 because bh was 0 from jump table lookup
+iret
 
 ;          4  Allocate Pages                                 43h      
 ;           BX = num_of_pages_to_alloc
 
 EMS_FUNCTION_043h:
-push       cs
-pop        ds
-push       bx
-cmp        bx, 0
-je         ARG_BX_IS_0
 
-cmp        bx, word ptr ds:[unallocated_page_count]
-ja         ARG_BX_ABOVE_PAGE_COUNT
-cmp        bx, word ptr ds:[total_EMS_page_count]
-ja         ARG_BX_ABOVE_TOTAL_PAGE_COUNT
+; ax has bx value..
 
-cmp        word ptr ds:[handle_count], 0
-je         NO_HANDLES_LEFT
+test       ax, ax
+jz         func_43_alloc_pages_0_error
 
-jmp         FOUND_PAGES_FOR_ALLOCATION
+cmp        ax, word ptr cs:[unallocated_page_count]
+ja         func_43_allocated_too_many_pages
+cmp        ax, word ptr cs:[total_EMS_page_count]
+ja         func_43_allocated_too_many_pages_above_total
 
-NO_HANDLES_LEFT:
-mov        dx, 0
-pop        bx
-jmp        RETURNINTERRUPTRESULT_85
-ARG_BX_ABOVE_TOTAL_PAGE_COUNT:
-mov        dx, 0
-pop        bx
-jmp        RETURNINTERRUPTRESULT_88
-ARG_BX_IS_0:
-mov        dx, 0
-pop        bx
-jmp        RETURNINTERRUPTRESULT_89
-ARG_BX_ABOVE_PAGE_COUNT:
-mov        dx, 1
-pop        bx
-jmp        RETURNINTERRUPTRESULT_87
+dec        word ptr cs:[handle_count]
 
-FOUND_PAGES_FOR_ALLOCATION:
+js         func_43_no_handles_Left
 
 ALLOCATE_SUCCESS:
-sub word ptr ds:[unallocated_page_count], bx
-
-dec word ptr ds:[handle_count]
-pop        bx
-mov        dx, 0001h   ; force handle 1.
-
-jmp        RETURNINTERRUPTRESULT0
-
-;          5  Map/Unmap Handle Page                          44h      
+sub        word ptr cs:[unallocated_page_count], ax
+xchg       ax, bx
+cwd        ; dx = 0
+inc        dx ;  handle always 1.
+iret
 
 
-;          AL = physical_page_number
-;                     Contains the number of the physical page into which the
-;                     logical page number is to be mapped.  Physical pages are
-;                     numbered zero relative.
-;          BX = logical_page_number
-;                     Contains the number of the logical page to be mapped at the
-;                     physical page within the page frame.  Logical pages are
-;                     numbered zero relative.  The logical page must be in the
-;                     range zero through (number of pages allocated to the EMM
-;                     handle - 1).  However, if BX contains logical page number
-;                     FFFFh, the physical page specified in AL will be unmapped
-;                     (be made inaccessible for reading or writing).
-;          DX = emm_handle
+
+func_43_no_handles_Left:
+inc        word ptr cs:[handle_count]
+
+xchg       ax, bx
+cwd        ; dx = 0
+mov        ah, 085h  ; All EMM handles are being used.
+iret
+func_43_allocated_too_many_pages_above_total:
+func_51_allocated_too_many_pages_above_total:
+xchg       ax, bx
+cwd        ; dx = 0
+mov        ah, 087h  ; There aren't enough expanded memory pages present in the system to satisfy your program's request.
+iret
+func_43_alloc_pages_0_error:
+xchg       ax, bx
+cwd        ; dx = 0
+mov        ah, 089h  ; Your program attempted to allocate zero pages.
+iret
+func_43_allocated_too_many_pages:
+xchg       ax, bx
+cwd        ; dx = 0
+mov        ah, 087h  ; There aren't enough expanded memory pages present in the system to satisfy your program's request.
+iret
 
 
-; INLINED UP ABOVE
+
+
+
+
 
 ;         6  Deallocate Pages                               45h       
 
 EMS_FUNCTION_045h:
-push       cs
-pop        ds
-push       bx
-push       dx
-
-
-cmp dx, 1
-jne  NO_EMM_HANDLE_FOUND
+xchg       ax, bx  ; put bx back
+cmp        dx, 1
+jne        func_45_no_emm_handle_found
 
 GOOD_EMM_HANDLE:
-mov        dx, word ptr ds:[total_EMS_page_count]
+mov        ax, word ptr cs:[total_EMS_page_count]
 
-add        word ptr ds:[unallocated_page_count], dx
-inc        word ptr ds:[handle_count]  ; handle freed, increment handle count
+mov        word ptr cs:[unallocated_page_count], ax
+inc        word ptr cs:[handle_count]  ; handle freed, increment handle count
 
-pop        dx
-pop        bx
-jmp        RETURNINTERRUPTRESULT0
+xor        ax, ax
+iret
 
-pop        dx
-pop        bx
-jmp        RETURNINTERRUPTRESULT_80
-NO_EMM_HANDLE_FOUND:
-pop        dx
-pop        bx
-jmp        RETURNINTERRUPTRESULT_83
-COULD_NOT_FIND_EMM_HANDLE_SPECIFIED:
-pop        dx
-pop        bx
-jmp        RETURNINTERRUPTRESULT_86
+func_45_no_emm_handle_found:
+func_4C_no_emm_handle_found:
+func_51_no_emm_handle_found:
+mov        ah, 083h  ; The memory manager couldn't find the EMM handle your program specified.
+iret
 
 ;          7  Get Version                                    46h       
 
 EMS_FUNCTION_046h:
 ; Get Version, return 4.0
-mov        al, 040h
-jmp        RETURNINTERRUPTRESULT0
+xchg       ax, bx
+mov        al, 040h ; ah already 0
+iret 
 
 ;          8  Save Page Map                                  47h       
 
 EMS_FUNCTION_047h:
+; TODO NOT DONE
+
+xchg       ax, bx
+iret
+
  
 
 ;          9  Restore Page Map                               48h       
 
 EMS_FUNCTION_048h:
+; TODO NOT DONE
+
+xchg       ax, bx
+iret
+
 
 
 ;          10 Reserved                                       49h       
 
 
 EMS_FUNCTION_049h:
-jmp        RETURNINTERRUPTRESULT0
+; TODO NOT DONE
+
+xchg       ax, bx
+iret
+
 
 ;          11 Reserved                                       4Ah       
 
 EMS_FUNCTION_04Ah:
-jmp        RETURNINTERRUPTRESULT0
+; TODO NOT DONE
+
+xchg       ax, bx
+iret
+
 
 ;          12 Get Handle Count                               4Bh       
 
 EMS_FUNCTION_04Bh:
-;mov        bx, CONST_HANDLE_TABLE_LENGTH
-sub        bx, word ptr cs:[handle_count]
-jmp        RETURNINTERRUPTRESULT0
+xchg       ax, bx
+mov        bx, word ptr cs:[handle_count]
+iret
+
 
 ;          13 Get Handle Pages                               4Ch       
 
 EMS_FUNCTION_04Ch:
+xchg       ax, bx
+cmp        dx, 1
+jne        func_4C_no_emm_handle_found
+
+mov        bx, word ptr cs:[total_EMS_page_count]
+sub        bx, word ptr cs:[unallocated_page_count]
+iret
 
 
 ;          14 Get All Handle Pages                           4Dh       
 ; we write all handles and their page counts to es:di
 EMS_FUNCTION_04Dh:
+; TODO NOT DONE
+
+xchg       ax, bx
+iret
 
 
 
@@ -2432,93 +2388,45 @@ EMS_FUNCTION_04Dh:
 ;             Get Size of Page Map Save Array                4E03h     
 
 EMS_FUNCTION_04Eh:
+; TODO NOT DONE
+
+xchg       ax, bx
+iret
  
 
 ; 16 Get Partial Page Map                           4F00h     
 ;             Set Partial Page Map                           4F01h     
 ;             Get Size of Partial Page Map Save Array        4F02h     
 EMS_FUNCTION_04Fh:
+; TODO NOT DONE
+
+xchg       ax, bx
+iret
  
 
-;          17 Map/Unmap Multiple Handle Pages
-;             (Physical page number mode)                    5000h     
-;             (Segment address mode)                         5001h     
 
-;EMS_FUNCTION_050h:
-
-
-
-; note: not really implemented yet
+; didnt handle the subfuncton
 EMS_FUNCTION_05001h:
 
-cli
-DO_NEXT_PAGE_5001:
-; next page in ax....
-lodsw
-mov        bx, ax
-lodsw
-; read two words - bx and ax
-
-cmp ax, 12
-jae NOT_CONVENTIONAL_REGISTER_5001
-add ax, 4 ; need to add 4 for d000 case for scamp...  c000, e000  not supported
-NOT_CONVENTIONAL_REGISTER_5001:
+; TODO NOT DONE 
+xchg       ax, bx
+iret
  
-out        SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
-xchg ax, ax  ; nop delays
-xchg ax, ax
-xchg ax, ax
-mov  ax, bx
-
-; ??? seems this must be on, not sure why actually...
-mov  ah, 1    
-
-out  SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
-
-
-
-
-loop       DO_NEXT_PAGE_5001
-sti
-xor        ax, ax
-pop        bx
-jmp        RETURNINTERRUPTRESULT
-
-
-
-
-; The memory manager couldn't find the EMM handle your program specified.
-RETURN_RESULT_B_83:
-mov        ah, 083h
-jmp        RETURN_RESULT_B
-nop        
-
-RETURN_RESULT_B_8A:
-mov        ah, 08ah
-jmp        RETURN_RESULT_B
-nop        
-
-;unused
-RETURN_RESULT_B_8B:
-mov        ah, 08bh
-jmp        RETURN_RESULT_B
-nop        
-
-RETURN_RESULT_B:
-pop        di
-pop        si
-pop        dx
-pop        cx
-pop        bx
-pop        ds
-ret
-
 
 
 ;          18 Reallocate Pages                               51h       
 ; DX = handle
 ;BX = reallocation_count                     
 EMS_FUNCTION_051h:
+xchg       ax, bx  ; on failure dont change bx
+cmp        dx, 1
+jne        func_51_no_emm_handle_found
+mov        ax, word ptr cs:[total_EMS_page_count]
+sub        ax, bx
+jb         func_51_allocated_too_many_pages_above_total
+xchg       ax, bx
+xor        ax, ax  ; ah = 0
+iret
 
 
 
@@ -2528,6 +2436,9 @@ EMS_FUNCTION_051h:
 
 ; it seems this is mostly unsupported.
 EMS_FUNCTION_052h:
+; TODO NOT DONE 
+xchg       ax, bx
+iret
 
 
 ;          20 Get Handle Name                                5300h     
@@ -2535,6 +2446,9 @@ EMS_FUNCTION_052h:
 
        
 EMS_FUNCTION_053h:
+; TODO NOT DONE 
+xchg       ax, bx
+iret
 
 
 ;          21 Get Handle Directory                           5400h     
@@ -2543,6 +2457,9 @@ EMS_FUNCTION_053h:
 
 
 EMS_FUNCTION_054h:
+; TODO NOT DONE 
+xchg       ax, bx
+iret
 
 
 ;      22 Alter Page Map & Jump
@@ -2551,6 +2468,9 @@ EMS_FUNCTION_054h:
 ;             (Segment address mode)                         5501h     
 
 EMS_FUNCTION_055h:
+; TODO NOT DONE 
+xchg       ax, bx
+iret
  
 
 ;   BX = total_handles
@@ -2567,6 +2487,9 @@ EMS_FUNCTION_055h:
 ;             Get Page Map Stack Space Size                  5602h     
 
 EMS_FUNCTION_056h:
+; TODO NOT DONE 
+xchg       ax, bx
+iret
 
 
 ; REFER TO EMS 4.0 documentation, this is a doozy!
@@ -2586,6 +2509,9 @@ EMS_FUNCTION_056h:
 ;          DS:SI = pointer to move_source_dest structure
 ;     FUNCTION 24   MOVE/EXCHANGE MEMORY REGION
 EMS_FUNCTION_057h:
+; TODO NOT DONE 
+xchg       ax, bx
+iret
 
 ;          25 Get Mappable Physical Address Array            5800h     
 ;             Get Mappable Physical Address Array Entries    5801h     
@@ -2596,42 +2522,33 @@ EMS_FUNCTION_057h:
 ;          mappable_phys_page_struct   ENDS
 
 EMS_FUNCTION_058h:
-add        sp, 0ch
-cmp        al, 0
-jne        NOT_05800h
+xchg       ax, bx
+cmp        byte ptr cs:[_current_call_subfunction_value], 1
+jae        func_58_not_5801
 EMS_FUNCTION_05800h:
 push       ds
-push       es
 push       si
-push       di
-push       bx
 push       cs
 pop        ds
 mov        si, OFFSET mappable_phys_page_struct
-mov        cx, word ptr cs:[pageable_frame_count]
-LOOP_05800h:
-mov        ax, word ptr ds:[si]
-stosw
-mov        ax, word ptr ds:[si + 2]
-stosw
-add        si, 4
-loop       LOOP_05800h
-mov        cx, word ptr cs:[pageable_frame_count]
-mov        ah, 0
-pop        bx
-pop        di
+mov        ax, word ptr cs:[pageable_frame_count] ; ah cant be 0 right..?
+mov        cx, ax
+shl        cx, 1
+rep        movsw
+xchg       ax, cx
+sub        di, cx
+sub        di, cx
+; ah 0 because cx was 0.
 pop        si
-pop        es
 pop        ds
 iret
-NOT_05800h:
-cmp        al, 1
-jne        EXITINTERRUPTB_RESULT8F
+func_58_not_5801:
+ja         func_58_invalid_subfunction
 EMS_FUNCTION_05801h:
 mov        cx, word ptr cs:[pageable_frame_count]
-mov        ax, 0
+; ah already 0.
 iret
-EXITINTERRUPTB_RESULT8F:
+func_58_invalid_subfunction:
 mov        ah, 08fh
 iret
 
@@ -2639,14 +2556,18 @@ iret
 ;             Get Unallocated Raw Page Count                 5901h     
 
 EMS_FUNCTION_059h:
-
+; TODO NOT DONE 
+xchg       ax, bx
+iret
 
 
 ;          27 Allocate Standard Pages                        5A00h     
 ;             Allocate Raw Pages                             5A01h     
 
 EMS_FUNCTION_05ah:
-
+; TODO NOT DONE 
+xchg       ax, bx
+iret
 
 ;          28 Get Alternate Map Register Set                 5B00h     
 ;             Set Alternate Map Register Set                 5B01h     
@@ -2661,12 +2582,16 @@ EMS_FUNCTION_05ah:
 
 
 EMS_FUNCTION_05Bh:
-
+; TODO NOT DONE 
+xchg       ax, bx
+iret
 
 ;          29 Prepare Expanded Memory Hardware for Warmboot  5Ch       
 
 EMS_FUNCTION_05Ch:
-
+; TODO NOT DONE 
+xchg       ax, bx
+iret
 
 ;          30 Enable OS/E Function Set                       5D00h     
 ;             Disable OS/E Function Set                      5D01h     
@@ -2674,230 +2599,10 @@ EMS_FUNCTION_05Ch:
 
 
 EMS_FUNCTION_05Dh:
+; TODO NOT DONE 
+xchg       ax, bx
 iret
 
-; JUMP TABLE FOR EMS RETURN VALUES
-
-; The manager detected a malfunction in the memory manager software.
-RETURNINTERRUPTRESULT_80:
-mov        ah, 080h
-jmp        RETURNINTERRUPTRESULT
-
-; The memory manager couldn't find the EMM handle your program specified.
-RETURNINTERRUPTRESULT_83:
-mov        ah, 083h
-jmp        RETURNINTERRUPTRESULT
-
-; The function code passed to the memory manager is not defined.
-RETURNINTERRUPTRESULT_84:
-mov        ah, 084h
-jmp        RETURNINTERRUPTRESULT
-RETURNINTERRUPTRESULT_85:
-mov        ah, 085h
-jmp        RETURNINTERRUPTRESULT
-RETURNINTERRUPTRESULT_86:
-mov        ah, 086h
-jmp        RETURNINTERRUPTRESULT
-RETURNINTERRUPTRESULT_87:
-mov        ah, 087h
-jmp        RETURNINTERRUPTRESULT
-RETURNINTERRUPTRESULT_88:
-mov        ah, 088h
-jmp        RETURNINTERRUPTRESULT
-RETURNINTERRUPTRESULT_89:
-mov        ah, 089h
-jmp        RETURNINTERRUPTRESULT
-RETURNINTERRUPTRESULT_8A:
-mov        ah, 08ah
-jmp        RETURNINTERRUPTRESULT
-
-RETURNINTERRUPTRESULT_8B:
-mov        ah, 08bh
-jmp        RETURNINTERRUPTRESULT
-
-;unused
-; There is no room in the save area to store the state of the page mapping registers.  The state of the map registers has not been saved.
-RETURNINTERRUPTRESULT_8C:
-mov        ah, 08ch
-jmp        RETURNINTERRUPTRESULT
-nop        
-
-; The save area already contains the page mapping register state for the EMM handle your program specified.
-RETURNINTERRUPTRESULT_8D:
-mov        ah, 08dh
-jmp        RETURNINTERRUPTRESULT
-nop        
-
-; There is no page mapping register state in the save area for the specified EMM handle.  Your program didn't save the contents of the page mapping hardware, so Restore Page Map can't restore it.
-RETURNINTERRUPTRESULT_8E:
-mov        ah, 08eh
-jmp        RETURNINTERRUPTRESULT
-nop        
-
-;The subfunction parameter is invalid.
-RETURN_BAD_SUBFUNCTION_PARAMETER:
-mov        ah, 08fh
-jmp        RETURNINTERRUPTRESULT
-nop        
-
-; The attribute type is undefined.
-RETURNINTERRUPTRESULT_90:
-mov        ah, 090h
-jmp        RETURNINTERRUPTRESULT
-nop        
-
-; This feature is not supported.
-RETURNINTERRUPTRESULT_91:
-mov        ah, 091h
-jmp        RETURNINTERRUPTRESULT
-nop        
-
-; unused
-; The source and destination expanded memory regions have the same handle and overlap.  This is valid for a move.  The move has been completed and the destination region has a
-; full copy of the source region.  However, at least a portion of the source region has been overwritten by the move.  Note that the source and destination expanded memory
-; regions with different handles will never physically overlap because the different handles specify totally different regions of expanded memory.
-RETURNINTERRUPTRESULT_92:
-mov        ah, 092h
-jmp        RETURNINTERRUPTRESULT
-nop        
-
-; unused
-; The length of the source or destination expanded memory region specified exceeds the length of the expanded memory region allocated either the source or destination handle.
-; Insufficient pages are allocated to this handle to move a region of the size specified.  The program can recover from this condition by allocating additional pages to the
-; destination or source handle and attempting to execute the function again.  However, if the application program allocated as much expanded memory as it thought it needed,
-; this may be a program error and is not recoverable.
-RETURNINTERRUPTRESULT_93:
-mov        ah, 093h
-jmp        RETURNINTERRUPTRESULT
-nop        
-
-; The conventional memory region and expanded memory region overlap.  This is invalid, the conventional memory region cannot overlap the expanded memory region.
-RETURNINTERRUPTRESULT_94:
-mov        ah, 094h
-jmp        RETURNINTERRUPTRESULT
-nop        
-
-; The offset within the logical page exceeds the length of the logical page.  The initial source or destination offsets within an expanded memory region must be between 0000h and 3FFFh (16383 or (length of a logical page - 1)).
-RETURNINTERRUPTRESULT_95:
-mov        ah, 095h
-jmp        RETURNINTERRUPTRESULT
-nop        
-
-; Region length exceeds 1M byte.
-RETURNINTERRUPTRESULT_96:
-mov        ah, 096h
-jmp        RETURNINTERRUPTRESULT
-nop        
-
-; The source and destination expanded memory regions have the same handle and overlap.  This is invalid, the source and destination expanded memory regions cannot have the same
-; handle and overlap when they are being exchanged. Note that the source and destination expanded memory regions which have different handles will never physically overlap
-; because the different handles specify totally different regions of expanded memory.
-RETURNINTERRUPTRESULT_97:
-mov        ah, 097h
-jmp        RETURNINTERRUPTRESULT
-nop        
-
-; The memory source and destination types are undefined.
-RETURNINTERRUPTRESULT_98:
-mov        ah, 098h
-jmp        RETURNINTERRUPTRESULT
-nop        
-
-; unused, nonexistant in spec
-RETURNINTERRUPTRESULT_99:
-mov        ah, 099h
-jmp        RETURNINTERRUPTRESULT
-nop        
-
-; unused
-; Alternate map register sets are supported, but the alternate map register set specified is not supported.
-; Alternate DMA register sets are supported, but the alternate DMA register set specified is not supported.
-RETURNINTERRUPTRESULT_9A:
-mov        ah, 09ah
-jmp        RETURNINTERRUPTRESULT
-nop        
-
-; unused
-; Alternate map register sets are supported.  However, all alternate map register sets are currently allocated.
-; Alternate DMA register sets are supported.  However, all alternate DMA register sets are currently allocated.
-RETURNINTERRUPTRESULT_9B:
-mov        ah, 09bh
-jmp        RETURNINTERRUPTRESULT
-nop        
-
-; Alternate map register sets are not supported and the alternate map register set specified is not zero.
-; Alternate DMA register sets are not supported and the alternate DMA register set specified is not zero.
-RETURNINTERRUPTRESULT_9C:
-mov        ah, 09ch
-jmp        RETURNINTERRUPTRESULT
-nop        
-
-; unused
-; Alternate map register sets are supported, but the alternate map register set specified is either not defined or not allocated.
-; DMA register sets are supported, but the DMA register set specified is either not defined or not allocated.
-RETURNINTERRUPTRESULT_9D:
-mov        ah, 09dh
-jmp        RETURNINTERRUPTRESULT
-nop        
-
-; unused
-; Dedicated DMA channels are not supported.
-RETURNINTERRUPTRESULT_9E:
-mov        ah, 09eh
-jmp        RETURNINTERRUPTRESULT
-nop        
-
-; unused
-; Dedicated DMA channels are supported, but the DMA channel specified is not supported.
-RETURNINTERRUPTRESULT_9f:
-mov        ah, 09fh
-jmp        RETURNINTERRUPTRESULT
-nop        
-
-; No corresponding handle could be found for the handle name specified.
-RETURNINTERRUPTRESULT_A0:
-mov        ah, 0a0h
-jmp        RETURNINTERRUPTRESULT
-nop        
-
-; A handle found had no name (all ASCII nulls).
-; A handle with this name already exists.  The specified handle was not assigned a name.
-RETURNINTERRUPTRESULT_A1:
-mov        ah, 0a1h
-jmp        RETURNINTERRUPTRESULT
-nop        
-
-; An attempt was made to wrap around the 1M-byte address space of conventional memory during the move.  The combination of source/destination 
-; starting address and length of the region to be moved exceeds 1M byte.  No data was moved.
-; An attempt was made to wrap around the 1M-byte address space of conventional memory during the exchange.  The source starting address together 
-; with the length of the region to be exchanged exceeds 1M byte.  No data was exchanged.
-RETURNINTERRUPTRESULT_A2:
-mov        ah, 0a2h
-jmp        RETURNINTERRUPTRESULT
-nop        
-
-; The contents of the source array have been corrupted, or the pointer passed to the subfunction is invalid.
-RETURNINTERRUPTRESULT_A3:
-mov        ah, 0a3h
-jmp        RETURNINTERRUPTRESULT
-nop        
-
-; The operating system has denied access to this function. The function cannot be used at this time.
-RETURNINTERRUPTRESULT_A4:
-mov        ah, 0a4h
-jmp        RETURNINTERRUPTRESULT
-nop        
-
-RETURNINTERRUPTRESULT0:
-mov        ah, 0
-RETURNINTERRUPTRESULT:
-pop        es
-pop        ds
-pop        bp
-pop        di
-pop        si
-pop        cx
-iret
 
 ;db 'SQEMM END'
 
@@ -2918,6 +2623,7 @@ iret
 
 
 end_of_driver_label:
+public end_of_driver_label
 
 
 string_driver_exists db 0Dh, 0Ah, 'EMS Driver already loaded (chaining not supported).',0Dh, 0Ah, '$'
