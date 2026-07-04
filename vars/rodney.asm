@@ -1,3 +1,11 @@
+; Two-word pairs. first word is page frame (04000h, 04400h... etc) up to f000.  
+;                 second word its physical ems index port
+; 144 bytes long 
+; i think a clone of the above struct in practice except pre-formatted for return in function 5800h (2nd arg a word, ordered lowest segment first)
+
+  ; you can hardcode the chipset's mappable page list here for call 5800
+mappable_phys_page_struct:
+
   dw 04000h, 0010h, 04400h, 0011h, 04800h, 0012h, 04C00h, 0013h
   dw 05000h, 0014h, 05400h, 0015h, 05800h, 0016h, 05C00h, 0017h
   dw 06000h, 0018h, 06400h, 0019h, 06800h, 001Ah, 06C00h, 001Bh
@@ -6,3 +14,17 @@
   dw 09000h, 0024h, 09400h, 0025h, 09800h, 0026h, 09C00h, 0027h
   dw 0D000h, 0034h, 0D400h, 0035h, 0D800h, 0036h, 0DC00h, 0037h
   dw 0E000h, 0038h, 0E400h, 0039h, 0E800h, 003Ah, 0EC00h, 003Bh
+
+COMMENT @
+; for function 15/16 'push/pop' like operation.
+page_stack: 
+LENGTH_OF_STACK = (OFFSET page_stack - mappable_phys_page_struct) SHR 1
+REPT LENGTH_OF_STACK
+  dw 0
+ENDM
+
+@
+; for function 8/9 'push/pop' like operation.
+page_frame_stack:
+dw 0, 0, 0, 0
+

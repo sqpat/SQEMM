@@ -237,15 +237,6 @@ retf
 
 ALIGN 2 
 
-; Two-word pairs. first word is page frame (04000h, 04400h... etc) up to f000.  
-;                 second word its physical ems index port
-; 144 bytes long 
-; i think a clone of the above struct in practice except pre-formatted for return in function 5800h (2nd arg a word, ordered lowest segment first)
-
-; CHIPSET SPECIFIC START
-
-mappable_phys_page_struct:
-  ; you can hardcode the chipset's mappable page list here for call 5800
 
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
    INCLUDE vars\scamp.asm
@@ -337,7 +328,7 @@ MAIN_EMS_INTERRUPT_VECTOR:
 
 ; inline the main function(s) here.
 
-cmp      ax, 05800h
+cmp      ax, 05000h
 jne      NOT_FUNC_50h
 
 ; CHIPSET SPECIFIC START
@@ -623,20 +614,65 @@ iret
 ;          8  Save Page Map                                  47h       
 
 EMS_FUNCTION_047h:
-; TODO NOT DONE, should be done
 
-xchg       ax, bx
-iret
+IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
+   INCLUDE func08\scamp.asm
+ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
+   INCLUDE func08\fantasy.asm
+ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
+   INCLUDE func08\rodney.asm
+ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
+   INCLUDE func08\scat.asm
+ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
+   INCLUDE func08\ht18.asm
+ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
+   INCLUDE func08\ht12.asm
+ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
+   INCLUDE func08\hedaka.asm
+ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
+   INCLUDE func08\lotech.asm
+ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
+   INCLUDE func08\neat.asm
+ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
+   INCLUDE func08\intelab.asm
+ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
+   INCLUDE func08\sarc.asm
+ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
+   INCLUDE func17\standard.asm
+ENDIF
 
  
 
 ;          9  Restore Page Map                               48h       
 
 EMS_FUNCTION_048h:
-; TODO NOT DONE, should be done
 
-xchg       ax, bx
-iret
+IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
+   INCLUDE func09\scamp.asm
+ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
+   INCLUDE func09\fantasy.asm
+ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
+   INCLUDE func09\rodney.asm
+ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
+   INCLUDE func09\scat.asm
+ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
+   INCLUDE func09\ht18.asm
+ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
+   INCLUDE func09\ht12.asm
+ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
+   INCLUDE func09\hedaka.asm
+ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
+   INCLUDE func09\lotech.asm
+ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
+   INCLUDE func09\neat.asm
+ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
+   INCLUDE func09\intelab.asm
+ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
+   INCLUDE func09\sarc.asm
+ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
+   INCLUDE func09\standard.asm
+ENDIF
+
 
 
 
