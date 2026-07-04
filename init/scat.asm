@@ -59,7 +59,7 @@
   ; al is 0 4 8 or 12
   mov   bx, ax ; backup
 
-  shl   ah, 4  ; 0 1 2 to 00 10 20  (C D E)
+  SHIFT_MACRO shl   ah, 4  ; 0 1 2 to 00 10 20  (C D E)
   or    al, ah
   add   al, 0C0h
   mov   byte ptr ds:[_RESIDENT_VARIABLE_page_frame_segment+2], al 
@@ -145,7 +145,7 @@ SELFMODIFY_SCAT_set_page_set_register_1:
   call  print_driver_param_4_char_int
 
 
-  mov   word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count+1], SCAT_PAGE_FRAME_COUNT ; todo... should we decrease based on stuff like ROMS etc?
+  mov   byte ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_1+1], SCAT_PAGE_FRAME_COUNT ; todo... should we decrease based on stuff like ROMS etc?
 
   mov   ah, "O"  ; page offset
   call  parse_driver_params_get_int  ; no default. instead fetch from chipswt
@@ -186,8 +186,3 @@ SELFMODIFY_SCAT_set_page_set_register_1:
   
   mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_1+2], ax
   mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_2+2], ax
-
-
-
-  ; one handle for now
-  mov        word ptr ds:[_RESIDENT_VARIABLE_handle_count+1], 01h

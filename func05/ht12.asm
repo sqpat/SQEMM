@@ -1,7 +1,6 @@
-  xor        ah, ah
-_RESIDENT_VARIABLE_pageable_frame_count:
-  cmp        ax, 01000h
-  jnb        RETURN_RESULT_8B
+_RESIDENT_VARIABLE_pageable_frame_count_1:
+  cmp        al, 010h
+  jae        func_05_page_too_high
 
   ENOUGH_PAGES:
   cmp        dx,  1
@@ -67,7 +66,3 @@ _RESIDENT_VARIABLE_pageable_frame_count:
   xor ax, ax
   iret
 
-
-  RETURN_RESULT_8B:
-  mov        ah, 08Bh
-  iret

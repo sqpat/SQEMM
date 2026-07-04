@@ -3,10 +3,9 @@
   ; which is unfortunate. its not really backward compatible with 0-3 = page frame 3.2 style programming...
   ; for now in sqemm, call 44h (a 3.2 call) will map 0-4 to the page frame and ignore backfill register addresses.
 
-  xor        ah, ah
-_RESIDENT_VARIABLE_pageable_frame_count:
-  cmp        ax, 01000h
-  jnb        RETURN_RESULT_8B
+_RESIDENT_VARIABLE_pageable_frame_count_1:
+  cmp        al, 010h
+  jae        func_05_page_too_high
 
   ENOUGH_PAGES:
   cmp        dx,  1
@@ -48,8 +47,3 @@ SELFMODIFY_SCAT_set_page_set_register_2:
   xor   ax, ax
   iret
 
-
-  
-  RETURN_RESULT_8B:
-  mov        ah, 08Bh
-  iret

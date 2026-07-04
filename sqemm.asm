@@ -17,7 +17,7 @@ FANTASY_EMS = 11
 RODNEY_EMS = 12
 
 ;COMPILE_CHIPSET = SCAMP_CHIPSET
-;COMPILE_CHIPSET = SCAT_CHIPSET
+COMPILE_CHIPSET = SCAT_CHIPSET
 ;COMPILE_CHIPSET = HT18_CHIPSET
 ;COMPILE_CHIPSET = HT12_CHIPSET
 ;COMPILE_CHIPSET = HEDAKA_CHIPSET
@@ -26,7 +26,7 @@ RODNEY_EMS = 12
 ;COMPILE_CHIPSET =  INTEL_ABOVEBOARD
 ;COMPILE_CHIPSET =  SARC_RC2016A
 ;COMPILE_CHIPSET = STANDARD_EMS_BOARD
-COMPILE_CHIPSET = FANTASY_EMS
+;COMPILE_CHIPSET = FANTASY_EMS
 ;COMPILE_CHIPSET = RODNEY_EMS
 
 
@@ -446,6 +446,11 @@ ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
 ENDIF
 
 
+  
+func_17_page_too_high:
+func_05_page_too_high:
+mov        ah, 08Bh
+iret
 
 NOT_FUNC_44h:
 
@@ -490,7 +495,7 @@ iret
 
 EMS_FUNCTION_041h:
 _RESIDENT_VARIABLE_page_frame_segment:
-mov        ax, 0D000h
+mov        ax, 0D000h  ; return in bx
 xchg       ax, bx
 ; ah is already 0 because bh was 0 from jump table lookup
 iret
@@ -502,7 +507,7 @@ EMS_FUNCTION_042h:
 _RESIDENT_VARIABLE_unallocated_page_count:
 mov        dx, 01000h
 _RESIDENT_VARIABLE_total_EMS_page_count:
-mov        ax, 01000h
+mov        ax, 01000h  ; return in bx
 xchg       ax, bx
 ; ah is already 0 because bh was 0 from jump table lookup
 iret
@@ -766,21 +771,23 @@ push       si
 push       cs
 pop        ds
 mov        si, OFFSET mappable_phys_page_struct
-mov        ax, word ptr cs:[_RESIDENT_VARIABLE_pageable_frame_count+1] ; ah cant be 0 right..?
-mov        cx, ax
-shl        cx, 1
+_RESIDENT_VARIABLE_pageable_frame_count_2:
+mov        cx, 01000h
 rep        movsw
-xchg       ax, cx
-sub        di, cx
-sub        di, cx
-; ah 0 because cx was 0.
+_RESIDENT_VARIABLE_pageable_frame_count_4:
+mov        cx, 01000h
+_RESIDENT_VARIABLE_pageable_frame_count_5:
+sub        di, 01000h
+
+; ah 0 from original xchg ah
 pop        si
 pop        ds
 iret
 func_58_not_5801:
 ja         func_58_invalid_subfunction
 EMS_FUNCTION_05801h:
-mov        cx, word ptr cs:[_RESIDENT_VARIABLE_pageable_frame_count+1]
+_RESIDENT_VARIABLE_pageable_frame_count_3:
+mov        cx, 01000h
 ; ah already 0.
 iret
 func_58_invalid_subfunction:
@@ -839,8 +846,8 @@ string_bad_page_frame_param db 0Dh, 0Ah,  'Bad Page Frame Param in Driver Parame
 string_bad_page_count_param db 0Dh, 0Ah,  'Bad Page Count Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
 string_bad_page_offset_param db 0Dh, 0Ah, 'Bad Page Offset Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
 
-string_parsed_parameter                     db            " (Parsed Parameter)", 0Dh, 0Ah,'$'
-string_unparsed_parameter                   db            " (User Parameter)", 0Dh, 0Ah,'$'
+string_parsed_parameter                     db            " (User Parameter)", 0Dh, 0Ah,'$'
+string_unparsed_parameter                   db            " (Default Parameter)", 0Dh, 0Ah,'$'
 
 string_good_port_param                      db            "Using Port:  "
 string_good_port_param_EDIT_OFFSET          db            "0208",'$'
@@ -955,6 +962,14 @@ ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
    INCLUDE init\standard.asm
 ENDIF
 
+
+mov        al, byte ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_1+1]
+cbw
+mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_3+1], ax
+mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_4+1], ax
+shl        ax, 1
+mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_5+2], ax
+mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_2+1], ax
 
 
 
@@ -1314,7 +1329,14 @@ IF COMPILE_CHIPSET EQ SCAT_CHIPSET
   ret
 
 ENDIF
+IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
 
+  scamp_chipset_page_number_table:
+
+  db 8, 9, 10, 11 ; c000
+  db 0, 1,  2,  3 ; d000
+  db 4, 5,  6,  7 ; e000
+ENDIF
 
 COMMENT @
 trigger_debugger:

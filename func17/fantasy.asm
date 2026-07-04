@@ -12,7 +12,7 @@
   lodsw
   ; read two words - bx and ax
 
-  cmp   al, 12
+  cmp   al, 12  ; after 12 is conventional backfill
   ; default, lets assume backfill
   jb PAGEFRAME_REGISTER_5000
 
@@ -36,7 +36,8 @@
 
 
   PAGEFRAME_REGISTER_5000:
-  
+
+SELFMODIFY_FANTASY_add_page_frame_offset_1:  
   add   al, 4 ; need to add 4 for d000 case for FANTASY...  c000, e000  not supported
   out   FANTASY_PAGE_SELECT_REGISTER, al   ; select EMS page
   cmp   bx, 0FFFFh   ; -1 check

@@ -24,7 +24,4 @@ out NEAT_CHIPSET_CONFIG_REGISTER_READWRITE, al
   ; 256 pages hardcoded for now
   mov        word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count+1], NEAT_CONST_PAGE_COUNT
   mov        word ptr ds:[_RESIDENT_VARIABLE_total_EMS_page_count+1], NEAT_CONST_PAGE_COUNT
-  mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count+1], NEAT_PAGE_FRAME_COUNT
-
-  ; one handle for now
-  mov        word ptr ds:[_RESIDENT_VARIABLE_handle_count+1], 01h
+  mov        byte ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_1+1], NEAT_PAGE_FRAME_COUNT

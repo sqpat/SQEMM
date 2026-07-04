@@ -1,10 +1,10 @@
 
   ; page frame's pages are 208, 4208, 8208, c208. Technicaly x209 works too.
 
-  xor        ah, ah
-_RESIDENT_VARIABLE_pageable_frame_count:
-  cmp        ax, 01000h
-  jnb        RETURN_RESULT_8B
+_RESIDENT_VARIABLE_pageable_frame_count_1:
+  cmp        al, 010h
+  jae        func_05_page_too_high
+
 
   ENOUGH_PAGES:
   cmp        dx,  1
@@ -41,10 +41,4 @@ _RESIDENT_VARIABLE_pageable_frame_count:
   
   pop   dx
   ;xor   ax, ax   ; already 0 above
-  iret
-
-
-
-  RETURN_RESULT_8B:
-  mov        ah, 08Bh
   iret

@@ -1,7 +1,6 @@
-  xor        ah, ah
-_RESIDENT_VARIABLE_pageable_frame_count:
-  cmp        ax, 01000h
-  jnb        RETURN_RESULT_8B
+_RESIDENT_VARIABLE_pageable_frame_count_1:
+  cmp        al, 010h
+  jae        func_05_page_too_high
 
   ENOUGH_PAGES:
   cmp        dx,  1
@@ -9,10 +8,8 @@ _RESIDENT_VARIABLE_pageable_frame_count:
   
   ; al and bx are still the args
 
-  ; dumb hack. internally c000 - ec00 are pages 0-11 in order.
-  ; but if you want d000 to be page frame, outwardly we must expose it as 0-4.
-  ; so we are assuming 0-4 and adding by 4 to get the real internal offset
-  ; and assume 4-12 not used.
+  ; internally c000 - ec00 are pages 0-11 in order.
+  ; but only page frame is exposed as indexes 0-4
 
   cli
   cmp   ax, 12
@@ -64,9 +61,4 @@ _RESIDENT_VARIABLE_pageable_frame_count:
   PAGE_UNDERFLOW_3:
 
   mov        ah, 080h
-  iret
-
-  
-  RETURN_RESULT_8B:
-  mov        ah, 08Bh
   iret

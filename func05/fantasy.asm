@@ -1,7 +1,7 @@
-  xor        ah, ah
-_RESIDENT_VARIABLE_pageable_frame_count:
-  cmp        ax, 01000h
-  jnb        RETURN_RESULT_8B
+
+_RESIDENT_VARIABLE_pageable_frame_count_1:
+  cmp        al, 010h
+  jae        func_05_page_too_high
 
   ENOUGH_PAGES:
   cmp        dx,  1
@@ -9,14 +9,13 @@ _RESIDENT_VARIABLE_pageable_frame_count:
   
   ; al and bx are still the args
 
-  ; dumb hack. internally c000 - ec00 are pages 0-11 in order.
-  ; but if you want d000 to be page frame, outwardly we must expose it as 0-4.
-  ; so we are assuming 0-4 and adding by 4 to get the real internal offset
-  ; and assume 4-12 not used.
+  ; internally c000 - ec00 are pages 0-11 in order.
+  ; but only page frame is exposed as indexes 0-4
 
   cli
   cmp   al, 12
   jae   NOT_CONVENTIONAL_REGISTER
+SELFMODIFY_FANTASY_add_page_frame_offset_2:  
   add   al, 4 ; need to add 4 for d000 case for scamp...  we do this branch knowing it may need to undone eventually
   out   FANTASY_PAGE_SELECT_REGISTER, al   ; select EMS page
   cmp   bx, 0FFFFh   ; -1 check
@@ -52,8 +51,3 @@ _RESIDENT_VARIABLE_pageable_frame_count:
 
 
 
-
-  
-  RETURN_RESULT_8B:
-  mov        ah, 08Bh
-  iret
