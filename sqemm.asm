@@ -635,15 +635,6 @@ sub        bx, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count+1]
 iret
 
 
-;          14 Get All Handle Pages                           4Dh       
-; we write all handles and their page counts to es:di
-EMS_FUNCTION_04Dh:
-; TODO NOT DONE, should be done
-
-xchg       ax, bx
-iret
-
-
 
 ;          15 Get Page Map                                   4E00h    
 ;             Set Page Map                                   4E01h     
@@ -786,6 +777,32 @@ iret
 func_58_invalid_subfunction:
 mov        ah, 08fh
 iret
+
+
+
+;          14 Get All Handle Pages                           4Dh       
+; we write all handles and their page counts to es:di
+EMS_FUNCTION_04Dh:
+mov        ax, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count+1]
+xor        al, 1  ; 0 or 1 unallocated -> 1 or 1 allocated
+xchg       ax, bx ; ah zero, bx gets  total_open_emm_handles
+mov        ax, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count+1]
+mov        word ptr es:[di+2], ax ; pages_alloc_to_handle
+jnz        wrote_all_handle_pages ; no handles allocated
+
+neg        ax
+add        ax, word ptr cs:[_RESIDENT_VARIABLE_total_EMS_page_count+1]
+mov        word ptr es:[di+6], ax ; total pages - unallocated = allocated
+mov        word ptr es:[di+4], 1
+
+wrote_all_handle_pages:
+xor        ax, ax
+mov        word ptr es:[di], 0 ; emm_handle
+
+inc bx ; (including the operating system handle [0]).  The number cannot be zero because the operating system handle is always active and
+
+iret
+
 
 
 ;          8  Save Page Map                                  47h       
