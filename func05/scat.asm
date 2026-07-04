@@ -17,7 +17,7 @@ _RESIDENT_VARIABLE_pageable_frame_count_1:
  
 SELFMODIFY_SCAT_set_page_select_register_2:
   mov   dx, SCAT_PAGE_SELECT_REGISTER
-  SELFMODIFY_SCAT_add_page_frame_register_offset:
+  SELFMODIFY_SCAT_add_page_frame_register_offset_1:
   add   al, SCAT_PAGE_C000_REGISTER_OFFSET ; convert 0-4 to 18-1c
   cli
   out   dx, al   ; select EMS page
