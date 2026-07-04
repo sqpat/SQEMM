@@ -26,7 +26,7 @@
   bad_page_frame_param:
   ; bad page frame param! error?
   mov  DX, OFFSET string_bad_page_frame_param
-  jmp  DRIVER_NOT_INSTALLED_2
+  jmp  DRIVER_NOT_INSTALLED
 
   set_page_frame:
 
@@ -72,7 +72,7 @@ found_chipset_bounds_value:
   jbe   page_count_bounds_ok
 
   mov  DX, OFFSET string_bad_page_count_param
-  jmp  DRIVER_NOT_INSTALLED_2
+  jmp  DRIVER_NOT_INSTALLED
 
   page_count_bounds_ok:
 

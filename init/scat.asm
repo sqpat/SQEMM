@@ -51,7 +51,7 @@
   bad_page_frame_param:
   ; bad page frame param! error?
   mov  DX, OFFSET string_bad_page_frame_param
-  jmp  DRIVER_NOT_INSTALLED_2
+  jmp  DRIVER_NOT_INSTALLED
 
   set_page_frame:
 
@@ -132,7 +132,7 @@ SELFMODIFY_SCAT_set_page_set_register_1:
   jbe   page_count_bounds_ok
 
   mov  DX, OFFSET string_bad_page_count_param
-  jmp  DRIVER_NOT_INSTALLED_2
+  jmp  DRIVER_NOT_INSTALLED
 
   page_count_bounds_ok:
 
@@ -170,7 +170,7 @@ SELFMODIFY_SCAT_set_page_set_register_1:
   ; overーallocated?
 
   mov  DX, OFFSET string_bad_page_offset_param
-  jmp  DRIVER_NOT_INSTALLED_2
+  jmp  DRIVER_NOT_INSTALLED
 
   done_with_page_offset_bounds_check:
 

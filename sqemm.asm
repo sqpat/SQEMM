@@ -29,6 +29,7 @@ COMPILE_CHIPSET = SCAT_CHIPSET
 ;COMPILE_CHIPSET = FANTASY_EMS
 ;COMPILE_CHIPSET = RODNEY_EMS
 
+RET_OPCODE = 0C3h
 
 
 COMPILE_386  = 3
@@ -197,7 +198,7 @@ EMS_DRIVER_CALL:
 push  bx
 push  ds
 
-lds  bx, dword ptr cs:[request_header_pointer]  ; todo no ds?
+lds  bx, dword ptr cs:[request_header_pointer]
 
 cmp  byte ptr ds:[bx + DOS_DRIVER_REQUEST_HEADER.drrh_command_code], 0
 SELFMODIFY_prevent_double_init:
@@ -291,7 +292,7 @@ request_header_pointer dd 00000000h
 
 
 ; EMS Function pointer table
-; todo change to branches
+; branches tested, couldnt get it smaller
 _EMS_FUNCTION_POINTERTABLE:
 dw  OFFSET EMS_FUNCTION_040h
 dw  OFFSET EMS_FUNCTION_041h
@@ -309,7 +310,7 @@ dw  OFFSET EMS_FUNCTION_04ch
 dw  OFFSET EMS_FUNCTION_04dh
 dw  OFFSET EMS_FUNCTION_04eh
 dw  OFFSET EMS_FUNCTION_04fh
-dw  OFFSET EMS_FUNCTION_050h
+dw  OFFSET EMS_FUNCTION_05001h
 dw  OFFSET EMS_FUNCTION_051h
 dw  OFFSET EMS_FUNCTION_052h
 dw  OFFSET EMS_FUNCTION_053h
@@ -318,11 +319,7 @@ dw  OFFSET EMS_FUNCTION_055h
 dw  OFFSET EMS_FUNCTION_056h
 dw  OFFSET EMS_FUNCTION_057h
 dw  OFFSET EMS_FUNCTION_058h
-dw  OFFSET EMS_FUNCTION_059h
-dw  OFFSET EMS_FUNCTION_05ah
-dw  OFFSET EMS_FUNCTION_05bh
-dw  OFFSET EMS_FUNCTION_05ch
-dw  OFFSET EMS_FUNCTION_05dh
+
 
 _current_call_subfunction_value:
 db  0
@@ -340,7 +337,7 @@ MAIN_EMS_INTERRUPT_VECTOR:
 
 ; inline the main function(s) here.
 
-cmp      ah, 050h
+cmp      ax, 05800h
 jne      NOT_FUNC_50h
 
 ; CHIPSET SPECIFIC START
@@ -452,6 +449,32 @@ func_05_page_too_high:
 mov        ah, 08Bh
 iret
 
+; reserved, dont implement
+EMS_FUNCTION_049h:
+EMS_FUNCTION_04Ah:
+
+; Do not implement OS level 4.0 functions for single application driver.
+EMS_FUNCTION_052h:
+EMS_FUNCTION_053h:
+EMS_FUNCTION_054h:
+
+EMS_FUNCTION_059h:
+
+EMS_FUNCTION_05Ah:
+EMS_FUNCTION_05Bh:
+EMS_FUNCTION_05Ch:
+
+EMS_FUNCTION_05Dh:
+; TODO NOT DONE , wont be done. fall thru
+
+;          1  Get Status                                     40h      
+
+EMS_FUNCTION_040h:
+xchg       ax, bx
+; ah is already 0 because bh was 0 from jump table lookup
+iret
+
+
 NOT_FUNC_44h:
 
 ; CHIPSET SPECIFIC END
@@ -465,6 +488,9 @@ mov        al, ah
 cmp        al, 05dh
 ja         bad_function
 
+cmp        al, 059h
+jae        EMS_FUNCTION_059h  ; not implementing
+
 ; don't support calls below 040h
 sub        al, 040h
 jb         bad_function
@@ -474,7 +500,7 @@ jb         bad_function
 cbw
 xchg       ax, bx
 shl        bx, 1          
-jmp        word ptr cs:[bx + offset _EMS_FUNCTION_POINTERTABLE] ; ax has bx value!
+jmp        word ptr cs:[bx + offset _EMS_FUNCTION_POINTERTABLE] ; NOTE: ax has bx value! must be restored.
 
 ; The function code passed to the memory manager is not defined.
 bad_function:
@@ -484,12 +510,6 @@ iret
 
 ; MAIN EMS FUNCTIONS BELOW
 
-;          1  Get Status                                     40h      
-
-EMS_FUNCTION_040h:
-xchg       ax, bx
-; ah is already 0 because bh was 0 from jump table lookup
-iret
 
 ;          2  Get Page Frame Segment Address                 41h       
 
@@ -795,26 +815,6 @@ mov        ah, 08fh
 iret
 
 
-; reserved, dont implement
-EMS_FUNCTION_049h:
-EMS_FUNCTION_04Ah:
-
-; Do not implement OS level 4.0 functions for single application driver.
-EMS_FUNCTION_052h:
-EMS_FUNCTION_053h:
-EMS_FUNCTION_054h:
-
-EMS_FUNCTION_059h:
-
-EMS_FUNCTION_05Ah:
-EMS_FUNCTION_05Bh:
-EMS_FUNCTION_05Ch:
-
-EMS_FUNCTION_05Dh:
-
-; TODO NOT DONE , wont be done
-xchg       ax, bx
-iret
 
 
 ;db 'SQEMM END'
@@ -838,6 +838,10 @@ iret
 end_of_driver_label:
 public end_of_driver_label
 
+
+string_resident_driver_size                 db            "EMS Driver Resident Memory Usage: "
+string_resident_driver_size_EDIT_OFFSET     db            "      Bytes, Entrypoint:  "
+string_resident_driver_location_EDIT_OFFSET db            "0000:0000",'$'
 
 string_driver_exists db 0Dh, 0Ah, 'EMS Driver already loaded (chaining not supported).',0Dh, 0Ah, '$'
 string_driver_successfully_installed db 0Dh, 0Ah, 'SQEMM successfully initialized.', 0Ah, 0Dh, '$'
@@ -915,7 +919,16 @@ jne        EMS_INTERRUPT_FREE
 
 mov        dx, OFFSET string_driver_exists
 
-jmp        DRIVER_NOT_INSTALLED_2
+DRIVER_NOT_INSTALLED:
+mov        ah, 9  ; PRINT_STRING
+int        021h
+
+lds        bx, [request_header_pointer]
+mov        word ptr ds:[bx + 3], 0810ch
+mov        word ptr ds:[bx + 0eh], OFFSET end_of_driver_label
+mov        word ptr ds:[bx + 010h], cs
+;mov        word ptr ds:[bx + 017h], 00
+ret
 
 EMS_INTERRUPT_FREE:
 
@@ -927,7 +940,6 @@ call  parse_driver_params
 
 jnc   quiet_mode_off
 
-RET_OPCODE = 0C3h
 
 mov   byte ptr ds:[print_driver_param], RET_OPCODE
 
@@ -971,6 +983,42 @@ shl        ax, 1
 mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_5+2], ax
 mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_2+1], ax
 
+push       cs
+pop        es
+std
+mov        ax, OFFSET end_of_driver_label
+mov        bx, 10
+mov        di, OFFSET string_resident_driver_size_EDIT_OFFSET + 3
+
+print_next_size_digit:
+  cwd
+  div       bx
+  xchg      ax, dx  ; get   remainder in ax
+  add       al, '0' ; ASCIIfy
+  stosb             ; print remainder from ax
+  xchg      ax, dx  ; get   quotient back in ax
+  test      ax, ax
+  jnz       print_next_size_digit
+
+cld
+
+; hijack this to use do_print_driver_param_hex as function now
+mov        byte ptr ds:[done_editing_string], RET_OPCODE
+
+mov        ax, cs
+mov        di, OFFSET string_resident_driver_location_EDIT_OFFSET
+
+call       do_print_driver_param_hex
+inc        di   ; skip colon
+mov        ax, OFFSET MAIN_EMS_INTERRUPT_VECTOR
+call       do_print_driver_param_hex
+
+mov        dx, OFFSET string_resident_driver_size
+mov        ah, 9  ; PRINT_STRING
+int        021h
+
+
+
 
 
 ; one handle for now
@@ -984,7 +1032,6 @@ int        021h
 DRIVER_INSTALLED:
 
 mov        dx, OFFSET string_driver_successfully_installed
-
 mov        ah, 9  ; PRINT_STRING
 int        021h
 
@@ -998,26 +1045,8 @@ mov        word ptr ds:[bx + 010h], cs
 ;mov        word ptr ds:[bx + 017h], 00
 ret
 
-; DRIVER NOT INSTALLED
-; preloaded with string 'reason' for the print string
-DRIVER_NOT_INSTALLED:
-mov        ah, 9  ; PRINT_STRING
-int        021h
 
 
-mov        dx, OFFSET string_driver_failed_installing
-
-
-DRIVER_NOT_INSTALLED_2:
-mov        ah, 9  ; PRINT_STRING
-int        021h
-
-lds        bx, [request_header_pointer]
-mov        word ptr ds:[bx + 3], 0810ch
-mov        word ptr ds:[bx + 0eh], OFFSET end_of_driver_label
-mov        word ptr ds:[bx + 010h], cs
-;mov        word ptr ds:[bx + 017h], 00
-ret
 ; idea was to capitalize, find end of command line
 ; turns out ms-dos pre-capitalizes it all? (what about other DOS?) consider removing. 
 process_command_line:
@@ -1125,6 +1154,7 @@ ret
 
 print_driver_param_4_char_int:
   mov      cx, 3
+print_driver_param_int:
   clc
 
 print_driver_param:
