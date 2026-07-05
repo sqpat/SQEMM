@@ -17,8 +17,11 @@ _RESIDENT_VARIABLE_pageable_frame_count_1:
  
 SELFMODIFY_SCAT_set_page_select_register_2:
   mov   dx, SCAT_PAGE_SELECT_REGISTER
+  sub   al, 0Ch
+  jae   func_05_do_conventional_map
   SELFMODIFY_SCAT_add_page_frame_register_offset_1:
-  add   al, SCAT_PAGE_C000_REGISTER_OFFSET ; convert 0-4 to 18-1c
+  add   al, SCAT_PAGE_C000_REGISTER_OFFSET ; convert 0-4 to page frame. adds back subtracted 0Ch too
+  func_05_do_conventional_map:   ; conventional page should be good.
   cli
   out   dx, al   ; select EMS page
 SELFMODIFY_SCAT_set_page_set_register_2:

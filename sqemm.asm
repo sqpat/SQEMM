@@ -1099,6 +1099,17 @@ shl        ax, 1
 mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_5+2], ax
 mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_2+1], ax
 
+; set page table to page frame.
+
+mov        ax, word ptr ds:[_RESIDENT_VARIABLE_page_frame_segment+1]
+mov        word ptr ds:[mappable_phys_page_struct_page_frame+0], ax
+add        ax, 0400h
+mov        word ptr ds:[mappable_phys_page_struct_page_frame+4], ax
+add        ax, 0400h
+mov        word ptr ds:[mappable_phys_page_struct_page_frame+8], ax
+add        ax, 0400h
+mov        word ptr ds:[mappable_phys_page_struct_page_frame+12], ax
+
 push       cs
 pop        es
 std

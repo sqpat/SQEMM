@@ -9,7 +9,7 @@ SCAT_EXTENDED_BOUNDARY_REGISTER = 04Eh
 SCAT_EMS_CONFIG_REGISTER = 04Fh
 SCAT_PAGE_SELECT_REGISTER = 020Ah
 SCAT_PAGE_SET_REGISTER = 0208h
-SCAT_PAGE_FRAME_COUNT = 32
+SCAT_PAGE_FRAME_COUNT = 28
 
 ; 8000 is to mark bit 15 for free "ems enabled"
 ; 0080 is [currently hardcoded] 2 MB offset for beginning of EMS pagination,

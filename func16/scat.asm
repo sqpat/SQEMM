@@ -10,7 +10,7 @@
 SELFMODIFY_SCAT_set_page_select_register_7:
   mov   dx, SCAT_PAGE_SELECT_REGISTER
 SELFMODIFY_SCAT_add_page_frame_register_offset_5:
-  mov   bl, SCAT_PAGE_C000_REGISTER_OFFSET
+  mov   bl, SCAT_PAGE_C000_REGISTER_OFFSET ; includes 0Ch
 
 
   cmp   byte ptr cs:[_current_call_subfunction_value], 1
@@ -33,6 +33,10 @@ func_16_sub_00_save_next_page_frame_register:
   lodsw
   ; ax has segment... 
   call  util_get_register_for_segment
+  sub   al, 0Ch
+  jae   func_16_do_conventional_map
+  add   al, bl
+  func_16_do_conventional_map:
   out   dx, al   ; select EMS page
   stosw 
 

@@ -12,8 +12,8 @@ mappable_phys_page_struct:
   dw 07000h, 001Ch, 07400h, 001Eh, 07800h, 001Eh, 07C00h, 001Fh
   dw 08000h, 0020h, 08400h, 0021h, 08800h, 0022h, 08C00h, 0023h
   dw 09000h, 0024h, 09400h, 0025h, 09800h, 0026h, 09C00h, 0027h
+mappable_phys_page_struct_page_frame:
   dw 0D000h, 0034h, 0D400h, 0035h, 0D800h, 0036h, 0DC00h, 0037h
-  dw 0E000h, 0038h, 0E400h, 0039h, 0E800h, 003Ah, 0EC00h, 003Bh
 
 
 ; for function 15/16 'push/pop' like operation.

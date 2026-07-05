@@ -92,12 +92,18 @@
   shl  ah, 2   ; 0 1 2 to 0 4 8  (C D 0)
   or   al, ah  ; combine
   add  al, SCAT_PAGE_C000_REGISTER_OFFSET
-  mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_1+1], al
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_2+1], al
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_3+1], al
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_4+1], al
-  mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_5+1], al
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_6+1], al
+  
+
+  add  al, 0Ch
+  mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_1+1], al
+  mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_5+1], al
+  mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_7+1], al
+  sub  al, 0Ch
+
   or   al, SCAT_CHIPSET_AUTOINCREMENT_FLAG
 
 SELFMODIFY_SCAT_set_page_select_register_1:

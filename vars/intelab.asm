@@ -12,6 +12,7 @@ mappable_phys_page_struct:
   dw 07000h, 000Ch, 07400h, 000Eh, 07800h, 000Eh, 07C00h, 000Fh
   dw 08000h, 0010h, 08400h, 0011h, 08800h, 0012h, 08C00h, 0013h
   dw 09000h, 0014h, 09400h, 0015h, 09800h, 0016h, 09C00h, 0017h
+mappable_phys_page_struct_page_frame:
   dw 0D000h, 0018h, 0D400h, 0019h, 0D800h, 001Ah, 0DC00h, 001Bh
 
 
