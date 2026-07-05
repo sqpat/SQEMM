@@ -5,12 +5,13 @@
 
   ; physical page number mode
   cli
-  DO_NEXT_PAGE_5000:
+  func1701_loop_next_page:
   ; next page in ax....
   lodsw
   mov        dx, ax
   lodsw
   ; read two words - bx and ax
+  call util_get_register_for_segment
 
   ror   ax, 2
   ; 0-4 becomes 0208, 4208, 8208, c208
@@ -19,12 +20,12 @@
   xchg  dx, ax
 
   cmp   ax, 0FFFFh   ; -1 check
-  je    handle_default_page
+  je    func17_01_handle_default_page
 
   add   ax, STANDARD_BOARD_PAGE_OFFSET_AMT   ; turn on EMS ON bit
   out   dx, al   ; write 8 bit page num. 
 
-  loop       DO_NEXT_PAGE_5000
+  loop       func1701_loop_next_page
   sti
 
   ; exit fall thru
@@ -34,11 +35,11 @@
   pop cx
   iret
 
-  handle_default_page:
+  func17_01_handle_default_page:
   ; mapping to page -1
   mov   ax, STANDARD_BOARD_CHIPSET_UNMAP_VALUE
   out   dx, al   ; write 8 bit page num. 
-  loop       DO_NEXT_PAGE_5000
+  loop       func1701_loop_next_page
   sti
 
 

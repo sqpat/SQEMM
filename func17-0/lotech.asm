@@ -5,7 +5,7 @@
 
   ; physical page number mode
   cli
-  DO_NEXT_PAGE_5000:
+  func1700_loop_next_page:
   ; next page in ax....
 
   lodsw
@@ -15,7 +15,7 @@
 
   out   dx, al   ; write 8 bit page num. 
 
-  loop       DO_NEXT_PAGE_5000
+  loop       func1700_loop_next_page
   sti
 
 

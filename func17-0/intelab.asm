@@ -4,7 +4,7 @@
 
   ; physical page number mode
   cli
-  DO_NEXT_PAGE_5000:
+  func1700_loop_next_page:
   ; next page in ax....
 
   lodsw
@@ -19,7 +19,7 @@
   lodsw
 
   cmp   dx, 0FFFFh   ; -1 check
-  je    handle_default_page
+  je    func17_00_handle_default_page
 
   ror  ax, 1
   ror  ax, 1
@@ -32,7 +32,7 @@
   intel_ab_not_overflow:
   out   dx, al   ; write 8 bit page num. 
 
-  loop       DO_NEXT_PAGE_5000
+  loop       func1700_loop_next_page
   sti
 
 
@@ -44,7 +44,7 @@
   iret
 
 
-  handle_default_page:
+  func17_00_handle_default_page:
   ; mapping to page -1
   ; get the value again
   
@@ -61,7 +61,7 @@
   add   al, 90h
 
   out   dx, al   ; write 8 bit page num. 
-  loop  DO_NEXT_PAGE_5000
+  loop  func1700_loop_next_page
   sti
 
 
@@ -76,7 +76,7 @@
 
   add   al, 070h
   out   dx, al   ; write 8 bit page num. 
-  loop  DO_NEXT_PAGE_5000
+  loop  func1700_loop_next_page
   sti
 
 
@@ -103,7 +103,7 @@ COMMENT @
 
 
   out   dx, al   ; write 8 bit page num. 
-  loop  DO_NEXT_PAGE_5000
+  loop  func1700_loop_next_page
   sti
 
 

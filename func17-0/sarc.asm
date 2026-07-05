@@ -4,7 +4,7 @@
 
   ; physical page number mode
   cli
-  DO_NEXT_PAGE_5000:
+  func1700_loop_next_page:
   ; next page in ax....
 
   lodsw
@@ -13,7 +13,7 @@
 
 
   cmp dx, 0FFFFh
-  je    handle_default_page
+  je    func17_00_handle_default_page
 
   mov ah, al
   sal al, 1
@@ -44,7 +44,7 @@
   out SARC_RC2016_CHIPSET_VALUE_PORT, al
  
 
-  loop       DO_NEXT_PAGE_5000
+  loop       func1700_loop_next_page
   sti
 
 
@@ -55,7 +55,7 @@
   pop cx
   iret
 
-    handle_default_page:
+    func17_00_handle_default_page:
   ; mapping to page -1
   ; dx is scratch, ax is page
 
@@ -75,7 +75,7 @@
   out  SARC_RC2016_CHIPSET_VALUE_PORT, al
 
 
-  loop       DO_NEXT_PAGE_5000
+  loop       func1700_loop_next_page
   sti
 
   ; exit fall thru

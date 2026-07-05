@@ -6,7 +6,7 @@
 
   ; physical page number mode
   cli
-  DO_NEXT_PAGE_5000:
+  func1700_loop_next_page:
 
   ; preselect the register for the page on/off 
 
@@ -40,7 +40,7 @@
   
   
   cmp   ax, 0FFFFh   ; -1 check
-  je    handle_default_page
+  je    func17_00_handle_default_page
 
   xchg ax, bx
   or  al, dl  ; page is turned on
@@ -59,7 +59,7 @@
 
   pop cx
 
-  loop       DO_NEXT_PAGE_5000
+  loop       func1700_loop_next_page
   sti
 
   ; exit fall thru
@@ -70,7 +70,7 @@
   pop cx
   iret
 
-  handle_default_page:
+  func17_00_handle_default_page:
   ; mapping to page -1
 
   
@@ -82,7 +82,7 @@
 
   pop cx
 
-  loop       DO_NEXT_PAGE_5000
+  loop       func1700_loop_next_page
   sti
 
 

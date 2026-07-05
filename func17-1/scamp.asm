@@ -5,12 +5,13 @@
 
   ; physical page number mode
   cli
-  DO_NEXT_PAGE_5000:
+  func1701_loop_next_page:
   ; next page in ax....
   lodsw
   mov        bx, ax
   lodsw
   ; read two words - bx and ax
+  call util_get_register_for_segment
 
   cmp   ax, 12
   ; default, lets assume backfill
@@ -26,7 +27,7 @@
   out   SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
 
 
-  loop       DO_NEXT_PAGE_5000
+  loop       func1701_loop_next_page
   sti
   ; exits if we fall thru loop with no error
   xor        ax, ax
@@ -41,12 +42,12 @@
   add   ax, 4 ; need to add 4 for d000 case for scamp...  c000, e000  not supported
   out   SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
   cmp   bx, 0FFFFh   ; -1 check
-  je    handle_default_page
+  je    func17_01_handle_default_page
   mov   ax, bx
   add   ax, SCAMP_PAGE_OFFSET_AMT   ; offset by default starting page
   out   SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
 
-  loop       DO_NEXT_PAGE_5000
+  loop       func1701_loop_next_page
   sti
 
   ; exits if we fall thru loop with no error
@@ -59,10 +60,10 @@
   handle_default_page_with_add:
   add   ax, 4
   
-  handle_default_page:
+  func17_01_handle_default_page:
   ; mapping to page -1
   out  SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
-  loop       DO_NEXT_PAGE_5000
+  loop       func1701_loop_next_page
   ; fall thru if done..
   sti
 

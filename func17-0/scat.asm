@@ -6,7 +6,8 @@
 
   ; physical page number mode
   cli
-  DO_NEXT_PAGE_5000:
+
+func1700_loop_next_page:
   ; next page in ax....
   lodsw
   xchg  ax, bx
@@ -16,24 +17,27 @@
 SELFMODIFY_SCAT_set_page_select_register_3:
   mov   dx, SCAT_PAGE_SELECT_REGISTER
   sub   al, 0Ch
-  jae   func_17_do_conventional_map
+  jae   func_1700_do_conventional_map
   SELFMODIFY_SCAT_add_page_frame_register_offset_7:
   add   al, SCAT_PAGE_C000_REGISTER_OFFSET ; convert 0-4 to page frame. adds back subtracted 0Ch too
-  func_17_do_conventional_map:   ; conventional page should be good.
+  func_1700_do_conventional_map:   ; conventional page should be good.
 
   
   out   dx, al   ; select EMS page
 SELFMODIFY_SCAT_set_page_set_register_3:
   mov   dx, SCAT_PAGE_SET_REGISTER
   cmp   bx, 0FFFFh   ; -1 check
-  je    handle_default_page
+  je    func_1700_handle_default_page
   SELFMODIFY_SCAT_add_page_offset_and_enable_1:
   lea   ax, [BX + SCAT_PAGE_OFFSET_AMT]   ; offset by default starting page
 
   out   dx, ax   ; write 16 bit page num. 
 
-  loop       DO_NEXT_PAGE_5000
+  loop  func1700_loop_next_page
+
   sti
+
+  
 
   ; exit fall thru
   xor ax, ax
@@ -43,11 +47,11 @@ SELFMODIFY_SCAT_set_page_set_register_3:
   pop cx
   iret
 
-  handle_default_page:
+  func_1700_handle_default_page:
   ; mapping to page -1
   mov   ax, SCAT_CHIPSET_UNMAP_VALUE
   out   dx, ax   ; write 16 bit page num. 
-  loop       DO_NEXT_PAGE_5000
+  loop  func1700_loop_next_page
   sti
 
 
