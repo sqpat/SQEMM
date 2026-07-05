@@ -16,7 +16,7 @@ mappable_phys_page_struct:
   dw 0E000h, 0004h, 0E400h, 0005h, 0E800h, 0006h, 0EC00h, 0007h
   dw 0C000h, 0008h, 0C400h, 0009h, 0C800h, 000Ah, 0CC00h, 000Bh 
 
-COMMENT @
+
 ; for function 15/16 'push/pop' like operation.
 page_stack: 
 LENGTH_OF_STACK = (OFFSET page_stack - mappable_phys_page_struct) SHR 1
@@ -24,7 +24,7 @@ REPT LENGTH_OF_STACK
   dw 0
 ENDM
 
-@
+
 ; for function 8/9 'push/pop' like operation.
 page_frame_stack:
 dw 0, 0, 0, 0

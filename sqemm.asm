@@ -636,27 +636,6 @@ iret
 
 
 
-;          15 Get Page Map                                   4E00h    
-;             Set Page Map                                   4E01h     
-;             Get & Set Page Map                             4E02h     
-;             Get Size of Page Map Save Array                4E03h     
-
-EMS_FUNCTION_04Eh:
-; TODO NOT DONE, should be done
-
-xchg       ax, bx
-iret
- 
-
-; 16 Get Partial Page Map                           4F00h     
-;             Set Partial Page Map                           4F01h     
-;             Get Size of Partial Page Map Save Array        4F02h     
-EMS_FUNCTION_04Fh:
-; TODO NOT DONE, should be done
-
-xchg       ax, bx
-iret
- 
 
 
 ; didnt handle the subfuncton
@@ -832,7 +811,7 @@ ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
 ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
    INCLUDE func08\sarc.asm
 ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-   INCLUDE func17\standard.asm
+   INCLUDE func08\standard.asm
 ENDIF
 
  
@@ -867,6 +846,90 @@ ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
    INCLUDE func09\standard.asm
 ENDIF
 
+
+;          15 Get Page Map                                   4E00h    
+;             Set Page Map                                   4E01h     
+;             Get & Set Page Map                             4E02h     
+;             Get Size of Page Map Save Array                4E03h     
+EMS_FUNCTION_04Eh:
+
+IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
+   INCLUDE func15\scamp.asm
+ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
+   INCLUDE func15\fantasy.asm
+ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
+   INCLUDE func15\rodney.asm
+ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
+   INCLUDE func15\scat.asm
+ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
+   INCLUDE func15\ht18.asm
+ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
+   INCLUDE func15\ht12.asm
+ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
+   INCLUDE func15\hedaka.asm
+ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
+   INCLUDE func15\lotech.asm
+ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
+   INCLUDE func15\neat.asm
+ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
+   INCLUDE func15\intelab.asm
+ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
+   INCLUDE func15\sarc.asm
+ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
+   INCLUDE func15\standard.asm
+ENDIF
+
+; 16 Get Partial Page Map                           4F00h     
+;             Set Partial Page Map                           4F01h     
+;             Get Size of Partial Page Map Save Array        4F02h     
+EMS_FUNCTION_04Fh:
+
+IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
+   INCLUDE func16\scamp.asm
+ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
+   INCLUDE func16\fantasy.asm
+ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
+   INCLUDE func16\rodney.asm
+ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
+   INCLUDE func16\scat.asm
+ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
+   INCLUDE func16\ht18.asm
+ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
+   INCLUDE func16\ht12.asm
+ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
+   INCLUDE func16\hedaka.asm
+ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
+   INCLUDE func16\lotech.asm
+ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
+   INCLUDE func16\neat.asm
+ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
+   INCLUDE func16\intelab.asm
+ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
+   INCLUDE func16\sarc.asm
+ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
+   INCLUDE func16\standard.asm
+ENDIF 
+
+; cross platform utility function for getting the (application facing) page index for a segment.
+
+util_get_register_for_segment:
+   push  si
+   push  cx
+   mov   si, OFFSET mappable_phys_page_struct
+
+   check_next_segment_in_list:
+   cmp   ax, word ptr cs:[si]
+   je    found_page_in_list
+   add   si, 4
+   loop  check_next_segment_in_list
+
+   ; fail... undefined behavior? or just store FFFF in there?
+
+   found_page_in_list:
+   mov   ax, word ptr cs:[si+2]
+   pop   cx
+   pop   si
+   ret
 
 
 
