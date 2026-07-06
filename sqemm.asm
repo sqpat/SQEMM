@@ -16,20 +16,9 @@ STANDARD_EMS_BOARD = 10
 FANTASY_EMS = 11
 RODNEY_EMS = 12
 
-;COMPILE_CHIPSET = SCAMP_CHIPSET
-COMPILE_CHIPSET = SCAT_CHIPSET
-;COMPILE_CHIPSET = HT18_CHIPSET
-;COMPILE_CHIPSET = HT12_CHIPSET
-;COMPILE_CHIPSET = HEDAKA_CHIPSET
-;COMPILE_CHIPSET = LOTECH_BOARD
-;COMPILE_CHIPSET =  NEAT_CHIPSET
-;COMPILE_CHIPSET =  INTEL_ABOVEBOARD
-;COMPILE_CHIPSET =  SARC_RC2016A
-;COMPILE_CHIPSET = STANDARD_EMS_BOARD
-;COMPILE_CHIPSET = FANTASY_EMS
-;COMPILE_CHIPSET = RODNEY_EMS
-
-RET_OPCODE = 0C3h
+DRIVER_VERSION_MIN   = 1  ; around 600-700 bytes, main functions implemented, single handle
+DRIVER_VERSION_SMALL = 2  ; around 800 bytes, some rarer functions implemented, single handle
+DRIVER_VERSION_FULL  = 3  ; several KB full 4.0 implementation.
 
 
 COMPILE_386  = 3
@@ -37,12 +26,22 @@ COMPILE_286  = 2
 COMPILE_186  = 1
 COMPILE_8086 = 0
 
-COMPISA = COMPILE_8086
+
+
+COMPILE_VERSION = DRIVER_VERSION_MIN
+COMPILE_CHIPSET = SCAT_CHIPSET
+
+RET_OPCODE = 0C3h
+
+
+
 
 IF COMPILE_CHIPSET EQ LOTECH_BOARD
 	.8086
+   COMPISA = COMPILE_8086
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
 	.8086
+   COMPISA = COMPILE_8086
 ELSE
 	.286
   COMPISA = COMPILE_186
@@ -312,6 +311,7 @@ dw  OFFSET EMS_FUNCTION_04dh
 dw  OFFSET EMS_FUNCTION_04eh
 dw  OFFSET EMS_FUNCTION_04fh
 dw  OFFSET EMS_FUNCTION_05001h
+IF COMPISA GE DRIVER_VERSION_FULL
 dw  OFFSET EMS_FUNCTION_051h
 dw  OFFSET EMS_FUNCTION_052h
 dw  OFFSET EMS_FUNCTION_053h
@@ -319,8 +319,8 @@ dw  OFFSET EMS_FUNCTION_054h
 dw  OFFSET EMS_FUNCTION_055h
 dw  OFFSET EMS_FUNCTION_056h
 dw  OFFSET EMS_FUNCTION_057h
-dw  OFFSET EMS_FUNCTION_058h
-
+dw  OFFSET EMS_FUNCTION_058h_JUMP
+ENDIF
 
 _current_call_subfunction_value:
 db  0
@@ -454,18 +454,7 @@ iret
 EMS_FUNCTION_049h:
 EMS_FUNCTION_04Ah:
 
-; Do not implement OS level 4.0 functions for single application driver.
-EMS_FUNCTION_052h:
-EMS_FUNCTION_053h:
-EMS_FUNCTION_054h:
-
-EMS_FUNCTION_059h:
-
-EMS_FUNCTION_05Ah:
-EMS_FUNCTION_05Bh:
-EMS_FUNCTION_05Ch:
-
-EMS_FUNCTION_05Dh:
+EMS_FUNCTION_UNIMPLEMENTED:
 ; These functions will remain unimplemented for this version of the driver. fall thru
 
 ;          1  Get Status                                     40h      
@@ -488,10 +477,12 @@ mov        byte ptr cs:[_current_call_subfunction_value], al
 mov        al, ah
 cmp        al, 05dh
 ja         bad_function
-
-cmp        al, 059h
-jae        EMS_FUNCTION_059h  ; not implementing
-
+IF COMPISA GE DRIVER_VERSION_MIN
+cmp        al, 58h
+je         EMS_FUNCTION_058h
+cmp        al, 050h
+jae        EMS_FUNCTION_UNIMPLEMENTED  ; not implementing
+ENDIF
 ; don't support calls below 040h
 sub        al, 040h
 jb         bad_function
@@ -510,6 +501,50 @@ mov        ah, 084h
 iret
 
 ; MAIN EMS FUNCTIONS BELOW
+
+;          25 Get Mappable Physical Address Array            5800h     
+;             Get Mappable Physical Address Array Entries    5801h     
+
+;    mappable_phys_page_struct   STRUC
+;             phys_page_segment        DW ?
+;             phys_page_number         DW ?
+;          mappable_phys_page_struct   ENDS
+
+EMS_FUNCTION_058h_JUMP:
+xchg       ax, bx
+EMS_FUNCTION_058h: ; this path  doesnt xchg ax bx
+cbw         
+cmp        byte ptr cs:[_current_call_subfunction_value], 1
+jae        func_58_not_5800
+EMS_FUNCTION_05800h:
+push       ds
+push       si
+push       cs
+pop        ds
+mov        si, OFFSET mappable_phys_page_struct
+_RESIDENT_VARIABLE_pageable_frame_count_2:
+mov        cx, 01000h
+rep        movsw
+_RESIDENT_VARIABLE_pageable_frame_count_4:
+mov        cx, 01000h
+_RESIDENT_VARIABLE_pageable_frame_count_5:
+sub        di, 01000h
+
+; ah 0 from original xchg ah
+pop        si
+pop        ds
+iret
+func_58_not_5800:
+ja         func_58_invalid_subfunction
+EMS_FUNCTION_05801h:
+_RESIDENT_VARIABLE_pageable_frame_count_3:
+mov        cx, 01000h
+; ah already 0.
+iret
+func_58_invalid_subfunction:
+mov        ah, 08fh
+iret
+
 
 
 ;          2  Get Page Frame Segment Address                 41h       
@@ -633,6 +668,9 @@ mov        bx, 01000h
 iret
 
 
+
+IF COMPISA GE DRIVER_VERSION_SMALL
+
 ;          13 Get Handle Pages                               4Ch       
 
 EMS_FUNCTION_04Ch:
@@ -648,6 +686,83 @@ iret
 
 
 
+
+
+;          8  Save Page Map                                  47h       
+
+EMS_FUNCTION_047h:
+
+IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
+   INCLUDE func08\scamp.asm
+ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
+   INCLUDE func08\fantasy.asm
+ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
+   INCLUDE func08\rodney.asm
+ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
+   INCLUDE func08\scat.asm
+ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
+   INCLUDE func08\ht18.asm
+ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
+   INCLUDE func08\ht12.asm
+ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
+   INCLUDE func08\hedaka.asm
+ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
+   INCLUDE func08\lotech.asm
+ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
+   INCLUDE func08\neat.asm
+ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
+   INCLUDE func08\intelab.asm
+ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
+   INCLUDE func08\sarc.asm
+ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
+   INCLUDE func08\standard.asm
+ENDIF
+
+ 
+
+;          9  Restore Page Map                               48h       
+
+EMS_FUNCTION_048h:
+
+IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
+   INCLUDE func09\scamp.asm
+ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
+   INCLUDE func09\fantasy.asm
+ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
+   INCLUDE func09\rodney.asm
+ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
+   INCLUDE func09\scat.asm
+ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
+   INCLUDE func09\ht18.asm
+ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
+   INCLUDE func09\ht12.asm
+ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
+   INCLUDE func09\hedaka.asm
+ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
+   INCLUDE func09\lotech.asm
+ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
+   INCLUDE func09\neat.asm
+ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
+   INCLUDE func09\intelab.asm
+ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
+   INCLUDE func09\sarc.asm
+ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
+   INCLUDE func09\standard.asm
+ENDIF
+
+ELSE
+
+EMS_FUNCTION_047h:
+EMS_FUNCTION_048h:
+EMS_FUNCTION_04Ch:
+   xchg   ax, bx
+   iret
+
+ENDIF
+
+
+
+IF COMPISA GE DRIVER_VERSION_FULL
 
 ;          18 Reallocate Pages                               51h       
 ; DX = handle
@@ -809,7 +924,7 @@ lodsw      ; dest page
 ; bp:cx is length
 ; bl, bh have source, dest mem types.
 
-; todo: check params for accuracy BEFORE state push pop.
+; check params for accuracy BEFORE state push pop.
 call       func_24_do_bounds_checks
 
 call       func_24_set_up_segments
@@ -820,7 +935,7 @@ mov        dx, cx
 ; bl/bh continue to maintain memory type bits.
 ; bp:dx now main 32 bit copy size..
 
-; TODO: conventional bounds checks!
+
 
 cmp   byte ptr cs:[_current_call_subfunction_value], 1
 je    do_func_24_01    
@@ -1074,6 +1189,9 @@ func_24_clean_up_segments:
 
 func_24_do_bounds_checks:
  ;TODO this
+  ; conventional 1M boundary checks?
+  ; logical page count checks?
+  
 
   test       bl, 1
   jne        func_24_skip_si_check
@@ -1124,46 +1242,6 @@ func_24_offset_too_high:
   jmp    func_24_error
 
 
-;          25 Get Mappable Physical Address Array            5800h     
-;             Get Mappable Physical Address Array Entries    5801h     
-
-;    mappable_phys_page_struct   STRUC
-;             phys_page_segment        DW ?
-;             phys_page_number         DW ?
-;          mappable_phys_page_struct   ENDS
-
-EMS_FUNCTION_058h:
-xchg       ax, bx
-cmp        byte ptr cs:[_current_call_subfunction_value], 1
-jae        func_58_not_5801
-EMS_FUNCTION_05800h:
-push       ds
-push       si
-push       cs
-pop        ds
-mov        si, OFFSET mappable_phys_page_struct
-_RESIDENT_VARIABLE_pageable_frame_count_2:
-mov        cx, 01000h
-rep        movsw
-_RESIDENT_VARIABLE_pageable_frame_count_4:
-mov        cx, 01000h
-_RESIDENT_VARIABLE_pageable_frame_count_5:
-sub        di, 01000h
-
-; ah 0 from original xchg ah
-pop        si
-pop        ds
-iret
-func_58_not_5801:
-ja         func_58_invalid_subfunction
-EMS_FUNCTION_05801h:
-_RESIDENT_VARIABLE_pageable_frame_count_3:
-mov        cx, 01000h
-; ah already 0.
-iret
-func_58_invalid_subfunction:
-mov        ah, 08fh
-iret
 
 
 
@@ -1175,84 +1253,20 @@ xor        al, 1  ; 0 or 1 unallocated -> 1 or 1 allocated
 xchg       ax, bx ; ah zero, bx gets  total_open_emm_handles
 mov        ax, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count+1]
 mov        word ptr es:[di+2], ax ; pages_alloc_to_handle
-jnz        wrote_all_handle_pages ; no handles allocated
+jnz        func_14_wrote_all_handle_pages ; no handles allocated
 
 neg        ax
 add        ax, word ptr cs:[_RESIDENT_VARIABLE_total_EMS_page_count+1]
 mov        word ptr es:[di+6], ax ; total pages - unallocated = allocated
 mov        word ptr es:[di+4], 1
 
-wrote_all_handle_pages:
+func_14_wrote_all_handle_pages:
 xor        ax, ax
 mov        word ptr es:[di], 0 ; emm_handle
 
 inc bx ; (including the operating system handle [0]).  The number cannot be zero because the operating system handle is always active and
 
 iret
-
-
-
-;          8  Save Page Map                                  47h       
-
-EMS_FUNCTION_047h:
-
-IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
-   INCLUDE func08\scamp.asm
-ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-   INCLUDE func08\fantasy.asm
-ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-   INCLUDE func08\rodney.asm
-ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-   INCLUDE func08\scat.asm
-ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-   INCLUDE func08\ht18.asm
-ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-   INCLUDE func08\ht12.asm
-ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-   INCLUDE func08\hedaka.asm
-ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-   INCLUDE func08\lotech.asm
-ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-   INCLUDE func08\neat.asm
-ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-   INCLUDE func08\intelab.asm
-ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-   INCLUDE func08\sarc.asm
-ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-   INCLUDE func08\standard.asm
-ENDIF
-
- 
-
-;          9  Restore Page Map                               48h       
-
-EMS_FUNCTION_048h:
-
-IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
-   INCLUDE func09\scamp.asm
-ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-   INCLUDE func09\fantasy.asm
-ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-   INCLUDE func09\rodney.asm
-ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-   INCLUDE func09\scat.asm
-ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-   INCLUDE func09\ht18.asm
-ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-   INCLUDE func09\ht12.asm
-ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-   INCLUDE func09\hedaka.asm
-ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-   INCLUDE func09\lotech.asm
-ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-   INCLUDE func09\neat.asm
-ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-   INCLUDE func09\intelab.asm
-ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-   INCLUDE func09\sarc.asm
-ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-   INCLUDE func09\standard.asm
-ENDIF
 
 
 ;          15 Get Page Map                                   4E00h    
@@ -1404,8 +1418,52 @@ ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
 ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
    INCLUDE util\standard.asm
 ENDIF
+; TODO: these
+
+EMS_FUNCTION_052h:
+EMS_FUNCTION_053h:
+EMS_FUNCTION_054h:
+
+EMS_FUNCTION_059h:
+
+EMS_FUNCTION_05Ah:
+EMS_FUNCTION_05Bh:
+EMS_FUNCTION_05Ch:
+
+EMS_FUNCTION_05Dh:
+
+xchg       ax, bx
+iret
 
 
+ELSE
+   ; stubs for min driver.
+EMS_FUNCTION_04Dh:
+EMS_FUNCTION_04Eh:
+EMS_FUNCTION_04Fh:
+EMS_FUNCTION_05001h:
+; Do not implement OS level 4.0 functions for single application driver.
+EMS_FUNCTION_051h:
+EMS_FUNCTION_052h:
+EMS_FUNCTION_053h:
+EMS_FUNCTION_054h:
+EMS_FUNCTION_055h:
+EMS_FUNCTION_056h:
+EMS_FUNCTION_057h:
+
+
+EMS_FUNCTION_059h:
+
+EMS_FUNCTION_05Ah:
+EMS_FUNCTION_05Bh:
+EMS_FUNCTION_05Ch:
+
+EMS_FUNCTION_05Dh:
+xchg       ax, bx
+iret
+
+
+ENDIF
 
 
 
@@ -1568,14 +1626,6 @@ ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
 ENDIF
 
 
-mov        al, byte ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_1+1]
-cbw
-mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_3+1], ax
-mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_4+1], ax
-shl        ax, 1
-mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_5+2], ax
-mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_2+1], ax
-
 ; set page table to page frame.
 
 mov        ax, word ptr ds:[_RESIDENT_VARIABLE_page_frame_segment+1]
@@ -1627,7 +1677,7 @@ int        021h
 
 ; one handle for now
 mov        word ptr ds:[_RESIDENT_VARIABLE_handle_count+1], 01h
-
+public _RESIDENT_VARIABLE_handle_count
 ; set interrupt vector  067h
 mov        dx, OFFSET MAIN_EMS_INTERRUPT_VECTOR
 mov        ax, 02567h

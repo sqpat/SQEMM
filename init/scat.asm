@@ -12,17 +12,22 @@
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_set_register_1+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_set_register_2+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_set_register_3+1], al
-  add   byte ptr ds:[SELFMODIFY_SCAT_set_page_set_register_4+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_1+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_2+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_3+1], al
+IF COMPISA GE DRIVER_VERSION_SMALL
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_4+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_5+1], al
+ENDIF
+
+IF COMPISA GE DRIVER_VERSION_FULL
+  add   byte ptr ds:[SELFMODIFY_SCAT_set_page_set_register_4+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_6+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_7+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_8+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_9+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_10+1], al
+ENDIF
   mov   ax, 0218h
 
   use_default_ports:
@@ -96,19 +101,27 @@
   shl  ah, 2   ; 0 1 2 to 0 4 8  (C D 0)
   or   al, ah  ; combine
   add  al, SCAT_PAGE_C000_REGISTER_OFFSET
+
+IF COMPISA GE DRIVER_VERSION_SMALL
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_2+1], al
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_3+1], al
+ENDIF
+
+IF COMPISA GE DRIVER_VERSION_FULL
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_4+1], al
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_6+1], al
-  
+ENDIF  
 
   add  al, 0Ch
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_1+1], al
-  mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_5+1], al
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_7+1], al
+
+IF COMPISA GE DRIVER_VERSION_FULL
+  mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_5+1], al
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_8+1], al
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_9+1], al
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_10+1], al
+ENDIF
   sub  al, 0Ch
 
   or   al, SCAT_CHIPSET_AUTOINCREMENT_FLAG
@@ -208,4 +221,18 @@ SELFMODIFY_SCAT_set_page_set_register_1:
   
   mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_1+2], ax
   mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_2+2], ax
+  
+IF COMPISA GE DRIVER_VERSION_FULL
   mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_3+2], ax
+ENDIF
+
+mov        al, byte ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_1+1]
+cbw
+mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_3+1], ax
+mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_4+1], ax
+shl        ax, 1
+mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_5+2], ax
+mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_2+1], ax
+
+
+
