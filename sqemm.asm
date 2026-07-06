@@ -102,6 +102,13 @@ ENDIF
 
 ENDM
 
+MOVSW_MACRO MACRO
+   shr        cx, 1
+   rep        movsw
+   jnc        $+1
+   movsb
+ENDM
+
 .MODEL  tiny
 
 
@@ -126,6 +133,9 @@ PAGE_COUNT_4_MB = 256
 OFFSET_1_MB = 64
 OFFSET_2_MB = 128
 ; 80h represents 2 MB offset beyond EMS start point
+
+FUNC_24_SOURCE_PAGE_FRAME_INDEX = 2
+FUNC_24_DEST_PAGE_FRAME_INDEX = 3
 
 
 
@@ -456,7 +466,7 @@ EMS_FUNCTION_05Bh:
 EMS_FUNCTION_05Ch:
 
 EMS_FUNCTION_05Dh:
-; TODO NOT DONE , wont be done. fall thru
+; These functions will remain unimplemented for this version of the driver. fall thru
 
 ;          1  Get Status                                     40h      
 
@@ -689,6 +699,162 @@ iret
 
 ; REFER TO EMS 4.0 documentation, this is a doozy!
 ;          24 Move Memory Region                             5700h     
+
+;move_source_dest_struct      STRUC
+;             region_length             DD  ?
+;             source_memory_type        DB  ?
+;             source_handle             DW  ?
+;             source_initial_offset     DW  ?
+;             source_initial_seg_page   DW  ?
+;             dest_memory_type          DB  ?
+;             dest_handle               DW  ?
+;             dest_initial_offset       DW  ?
+;             dest_initial_seg_page     DW  ?
+;          move_source_dest_struct      ENDS
+ALIGN 2
+_RESIDENT_VARIABLE_FUNC_24_source_original_page:
+dw 0
+_RESIDENT_VARIABLE_FUNC_24_dest_original_page:
+dw 0
+_RESIDENT_VARIABLE_FUNC_24_source_current_page:
+dw 0
+_RESIDENT_VARIABLE_FUNC_24_dest_current_page:
+dw 0
+
+; The function code passed to the memory manager is not defined.
+func_24_bad_subfunction:
+mov        ah, 08Fh  ;  The subfunction parameter is invalid.
+iret
+func_24_bad_handle:
+mov        ah, 083h   ; The manager couldn't find either the source or destination EMM handles.
+jmp        func_24_error
+func_24_unowned_memory:
+; TODO catch
+mov        ah, 08Ah   ; One or more of the logical pages is out of the range of logical pages allocated to the source/destination handle.
+jmp        func_24_error
+func_24_region_overlap:
+; TODO catch
+mov        ah, 094h   ; The conventional memory region and expanded memory region overlap.
+jmp        func_24_error
+func_24_too_large:
+mov        ah, 096h   ; Region length exceeds 1M Byte limit.
+jmp        func_24_error
+func_24_wraparound:
+; TODO catch
+mov        ah, 0A2h   ; An attempt was made to wrap around the 1M-byte address space of conventional memory during the move.
+jmp        func_24_error
+func_24_overlap:
+; TODO catch
+mov        ah, 097h   ; The source and destination expanded memory regions have the same handle and overlap.
+jmp        func_24_error
+func_24_invalid_memtype:
+mov        ah, 098h
+func_24_error:
+mov        es, ax
+POPA_MACRO
+mov        ax, es ; param
+pop        ds
+pop        es
+iret
+
+EMS_FUNCTION_057h:
+xchg       ax, bx
+cmp        byte ptr cs:[_current_call_subfunction_value], 1
+ja         func_24_bad_subfunction
+push       es
+push       ds
+PUSHA_MACRO
+
+
+do_func_24_00:
+
+lodsw
+xchg       ax, cx 
+lodsw
+cmp        ax, 010h  ; 0x100000 = 1 MB
+ja         func_24_too_large
+jb         func_24_size_ok
+test       cx, cx
+jne        func_24_too_large
+func_24_size_ok:
+xchg       ax, bp ; length to bp:cx
+
+lodsb    ; extended or expanded
+cmp        al, 1
+ja         func_24_invalid_memtype
+xchg       ax, bx ; bl gets this byte.
+lodsw      
+call       check_valid_handle 
+jc         func_24_bad_handle
+lodsw      ; initial offset
+xchg       ax, si
+lodsw      ; initial page
+xchg       ax, dx
+
+
+lodsb    ; extended or expanded
+cmp        al, 1
+ja         func_24_invalid_memtype
+mov        bh, al
+lodsw      
+call       check_valid_handle 
+jc         func_24_bad_handle
+lodsw      ; dest offset
+xchg       ax, di
+lodsw      ; dest page
+
+
+; dx, ax have source, dest segs
+; si, di have source, dest offsets
+; bp:cx is length
+; bl, bh have source, dest mem types.
+
+; todo: check params for accuracy BEFORE state push pop.
+call       func_24_do_bounds_checks
+
+call       func_24_set_up_segments
+
+mov        dx, cx
+
+; ds and es are now set up.
+; bl/bh continue to maintain memory type bits.
+; bp:dx now main 32 bit copy size..
+
+; TODO: conventional bounds checks!
+
+cmp   byte ptr cs:[_current_call_subfunction_value], 1
+je    do_func_24_01    
+
+
+; MAIN COPY LOOP: 
+func_24_copy_more_memory:
+
+   call       func_24_prep_copy_pointers ; does all the loop/copy setup
+   mov        ax, cx  ; copy len
+   MOVSW_MACRO
+
+   call       func_24_check_repage ; does all the logical page repaging
+
+
+   sub        dx, ax
+   sbb        bp, cx ; known 0   
+
+   mov        ax, dx
+   or         ax, bp
+   jnz        func_24_copy_more_memory
+
+func_24_done:
+
+call   func_24_clean_up_segments ; restore pagination if necessary
+
+POPA_MACRO
+pop    ds
+pop    es
+xor    ax, ax ; success
+iret
+
+
+
 ;             Exchange Memory Region                         5701h     
 ; xchg_source_dest_struct      STRUC
 ;             region_length             DD ?   0
@@ -703,10 +869,260 @@ iret
 ;          xchg_source_dest_struct      ENDS
 ;          DS:SI = pointer to move_source_dest structure
 ;     FUNCTION 24   MOVE/EXCHANGE MEMORY REGION
-EMS_FUNCTION_057h:
-; TODO NOT DONE, should be done
-xchg       ax, bx
-iret
+do_func_24_01:
+
+; MAIN EXCHANGE LOOP: 
+func_24_exchange_more_memory:
+
+   call       func_24_prep_copy_pointers ; does all the loop/exchange setup
+   push       cx ; store len
+   func_24_exchange_more_bytes:
+   lodsb
+   xchg       al, byte ptr es:[di]
+   lock mov        byte ptr ds:[si-1], al
+   inc        di
+   loop       func_24_exchange_more_bytes
+   pop        ax ; get length
+
+   call       func_24_check_repage ; does all the logical page repaging
+
+
+
+   sub        dx, ax
+   sbb        bp, cx ; known 0   
+
+   mov        ax, dx
+   or         ax, bp
+   jnz        func_24_copy_more_memory
+
+jmp  func_24_done
+
+
+; carry flag means bad handle
+check_valid_handle:
+ cmp       ax, 1
+ jne       ret_bad_handle
+ cmp       word ptr cs: [_RESIDENT_VARIABLE_handle_count+1], ax  ; known 1
+ jae       ret_bad_handle  ; the one handle is unalloced..
+ clc
+ ret
+ ret_bad_handle:
+ stc
+ ret
+
+; ds:si and es:di get normalized such that si/di are is 000n
+; bl/bh still carry copy types
+
+func_24_prep_copy_pointers:
+   ; ax/dx free
+
+ test  bl, 1
+ jne   func_24_skip_ds_si_noramlize
+ mov   dx, ds
+ mov   ax, si
+ and   si, 0FFF0h
+ SHIFT_MACRO shr ax 4
+ sub   dx, ax
+ mov   ds, dx
+
+ func_24_skip_ds_si_noramlize:
+ test  bh, 1
+ jne   func_24_skip_es_di_noramlize
+ mov   dx, es
+ mov   ax, di
+ and   di, 0FFF0h
+ SHIFT_MACRO shr ax 4
+ sub   dx, ax
+ mov   es, dx
+ func_24_skip_es_di_noramlize:
+
+
+ ; segments/offsets were normalized if conventional.
+ ; now calculate copy length for this iter.
+ ;
+ test  bx, bx
+ jz    func_24_use_conventional_max
+ mov   cx, 16384
+ cmp   bx, 0100h  
+ je    func_24_use_di_value
+ ja    func_24_use_min_of_both
+ func_24_use_si_value:
+ sub   cx, si
+ jmp   func_24_bounds_check
+ func_24_use_di_value:
+ sub   cx, di
+ jmp   func_24_bounds_check
+ func_24_use_min_of_both:
+ mov   ax, cx
+ sub   cx, si
+ sub   ax, di
+ cmp   cx, ax
+ jbe   func_24_bounds_check
+ xchg  ax, cx
+ jmp   func_24_bounds_check
+
+
+func_24_use_conventional_max:
+ mov   cx, dx
+ cmp   cx, 32768
+ ja    func_24_cap_conventional_size
+ mov   cx, 32768
+func_24_cap_conventional_size:
+
+func_24_bounds_check:
+ cmp        cx, dx   ; is length smaller than bp:dx?
+ jbe        func_24_ax_smaller_do_copy
+ test       bp, bp
+ jne        func_24_ax_smaller_do_copy
+ mov        cx, dx
+ func_24_ax_smaller_do_copy:
+
+ ret
+
+; ax gets MAX(16384-si, 16384-di)
+func_24_prep_extended_copy_length:
+ push  dx
+ mov   ax, 16384
+ mov   dx, ax
+ sub   ax, si
+ sub   dx, di
+ cmp   ax, dx
+ jbe   keep_this_ax
+ xchg  ax, dx
+ keep_this_ax:
+ pop   dx
+ ret
+
+ test  bl, 1
+ jne   skip_ds_si_noramlize
+ mov   dx, ds
+ mov   ax, si
+ and   si, 0FFF0h
+ SHIFT_MACRO shr ax 4
+ sub   dx, ax
+ mov   ds, dx
+
+ skip_ds_si_noramlize:
+ test  bh, 1
+ jne   skip_es_di_noramlize
+ mov   dx, es
+ mov   ax, di
+ and   di, 0FFF0h
+ SHIFT_MACRO shr ax 4
+ sub   dx, ax
+ mov   es, dx
+
+ skip_es_di_noramlize:
+ pop   ax
+
+ ret
+
+
+; set up ds:es according to bl/bh memory types. prep extended pages if necessary
+func_24_set_up_segments:
+ test  bl, 1
+ jne   func_24_prep_source_logical
+ mov   ds, dx
+
+ test  bh, 1
+ jne   func_24_prep_dest_logical
+ func_24_use_dest_conventional:
+ mov   es, ax
+
+ ret
+
+func_24_prep_source_logical:
+ push  ax   ; AAAA save ax (dest segment)
+ mov   word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_current_page], dx
+ mov   ax, FUNC_24_SOURCE_PAGE_FRAME_INDEX
+ call  UTIL_get_page
+ mov   word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_original_page], ax
+ mov   ax, FUNC_24_SOURCE_PAGE_FRAME_INDEX
+ call  UTIL_set_page
+ mov   ds, word ptr cs:[mappable_phys_page_struct_page_frame+(4 * FUNC_24_SOURCE_PAGE_FRAME_INDEX)] ; page 3 segment
+ pop   ax   ; AAAA restore ax (dest segment)
+ test  bh, 1
+ je    func_24_use_dest_conventional
+ 
+func_24_prep_dest_logical:
+ mov   word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_current_page], ax
+ push  ax
+ mov   ax, FUNC_24_DEST_PAGE_FRAME_INDEX
+ call  UTIL_get_page
+ mov   word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_original_page], ax
+ pop   dx
+ mov   ax, FUNC_24_DEST_PAGE_FRAME_INDEX
+ call  UTIL_set_page
+ mov   es, word ptr cs:[mappable_phys_page_struct_page_frame+(4 * FUNC_24_DEST_PAGE_FRAME_INDEX)] ; page 3 segment
+ ret
+
+func_24_clean_up_segments:
+  test  bl, 1
+  je    func_24_skip_source_cleanup
+  mov   dx, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_original_page]
+  mov   ax, FUNC_24_SOURCE_PAGE_FRAME_INDEX
+  call  UTIL_set_page
+ func_24_skip_source_cleanup:
+  test  bh, 1
+  je    func_24_skip_dest_cleanup
+  mov   dx, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_original_page]
+  mov   ax, FUNC_24_DEST_PAGE_FRAME_INDEX
+  call  UTIL_set_page
+
+ func_24_skip_dest_cleanup:
+  ret
+
+func_24_do_bounds_checks:
+ ;TODO this
+
+  test       bl, 1
+  jne        func_24_skip_si_check
+  cmp        si, 16384
+  jae        func_24_offset_too_high
+ func_24_skip_si_check:
+
+  test       bh, 1
+  jne        func_24_skip_di_check
+  cmp        di, 16384
+  jae        func_24_offset_too_high
+ func_24_skip_di_check:
+  ret
+
+func_24_check_repage:
+  test    bl, 1
+  je      func_24_dont_repage_source
+  cmp     si, 16384
+  jbe     func_24_dont_repage_source
+  push    dx
+  push    ax
+  inc     word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_current_page]
+  mov     dx, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_current_page]
+  mov     ax, FUNC_24_SOURCE_PAGE_FRAME_INDEX
+  call    UTIL_set_page
+  pop     ax
+  pop     dx
+  xor     si, si
+ func_24_dont_repage_source:
+  test    bh, 1
+  je      func_24_dont_repage_dest
+  cmp     di, 16384
+  jbe     func_24_dont_repage_dest
+  push    dx
+  push    ax
+  inc     word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_current_page]
+  mov     dx, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_current_page]
+  mov     ax, FUNC_24_DEST_PAGE_FRAME_INDEX
+  call    UTIL_set_page
+  pop     ax
+  pop     dx
+  xor     di, di
+ func_24_dont_repage_dest:
+  ret
+
+func_24_offset_too_high:
+  mov    ah, 095h   ; The offset within the logical page exceeds the length of the logical page.
+  jmp    func_24_error
+
 
 ;          25 Get Mappable Physical Address Array            5800h     
 ;             Get Mappable Physical Address Array Entries    5801h     
@@ -957,6 +1373,40 @@ util_get_register_for_segment:
    pop   cx
    pop   si
    ret
+
+
+
+
+
+
+IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
+   INCLUDE util\scamp.asm
+ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
+   INCLUDE util\fantasy.asm
+ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
+   INCLUDE util\rodney.asm
+ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
+   INCLUDE util\scat.asm
+ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
+   INCLUDE util\ht18.asm
+ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
+   INCLUDE util\ht12.asm
+ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
+   INCLUDE util\hedaka.asm
+ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
+   INCLUDE util\lotech.asm
+ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
+   INCLUDE util\neat.asm
+ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
+   INCLUDE util\intelab.asm
+ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
+   INCLUDE util\sarc.asm
+ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
+   INCLUDE util\standard.asm
+ENDIF
+
+
+
 
 
 

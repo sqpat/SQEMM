@@ -21,6 +21,8 @@
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_6+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_7+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_8+1], al
+  add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_9+1], al
+  add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_10+1], al
   mov   ax, 0218h
 
   use_default_ports:
@@ -105,6 +107,8 @@
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_5+1], al
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_7+1], al
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_8+1], al
+  mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_9+1], al
+  mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_10+1], al
   sub  al, 0Ch
 
   or   al, SCAT_CHIPSET_AUTOINCREMENT_FLAG
