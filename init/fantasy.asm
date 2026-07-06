@@ -64,11 +64,11 @@
   
   jc    found_chipset_bounds_value
 
-  mov   ax, FANTASY_EMS_MAX_PAGE_COUNT
+  mov   ax, MAX_PAGE_COUNT
 
 found_chipset_bounds_value:
 
-  cmp   ax, FANTASY_EMS_MAX_PAGE_COUNT
+  cmp   ax, MAX_PAGE_COUNT
   jbe   page_count_bounds_ok
 
   mov  DX, OFFSET string_bad_page_count_param
@@ -85,7 +85,7 @@ found_chipset_bounds_value:
   call  print_driver_param_4_char_int
 
 
-  mov   byte ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_1+1], FANTASY_PAGE_FRAME_COUNT ; todo... should we decrease based on stuff like ROMS etc?
+mov   byte ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_1+1], PAGE_FRAME_COUNT ; todo... should we decrease based on stuff like ROMS etc?
 
 
 

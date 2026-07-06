@@ -1625,6 +1625,19 @@ ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
    INCLUDE init\standard.asm
 ENDIF
 
+mov        ax, PAGE_FRAME_COUNT
+mov        byte ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_1+1], al ; todo... should we decrease based on stuff like ROMS etc?
+
+
+mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_3+1], ax
+mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_4+1], ax
+shl        ax, 1
+mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_5+2], ax
+mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_2+1], ax
+
+
+
+
 
 ; set page table to page frame.
 
@@ -1892,6 +1905,8 @@ done_editing_string:
 ;;; BEGIN CHIPSET SPECIFIC FUNCTION INIT DEFINITIONS. This section is not resident after initialization
 ;;; BEGIN CHIPSET SPECIFIC FUNCTION INIT DEFINITIONS. This section is not resident after initialization
 
+
+; TODO move the below to another file
 
 IF COMPILE_CHIPSET EQ SCAT_CHIPSET
   scat_chipset_offset_lookup_table:

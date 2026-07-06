@@ -180,7 +180,6 @@ SELFMODIFY_SCAT_set_page_set_register_1:
   call  print_driver_param_4_char_int
 
 
-  mov   byte ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_1+1], SCAT_PAGE_FRAME_COUNT ; todo... should we decrease based on stuff like ROMS etc?
 
   mov   ah, "O"  ; page offset
   call  parse_driver_params_get_int  ; no default. instead fetch from chipswt
@@ -225,14 +224,4 @@ SELFMODIFY_SCAT_set_page_set_register_1:
 IF COMPISA GE DRIVER_VERSION_FULL
   mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_3+2], ax
 ENDIF
-
-mov        al, byte ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_1+1]
-cbw
-mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_3+1], ax
-mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_4+1], ax
-shl        ax, 1
-mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_5+2], ax
-mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_2+1], ax
-
-
 
