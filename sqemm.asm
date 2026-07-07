@@ -572,11 +572,11 @@ iret
 
 EMS_FUNCTION_042h:
 ;      FUNCTION 3    GET UNALLOCATED PAGE COUNT
+xchg       ax, bx ; zero ah
 _RESIDENT_VARIABLE_unallocated_page_count:
-mov        dx, 01000h
+mov        bx, 01000h
 _RESIDENT_VARIABLE_total_EMS_page_count:
-mov        ax, 01000h  ; return in bx
-xchg       ax, bx
+mov        dx, 01000h  ; return in dx
 ; ah is already 0 because bh was 0 from jump table lookup
 iret
 
