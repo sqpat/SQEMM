@@ -33,6 +33,18 @@ COMPILE_CHIPSET = FANTASY_EMS
 
 RET_OPCODE = 0C3h
 
+MAX_HANDLE_COUNT = 128  ; TODO whats the right number?
+
+HANDLE_INFO STRUC 
+    handle_num_pages   dw ?  ; 0
+    handle_first_page  dw ?  ; 0
+HANDLE_INFO ENDS  ; 04h
+
+PAGE_INFO STRUC 
+; i think we dont need an owner?
+    ; page_info_page_owner   dw ?  ; 0
+    page_info_next_page    dw ?  ; 0
+PAGE_INFO ENDS  ; 04h
 
 
 
@@ -1470,6 +1482,36 @@ iret
 
 ENDIF
 
+IF COMPILE_VERSION GE DRIVER_VERSION_SMALL
+
+
+   _RESIDENT_VARIABLE_global_last_page:
+   dw  OFFSET _RESIDENT_VARIABLE_page_list + (MAX_PAGE_COUNT * (SIZE PAGE_INFO))
+
+   ; global handle (first allocation)
+
+      dw MAX_PAGE_COUNT  ; num pages for handle. -1 means unallocated.
+      dw OFFSET _RESIDENT_VARIABLE_handle_list ; ptr to first page. Can be -1 if the above is 0 for ems 4.0 driver
+
+   _RESIDENT_VARIABLE_handle_list:
+
+   REPT (MAX_HANDLE_COUNT - 1)
+      dw -1  ; num pages for handle. -1 means unallocated.
+      dw -1  ; ptr to first page. Can be -1 if the above is 0 for ems 4.0 driver
+   ENDM
+
+
+
+   _RESIDENT_VARIABLE_page_list:
+
+   CURRENT_NEXT_POINTER = _RESIDENT_VARIABLE_page_list
+
+   REPT MAX_PAGE_COUNT
+      CURRENT_NEXT_POINTER = CURRENT_NEXT_POINTER + (SIZE PAGE_INFO)
+      dw  CURRENT_NEXT_POINTER
+   ENDM
+
+ENDIF
 
 
 
@@ -1631,7 +1673,7 @@ ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
 ENDIF
 
 mov        ax, PAGE_FRAME_COUNT
-mov        byte ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_1+1], al ; todo... should we decrease based on stuff like ROMS etc?
+mov        byte ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_1+1], al ; todo... should we increase based on presence of other pages versus ROMS etc?
 
 
 mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_3+1], ax
