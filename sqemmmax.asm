@@ -188,10 +188,6 @@ db  0
 ALIGN 2
 
 
-func_44_no_emm_handle_found:
-mov        ah, 083h  ; The memory manager couldn't find the EMM handle your program specified.
-iret
-ALIGN 2
  
 
 
@@ -278,6 +274,34 @@ NOT_FUNC_50h:
 
 EMS_FUNCTION_044h:
 
+_RESIDENT_VARIABLE_pageable_frame_count_1:
+  cmp        al, 010h
+  jae        func_05_page_too_high
+
+; get actual page bx for handle dx
+
+push  cx
+mov   cx, bx
+mov   bx, dx
+SHIFT_MACRO shl bx 2  ;  SIZE HANDLE_INFO
+cmp   word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page], -1
+je    func_05_handle_not_found
+cmp   cx, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages]
+ja    func_05_logical_page_too_high
+mov   bx, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page]
+
+jcxz  func_05_done_looping
+func_05_loop_next_page:
+mov   bx, word ptr cs:[bx + PAGE_INFO.page_info_next_page]
+loop  func_05_loop_next_page
+func_05_done_looping:
+; bx is now ptr to the actual page...
+sub   bx, OFFSET _RESIDENT_VARIABLE_page_list
+shr   bx, 1  ; board physical page
+
+pop   cx
+
+
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
    INCLUDE max/func05\scamp.asm
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
@@ -303,13 +327,20 @@ ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
 ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
    INCLUDE max/func05\standard.asm
 ENDIF
+func_05_handle_not_found:
+mov        ah, 083h  ; The memory manager couldn't find the EMM handle your program specified.
+iret
 
-
-  
 func_17_page_too_high:
 func_05_page_too_high:
 mov        ah, 08Bh
 iret
+func_05_logical_page_too_high:
+pop        cx
+mov        ah, 08Bh
+iret
+
+  
 
 ; reserved, dont implement
 EMS_FUNCTION_049h:

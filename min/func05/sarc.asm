@@ -5,7 +5,7 @@ _RESIDENT_VARIABLE_pageable_frame_count_1:
 
   ENOUGH_PAGES:
   cmp        dx,  1
-  jne        func_44_no_emm_handle_found
+  jne        func_05_handle_not_found
   
   
   ; al and bx are still the args

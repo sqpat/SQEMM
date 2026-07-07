@@ -180,7 +180,7 @@ db  0
 ALIGN 2
 
 
-func_44_no_emm_handle_found:
+func_05_handle_not_found:
 mov        ah, 083h  ; The memory manager couldn't find the EMM handle your program specified.
 iret
 ALIGN 2

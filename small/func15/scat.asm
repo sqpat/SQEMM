@@ -68,7 +68,6 @@ je    func_15_sub_03
 ; fall thru
 func_15_sub_02:
 
-XCHG_AX_CX_OPCODE = 091h
  ; combination of function 00 and function 01. Self modify and run them.
  mov     byte ptr cs:[SELFMODIFY_func_15_return], RET_OPCODE
  call    func_15_sub_00
