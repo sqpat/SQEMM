@@ -439,21 +439,25 @@ ja         func_43_allocated_too_many_pages
 cmp        ax, word ptr cs:[_RESIDENT_VARIABLE_total_EMS_page_count+1]
 ja         func_43_allocated_too_many_pages_above_total
 
+
+
+call       COMMON_get_next_free_handle
+cmp        dx, -1
+je         func_43_no_handles_Left
+
 dec        word ptr cs:[_RESIDENT_VARIABLE_handle_count+1]
 
-js         func_43_no_handles_Left
-
-ALLOCATE_SUCCESS:
-sub        word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count+1], ax
 xchg       ax, bx
-cwd        ; dx = 0
-inc        dx ;  handle always 1.
+call       COMMON_allocate_pages
+
+xor        ax, ax ; return good
+
+
 iret
 
 
 
 func_43_no_handles_Left:
-inc        word ptr cs:[_RESIDENT_VARIABLE_handle_count+1]
 
 xchg       ax, bx
 cwd        ; dx = 0
@@ -485,10 +489,13 @@ iret
 
 EMS_FUNCTION_045h:
 xchg       ax, bx  ; put bx back
+; todo check handle info for real
 cmp        dx, 1
 jne        func_45_no_emm_handle_found
 
 GOOD_EMM_HANDLE:
+
+call       COMMON_deallocate_pages
 mov        ax, word ptr cs:[_RESIDENT_VARIABLE_total_EMS_page_count+1]
 
 mov        word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count+1], ax
@@ -1288,33 +1295,144 @@ xchg       ax, bx
 iret
 
 
+COMMON_reallocate_pages:
+push bx
+; allocate ax pages to (pre-existing) handle dx
+SHIFT_MACRO shl  dx 2
+xchg bx, dx
+mov  dx, word ptr cs:[bx + HANDLE_INFO.handle_first_page]
+xchg bx, dx
+SHIFT_MACRO shr  dx 2 ; dx has original page, bx has its first allocation..
 
 
-   _RESIDENT_VARIABLE_global_last_page:
-   dw  OFFSET _RESIDENT_VARIABLE_page_list + (MAX_PAGE_COUNT * (SIZE PAGE_INFO))
+;jmp  skip_first_page_set  ; TODO not this, need to catch the -1 case and switch over to unallocated?
 
-   ; global handle (first allocation)
+COMMON_allocate_pages:
+   ; allocate ax pages to handle dx
+   push bx
+   sub  word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count+1], ax
 
-      dw MAX_PAGE_COUNT  ; num pages for handle. -1 means unallocated.
-      dw OFFSET _RESIDENT_VARIABLE_handle_list ; ptr to first page. Can be -1 if the above is 0 for ems 4.0 driver
+   mov  bx, word ptr cs:[_RESIDENT_VARIABLE_handle_list + HANDLE_INFO.handle_first_page] ; get first unallocated page
+   SHIFT_MACRO shl  dx 2
+   xchg bx, dx
+   mov  word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page], dx
+   mov  word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages], ax
+   xchg bx, dx
+   SHIFT_MACRO shr  dx 2
 
-   _RESIDENT_VARIABLE_handle_list:
+   PAGE_loop_allocate_next_page:
 
-   REPT (MAX_HANDLE_COUNT - 1)
-      dw -1  ; num pages for handle. -1 means unallocated.
-      dw -1  ; ptr to first page. Can be -1 if the above is 0 for ems 4.0 driver
-   ENDM
+   mov  bx, word ptr cs:[bx + PAGE_INFO.page_info_next_page]
+   dec  ax
+   jns  PAGE_loop_allocate_next_page
+
+   ; ax is -1
+   xchg ax, word ptr cs:[bx + PAGE_INFO.page_info_next_page] ; mark end -1
+   lock mov  word ptr cs:[_RESIDENT_VARIABLE_handle_list + PAGE_INFO.page_info_next_page], ax 
+
+
+   pop  bx
+   ret
+
+
+COMMON_deallocate_pages:
+   ; deallocate all pages from handle dx
+   push bx
+   mov  bx, dx
+   SHIFT_MACRO shl  bx 2
+
+   mov  ax, -1   
+   xchg ax, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages] ; set -1 and get page count
+   add  word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count+1], ax
+
+   test ax, ax
+   jz   handle_zero_page_deallocation
+
+   mov  ax, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page] ; get first unallocated page
+   xchg ax, bx   ; ax stores original pointer. bx gets first page
+
+   cmp  bx, -1  ; special case 0 entry list
+   je   skip_loop
+
+   PAGE_loop_deallocate_next_page:
+   mov  bx, word ptr cs:[bx + PAGE_INFO.page_info_next_page]
+   cmp  bx, -1
+
+   jbe  PAGE_loop_deallocate_next_page
+
+   ; bx is -1
+   ; ax is pointer to handle.
+
+   xchg ax, bx
+
+   ; ax is -1
+   
+   xchg word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page], ax  ; -1
+   lock mov  word ptr cs:[_RESIDENT_VARIABLE_handle_list + PAGE_INFO.page_info_next_page], ax  ; point to first page 
+
+   skip_loop:
+   pop  bx
+   ret
+
+   handle_zero_page_deallocation:
+   dec  ax  ; -1
+   mov  word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page], ax ; write -1
+   pop  bx
+   ret
+
+
+COMMON_get_next_free_handle:
+   ; return next free handle in dx
+   push  bx
+   mov   bx, OFFSET _RESIDENT_VARIABLE_handle_list + (SIZE HANDLE_INFO) ; start at index 1
+   mov   dx, -1
+   
+  check_next_handle:
+   cmp   word ptr cs:[bx], dx
+   je    found_free_handle
+   add   bx, SIZE HANDLE_INFO
+   cmp   bx, offset _RESIDENT_VARIABLE_handle_list_END
+   jb    check_next_handle
+   ; dx = -1
+   pop   bx
+   ret
+
+  found_free_handle:
+   sub   bx, OFFSET _RESIDENT_VARIABLE_handle_list 
+   mov   dx, bx
+   SHIFT_MACRO shr dx 2
+   pop   bx
+   ret
 
 
 
-   _RESIDENT_VARIABLE_page_list:
+_RESIDENT_VARIABLE_global_last_page:
+dw  OFFSET _RESIDENT_VARIABLE_page_list + (MAX_PAGE_COUNT * (SIZE PAGE_INFO))
 
-   CURRENT_NEXT_POINTER = _RESIDENT_VARIABLE_page_list
+; global handle (first allocation)
 
-   REPT MAX_PAGE_COUNT
-      CURRENT_NEXT_POINTER = CURRENT_NEXT_POINTER + (SIZE PAGE_INFO)
-      dw  CURRENT_NEXT_POINTER
-   ENDM
+_RESIDENT_VARIABLE_handle_list:
+
+   dw MAX_PAGE_COUNT  ; num pages for handle. -1 means unallocated.
+   dw OFFSET _RESIDENT_VARIABLE_handle_list ; ptr to first page. Can be -1 if the above is 0 for ems 4.0 driver
+
+
+REPT (MAX_HANDLE_COUNT - 1)
+   dw -1  ; num pages for handle. -1 means unallocated.
+   dw -1  ; ptr to first page. Can be -1 if the above is 0 for ems 4.0 driver
+ENDM
+
+_RESIDENT_VARIABLE_handle_list_END:
+
+
+_RESIDENT_VARIABLE_page_list:
+
+CURRENT_NEXT_POINTER = _RESIDENT_VARIABLE_page_list
+
+REPT MAX_PAGE_COUNT
+   CURRENT_NEXT_POINTER = CURRENT_NEXT_POINTER + (SIZE PAGE_INFO)
+   dw  CURRENT_NEXT_POINTER
+ENDM
 
 
 
@@ -1538,9 +1656,9 @@ int        021h
 
 
 
+; todo variableize, remap pointers etc.
 
-; one handle for now
-mov        word ptr ds:[_RESIDENT_VARIABLE_handle_count+1], 01h
+mov        word ptr ds:[_RESIDENT_VARIABLE_handle_count+1], MAX_HANDLE_COUNT  
 public _RESIDENT_VARIABLE_handle_count
 ; set interrupt vector  067h
 mov        dx, OFFSET MAIN_EMS_INTERRUPT_VECTOR

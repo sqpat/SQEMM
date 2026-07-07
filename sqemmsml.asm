@@ -636,31 +636,31 @@ iret
 
 
 
-   _RESIDENT_VARIABLE_global_last_page:
-   dw  OFFSET _RESIDENT_VARIABLE_page_list + (MAX_PAGE_COUNT * (SIZE PAGE_INFO))
+_RESIDENT_VARIABLE_global_last_page:
+dw  OFFSET _RESIDENT_VARIABLE_page_list + (MAX_PAGE_COUNT * (SIZE PAGE_INFO))
 
-   ; global handle (first allocation)
+; global handle (first allocation)
+_RESIDENT_VARIABLE_handle_list:
 
-      dw MAX_PAGE_COUNT  ; num pages for handle. -1 means unallocated.
-      dw OFFSET _RESIDENT_VARIABLE_handle_list ; ptr to first page. Can be -1 if the above is 0 for ems 4.0 driver
-
-   _RESIDENT_VARIABLE_handle_list:
-
-   REPT (MAX_HANDLE_COUNT - 1)
-      dw -1  ; num pages for handle. -1 means unallocated.
-      dw -1  ; ptr to first page. Can be -1 if the above is 0 for ems 4.0 driver
-   ENDM
+   dw MAX_PAGE_COUNT  ; num pages for handle. -1 means unallocated.
+   dw OFFSET _RESIDENT_VARIABLE_handle_list ; ptr to first page. Can be -1 if the above is 0 for ems 4.0 driver
 
 
+REPT (MAX_HANDLE_COUNT - 1)
+   dw -1  ; num pages for handle. -1 means unallocated.
+   dw -1  ; ptr to first page. Can be -1 if the above is 0 for ems 4.0 driver
+ENDM
 
-   _RESIDENT_VARIABLE_page_list:
 
-   CURRENT_NEXT_POINTER = _RESIDENT_VARIABLE_page_list
 
-   REPT MAX_PAGE_COUNT
-      CURRENT_NEXT_POINTER = CURRENT_NEXT_POINTER + (SIZE PAGE_INFO)
-      dw  CURRENT_NEXT_POINTER
-   ENDM
+_RESIDENT_VARIABLE_page_list:
+
+CURRENT_NEXT_POINTER = _RESIDENT_VARIABLE_page_list
+
+REPT MAX_PAGE_COUNT
+   CURRENT_NEXT_POINTER = CURRENT_NEXT_POINTER + (SIZE PAGE_INFO)
+   dw  CURRENT_NEXT_POINTER
+ENDM
 
 
 
