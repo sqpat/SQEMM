@@ -1265,7 +1265,7 @@ func_24_offset_too_high:
 ;          14 Get All Handle Pages                           4Dh       
 ; we write all handles and their page counts to es:di
 EMS_FUNCTION_04Dh:
-mov        ax, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count+1]
+mov        ax, word ptr cs:[_RESIDENT_VARIABLE_handle_count+1]
 xor        al, 1  ; 0 or 1 unallocated -> 1 or 1 allocated
 xchg       ax, bx ; ah zero, bx gets  total_open_emm_handles
 mov        ax, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count+1]
