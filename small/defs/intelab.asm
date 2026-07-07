@@ -1,0 +1,19 @@
+; this is for 240 settings..
+INTEL_AB_ENABLE_REGISTER = 0024Fh
+INTEL_AB_4000_REGISTER = 00240h
+
+; 00246 = C000
+; 00247 = D000
+; 00248 = e000
+; 00249 Does not seem to do F000
+
+INTEL_AB_PAGE_REGISTER_0 = 00247h
+INTEL_AB_PAGE_REGISTER_1 = 04247h
+INTEL_AB_PAGE_REGISTER_2 = 08247h
+INTEL_AB_PAGE_REGISTER_3 = 0C278h
+; this would be A0 instead of 98 because the card initializes conventional with gaps
+; however we repage 18-1F to 08-0F
+INTEL_AB_PAGE_OFFSET_AMT = 0A0h
+INTEL_AB_CHIPSET_UNMAP_VALUE = 00h
+PAGE_FRAME_COUNT = 28
+MAX_PAGE_COUNT = 104

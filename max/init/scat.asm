@@ -20,7 +20,7 @@ IF COMPILE_VERSION GE DRIVER_VERSION_SMALL
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_5+1], al
 ENDIF
 
-IF COMPILE_VERSION GE DRIVER_VERSION_FULL
+IF COMPILE_VERSION GE DRIVER_VERSION_MAX
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_set_register_4+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_6+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_7+1], al
@@ -107,7 +107,7 @@ IF COMPILE_VERSION GE DRIVER_VERSION_SMALL
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_3+1], al
 ENDIF
 
-IF COMPILE_VERSION GE DRIVER_VERSION_FULL
+IF COMPILE_VERSION GE DRIVER_VERSION_MAX
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_4+1], al
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_6+1], al
 ENDIF  
@@ -116,7 +116,7 @@ ENDIF
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_1+1], al
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_7+1], al
 
-IF COMPILE_VERSION GE DRIVER_VERSION_FULL
+IF COMPILE_VERSION GE DRIVER_VERSION_MAX
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_5+1], al
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_8+1], al
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_9+1], al
@@ -221,7 +221,7 @@ SELFMODIFY_SCAT_set_page_set_register_1:
   mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_1+2], ax
   mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_2+2], ax
   
-IF COMPILE_VERSION GE DRIVER_VERSION_FULL
+IF COMPILE_VERSION GE DRIVER_VERSION_MAX
   mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_3+2], ax
 ENDIF
 
