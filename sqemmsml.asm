@@ -1,29 +1,29 @@
 
 
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
-   INCLUDE defs\scamp.asm
+   INCLUDE small/defs\scamp.asm
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-   INCLUDE defs\fantasy.asm
+   INCLUDE small/defs\fantasy.asm
 ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-   INCLUDE defs\rodney.asm
+   INCLUDE small/defs\rodney.asm
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-   INCLUDE defs\scat.asm
+   INCLUDE small/defs\scat.asm
 ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-   INCLUDE defs\ht18.asm
+   INCLUDE small/defs\ht18.asm
 ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-   INCLUDE defs\ht12.asm
+   INCLUDE small/defs\ht12.asm
 ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-   INCLUDE defs\hedaka.asm
+   INCLUDE small/defs\hedaka.asm
 ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-   INCLUDE defs\lotech.asm
+   INCLUDE small/defs\lotech.asm
 ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-   INCLUDE defs\neat.asm
+   INCLUDE small/defs\neat.asm
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-   INCLUDE defs\intelab.asm
+   INCLUDE small/defs\intelab.asm
 ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-   INCLUDE defs\sarc.asm
+   INCLUDE small/defs\sarc.asm
 ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-   INCLUDE defs\standard.asm
+   INCLUDE small/defs\standard.asm
 ENDIF
 
 
@@ -110,29 +110,29 @@ ALIGN 2
 
 
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
-   INCLUDE vars\scamp.asm
+   INCLUDE small/vars\scamp.asm
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-   INCLUDE vars\fantasy.asm
+   INCLUDE small/vars\fantasy.asm
 ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-   INCLUDE vars\rodney.asm
+   INCLUDE small/vars\rodney.asm
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-   INCLUDE vars\scat.asm
+   INCLUDE small/vars\scat.asm
 ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-   INCLUDE vars\ht18.asm
+   INCLUDE small/vars\ht18.asm
 ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-   INCLUDE vars\ht12.asm
+   INCLUDE small/vars\ht12.asm
 ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-   INCLUDE vars\hedaka.asm
+   INCLUDE small/vars\hedaka.asm
 ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-   INCLUDE vars\lotech.asm
+   INCLUDE small/vars\lotech.asm
 ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-   INCLUDE vars\neat.asm
+   INCLUDE small/vars\neat.asm
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-   INCLUDE vars\intelab.asm
+   INCLUDE small/vars\intelab.asm
 ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-   INCLUDE vars\sarc.asm
+   INCLUDE small/vars\sarc.asm
 ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-   INCLUDE vars\standard.asm
+   INCLUDE small/vars\standard.asm
 ENDIF
  
 ; CHIPSET SPECIFIC END
@@ -173,16 +173,7 @@ dw  OFFSET EMS_FUNCTION_04dh
 dw  OFFSET EMS_FUNCTION_04eh
 dw  OFFSET EMS_FUNCTION_04fh
 dw  OFFSET EMS_FUNCTION_05001h
-IF COMPILE_VERSION GE DRIVER_VERSION_MAX
-dw  OFFSET EMS_FUNCTION_051h
-dw  OFFSET EMS_FUNCTION_052h
-dw  OFFSET EMS_FUNCTION_053h
-dw  OFFSET EMS_FUNCTION_054h
-dw  OFFSET EMS_FUNCTION_055h
-dw  OFFSET EMS_FUNCTION_056h
-dw  OFFSET EMS_FUNCTION_057h
-dw  OFFSET EMS_FUNCTION_058h_JUMP
-ENDIF
+
 
 _current_call_subfunction_value:
 db  0
@@ -220,29 +211,29 @@ EMS_FUNCTION_050h:
 
 
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
-   INCLUDE func17-0\scamp.asm
+   INCLUDE small/func17-0\scamp.asm
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-   INCLUDE func17-0\fantasy.asm
+   INCLUDE small/func17-0\fantasy.asm
 ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-   INCLUDE func17-0\rodney.asm
+   INCLUDE small/func17-0\rodney.asm
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-   INCLUDE func17-0\scat.asm
+   INCLUDE small/func17-0\scat.asm
 ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-   INCLUDE func17-0\ht18.asm
+   INCLUDE small/func17-0\ht18.asm
 ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-   INCLUDE func17-0\ht12.asm
+   INCLUDE small/func17-0\ht12.asm
 ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-   INCLUDE func17-0\hedaka.asm
+   INCLUDE small/func17-0\hedaka.asm
 ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-   INCLUDE func17-0\lotech.asm
+   INCLUDE small/func17-0\lotech.asm
 ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-   INCLUDE func17-0\neat.asm
+   INCLUDE small/func17-0\neat.asm
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-   INCLUDE func17-0\intelab.asm
+   INCLUDE small/func17-0\intelab.asm
 ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-   INCLUDE func17-0\sarc.asm
+   INCLUDE small/func17-0\sarc.asm
 ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-   INCLUDE func17-0\standard.asm
+   INCLUDE small/func17-0\standard.asm
 ENDIF
 
 
@@ -280,29 +271,29 @@ NOT_FUNC_50h:
 EMS_FUNCTION_044h:
 
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
-   INCLUDE func05\scamp.asm
+   INCLUDE small/func05\scamp.asm
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-   INCLUDE func05\fantasy.asm
+   INCLUDE small/func05\fantasy.asm
 ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-   INCLUDE func05\rodney.asm
+   INCLUDE small/func05\rodney.asm
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-   INCLUDE func05\scat.asm
+   INCLUDE small/func05\scat.asm
 ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-   INCLUDE func05\ht18.asm
+   INCLUDE small/func05\ht18.asm
 ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-   INCLUDE func05\ht12.asm
+   INCLUDE small/func05\ht12.asm
 ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-   INCLUDE func05\hedaka.asm
+   INCLUDE small/func05\hedaka.asm
 ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-   INCLUDE func05\lotech.asm
+   INCLUDE small/func05\lotech.asm
 ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-   INCLUDE func05\neat.asm
+   INCLUDE small/func05\neat.asm
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-   INCLUDE func05\intelab.asm
+   INCLUDE small/func05\intelab.asm
 ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-   INCLUDE func05\sarc.asm
+   INCLUDE small/func05\sarc.asm
 ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-   INCLUDE func05\standard.asm
+   INCLUDE small/func05\standard.asm
 ENDIF
 
 
@@ -339,12 +330,13 @@ mov        byte ptr cs:[_current_call_subfunction_value], al
 mov        al, ah
 cmp        al, 05dh
 ja         bad_function
-IF COMPILE_VERSION GE DRIVER_VERSION_MIN
+; todo revisit
+
 cmp        al, 58h
 je         EMS_FUNCTION_058h
 cmp        al, 050h
 jae        EMS_FUNCTION_UNIMPLEMENTED  ; not implementing
-ENDIF
+
 ; don't support calls below 040h
 sub        al, 040h
 jb         bad_function
@@ -512,9 +504,9 @@ iret
 ;          7  Get Version                                    46h       
 
 EMS_FUNCTION_046h:
-; Get Version, return 4.0
+; Get Version, return 3.2
 xchg       ax, bx
-mov        al, 040h ; ah already 0
+mov        al, 032h ; ah already 0
 iret 
 
 
@@ -530,7 +522,7 @@ iret
 
 
 
-IF COMPILE_VERSION GE DRIVER_VERSION_SMALL
+
 
 ;          13 Get Handle Pages                               4Ch       
 
@@ -554,29 +546,29 @@ iret
 EMS_FUNCTION_047h:
 
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
-   INCLUDE func08\scamp.asm
+   INCLUDE small/func08\scamp.asm
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-   INCLUDE func08\fantasy.asm
+   INCLUDE small/func08\fantasy.asm
 ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-   INCLUDE func08\rodney.asm
+   INCLUDE small/func08\rodney.asm
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-   INCLUDE func08\scat.asm
+   INCLUDE small/func08\scat.asm
 ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-   INCLUDE func08\ht18.asm
+   INCLUDE small/func08\ht18.asm
 ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-   INCLUDE func08\ht12.asm
+   INCLUDE small/func08\ht12.asm
 ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-   INCLUDE func08\hedaka.asm
+   INCLUDE small/func08\hedaka.asm
 ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-   INCLUDE func08\lotech.asm
+   INCLUDE small/func08\lotech.asm
 ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-   INCLUDE func08\neat.asm
+   INCLUDE small/func08\neat.asm
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-   INCLUDE func08\intelab.asm
+   INCLUDE small/func08\intelab.asm
 ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-   INCLUDE func08\sarc.asm
+   INCLUDE small/func08\sarc.asm
 ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-   INCLUDE func08\standard.asm
+   INCLUDE small/func08\standard.asm
 ENDIF
 
  
@@ -586,724 +578,34 @@ ENDIF
 EMS_FUNCTION_048h:
 
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
-   INCLUDE func09\scamp.asm
+   INCLUDE small/func09\scamp.asm
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-   INCLUDE func09\fantasy.asm
+   INCLUDE small/func09\fantasy.asm
 ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-   INCLUDE func09\rodney.asm
+   INCLUDE small/func09\rodney.asm
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-   INCLUDE func09\scat.asm
+   INCLUDE small/func09\scat.asm
 ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-   INCLUDE func09\ht18.asm
+   INCLUDE small/func09\ht18.asm
 ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-   INCLUDE func09\ht12.asm
+   INCLUDE small/func09\ht12.asm
 ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-   INCLUDE func09\hedaka.asm
+   INCLUDE small/func09\hedaka.asm
 ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-   INCLUDE func09\lotech.asm
+   INCLUDE small/func09\lotech.asm
 ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-   INCLUDE func09\neat.asm
+   INCLUDE small/func09\neat.asm
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-   INCLUDE func09\intelab.asm
+   INCLUDE small/func09\intelab.asm
 ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-   INCLUDE func09\sarc.asm
+   INCLUDE small/func09\sarc.asm
 ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-   INCLUDE func09\standard.asm
-ENDIF
-
-ELSE
-
-EMS_FUNCTION_047h:
-EMS_FUNCTION_048h:
-EMS_FUNCTION_04Ch:
-   xchg   ax, bx
-   iret
-
-ENDIF
-
-
-
-IF COMPILE_VERSION GE DRIVER_VERSION_MAX
-
-;          18 Reallocate Pages                               51h       
-; DX = handle
-;BX = reallocation_count                     
-EMS_FUNCTION_051h:
-xchg       ax, bx  ; on failure dont change bx
-cmp        dx, 1
-jne        func_51_no_emm_handle_found
-mov        ax, word ptr cs:[_RESIDENT_VARIABLE_total_EMS_page_count+1]
-sub        ax, bx
-jb         func_51_allocated_too_many_pages_above_total
-xchg       ax, bx
-xor        ax, ax  ; ah = 0
-iret
-func_51_allocated_too_many_pages_above_total:
-xchg       ax, bx
-cwd        ; dx = 0
-mov        ah, 087h  ; There aren't enough expanded memory pages present in the system to satisfy your program's request.
-iret
-
-
-
-
-
-;      22 Alter Page Map & Jump
-;             (Physical page number mode)                    5500h     
-;             Alter Page Map & Jump
-;             (Segment address mode)                         5501h     
-
-EMS_FUNCTION_055h:
-; TODO NOT DONE, should be done
-xchg       ax, bx
-iret
- 
-
-;   BX = total_handles
-; The value returned represents the maximum number of handles
-; which a program may request the memory manager to allocate
-; memory to.  The value returned includes the operating
-; system handle (handle value 0).
-
-
-;          23 Alter Page Map & Call
-;             (Physical page number mode)                    5600h     
-;             Alter Page Map & Call
-;             (Segment address mode)                         5601h     
-;             Get Page Map Stack Space Size                  5602h     
-
-EMS_FUNCTION_056h:
-; TODO NOT DONE, should be done
-xchg       ax, bx
-iret
-
-
-; REFER TO EMS 4.0 documentation, this is a doozy!
-;          24 Move Memory Region                             5700h     
-
-;move_source_dest_struct      STRUC
-;             region_length             DD  ?
-;             source_memory_type        DB  ?
-;             source_handle             DW  ?
-;             source_initial_offset     DW  ?
-;             source_initial_seg_page   DW  ?
-;             dest_memory_type          DB  ?
-;             dest_handle               DW  ?
-;             dest_initial_offset       DW  ?
-;             dest_initial_seg_page     DW  ?
-;          move_source_dest_struct      ENDS
-ALIGN 2
-_RESIDENT_VARIABLE_FUNC_24_source_original_page:
-dw 0
-_RESIDENT_VARIABLE_FUNC_24_dest_original_page:
-dw 0
-_RESIDENT_VARIABLE_FUNC_24_source_current_page:
-dw 0
-_RESIDENT_VARIABLE_FUNC_24_dest_current_page:
-dw 0
-
-; The function code passed to the memory manager is not defined.
-func_24_bad_subfunction:
-mov        ah, 08Fh  ;  The subfunction parameter is invalid.
-iret
-func_24_bad_handle:
-mov        ah, 083h   ; The manager couldn't find either the source or destination EMM handles.
-jmp        func_24_error
-func_24_unowned_memory:
-; TODO catch
-mov        ah, 08Ah   ; One or more of the logical pages is out of the range of logical pages allocated to the source/destination handle.
-jmp        func_24_error
-func_24_region_overlap:
-; TODO catch
-mov        ah, 094h   ; The conventional memory region and expanded memory region overlap.
-jmp        func_24_error
-func_24_too_large:
-mov        ah, 096h   ; Region length exceeds 1M Byte limit.
-jmp        func_24_error
-func_24_wraparound:
-; TODO catch
-mov        ah, 0A2h   ; An attempt was made to wrap around the 1M-byte address space of conventional memory during the move.
-jmp        func_24_error
-func_24_overlap:
-; TODO catch
-mov        ah, 097h   ; The source and destination expanded memory regions have the same handle and overlap.
-jmp        func_24_error
-func_24_invalid_memtype:
-mov        ah, 098h
-func_24_error:
-mov        es, ax
-POPA_MACRO
-mov        ax, es ; param
-pop        ds
-pop        es
-iret
-
-EMS_FUNCTION_057h:
-xchg       ax, bx
-cmp        byte ptr cs:[_current_call_subfunction_value], 1
-ja         func_24_bad_subfunction
-push       es
-push       ds
-PUSHA_MACRO
-
-
-do_func_24_00:
-
-lodsw
-xchg       ax, cx 
-lodsw
-cmp        ax, 010h  ; 0x100000 = 1 MB
-ja         func_24_too_large
-jb         func_24_size_ok
-test       cx, cx
-jne        func_24_too_large
-func_24_size_ok:
-xchg       ax, bp ; length to bp:cx
-
-lodsb    ; extended or expanded
-cmp        al, 1
-ja         func_24_invalid_memtype
-xchg       ax, bx ; bl gets this byte.
-lodsw      
-call       check_valid_handle 
-jc         func_24_bad_handle
-lodsw      ; initial offset
-xchg       ax, si
-lodsw      ; initial page
-xchg       ax, dx
-
-
-lodsb    ; extended or expanded
-cmp        al, 1
-ja         func_24_invalid_memtype
-mov        bh, al
-lodsw      
-call       check_valid_handle 
-jc         func_24_bad_handle
-lodsw      ; dest offset
-xchg       ax, di
-lodsw      ; dest page
-
-
-; dx, ax have source, dest segs
-; si, di have source, dest offsets
-; bp:cx is length
-; bl, bh have source, dest mem types.
-
-; check params for accuracy BEFORE state push pop.
-call       func_24_do_bounds_checks
-
-call       func_24_set_up_segments
-
-mov        dx, cx
-
-; ds and es are now set up.
-; bl/bh continue to maintain memory type bits.
-; bp:dx now main 32 bit copy size..
-
-
-
-cmp   byte ptr cs:[_current_call_subfunction_value], 1
-je    do_func_24_01    
-
-
-; MAIN COPY LOOP: 
-func_24_copy_more_memory:
-
-   call       func_24_prep_copy_pointers ; does all the loop/copy setup
-   mov        ax, cx  ; copy len
-   MOVSW_MACRO
-
-   call       func_24_check_repage ; does all the logical page repaging
-
-
-   sub        dx, ax
-   sbb        bp, cx ; known 0   
-
-   mov        ax, dx
-   or         ax, bp
-   jnz        func_24_copy_more_memory
-
-func_24_done:
-
-call   func_24_clean_up_segments ; restore pagination if necessary
-
-POPA_MACRO
-pop    ds
-pop    es
-xor    ax, ax ; success
-iret
-
-
-
-;             Exchange Memory Region                         5701h     
-; xchg_source_dest_struct      STRUC
-;             region_length             DD ?   0
-;             source_memory_type        DB ?   4
-;             source_handle             DW ?   5
-;             source_initial_offset     DW ?   7
-;             source_initial_seg_page   DW ?   9
-;             dest_memory_type          DB ?   a
-;             dest_handle               DW ?   b
-;             dest_initial_offset       DW ?   d
-;             dest_initial_seg_page     DW ?   f
-;          xchg_source_dest_struct      ENDS
-;          DS:SI = pointer to move_source_dest structure
-;     FUNCTION 24   MOVE/EXCHANGE MEMORY REGION
-do_func_24_01:
-
-; MAIN EXCHANGE LOOP: 
-func_24_exchange_more_memory:
-
-   call       func_24_prep_copy_pointers ; does all the loop/exchange setup
-   push       cx ; store len
-   func_24_exchange_more_bytes:
-   lodsb
-   xchg       al, byte ptr es:[di]
-   lock mov        byte ptr ds:[si-1], al
-   inc        di
-   loop       func_24_exchange_more_bytes
-   pop        ax ; get length
-
-   call       func_24_check_repage ; does all the logical page repaging
-
-
-
-   sub        dx, ax
-   sbb        bp, cx ; known 0   
-
-   mov        ax, dx
-   or         ax, bp
-   jnz        func_24_copy_more_memory
-
-jmp  func_24_done
-
-
-; carry flag means bad handle
-check_valid_handle:
- cmp       ax, 1
- jne       ret_bad_handle
- cmp       word ptr cs: [_RESIDENT_VARIABLE_handle_count+1], ax  ; known 1
- jae       ret_bad_handle  ; the one handle is unalloced..
- clc
- ret
- ret_bad_handle:
- stc
- ret
-
-; ds:si and es:di get normalized such that si/di are is 000n
-; bl/bh still carry copy types
-
-func_24_prep_copy_pointers:
-   ; ax/dx free
-
- test  bl, 1
- jne   func_24_skip_ds_si_noramlize
- mov   dx, ds
- mov   ax, si
- and   si, 0FFF0h
- SHIFT_MACRO shr ax 4
- sub   dx, ax
- mov   ds, dx
-
- func_24_skip_ds_si_noramlize:
- test  bh, 1
- jne   func_24_skip_es_di_noramlize
- mov   dx, es
- mov   ax, di
- and   di, 0FFF0h
- SHIFT_MACRO shr ax 4
- sub   dx, ax
- mov   es, dx
- func_24_skip_es_di_noramlize:
-
-
- ; segments/offsets were normalized if conventional.
- ; now calculate copy length for this iter.
- ;
- test  bx, bx
- jz    func_24_use_conventional_max
- mov   cx, 16384
- cmp   bx, 0100h  
- je    func_24_use_di_value
- ja    func_24_use_min_of_both
- func_24_use_si_value:
- sub   cx, si
- jmp   func_24_bounds_check
- func_24_use_di_value:
- sub   cx, di
- jmp   func_24_bounds_check
- func_24_use_min_of_both:
- mov   ax, cx
- sub   cx, si
- sub   ax, di
- cmp   cx, ax
- jbe   func_24_bounds_check
- xchg  ax, cx
- jmp   func_24_bounds_check
-
-
-func_24_use_conventional_max:
- mov   cx, dx
- cmp   cx, 32768
- ja    func_24_cap_conventional_size
- mov   cx, 32768
-func_24_cap_conventional_size:
-
-func_24_bounds_check:
- cmp        cx, dx   ; is length smaller than bp:dx?
- jbe        func_24_ax_smaller_do_copy
- test       bp, bp
- jne        func_24_ax_smaller_do_copy
- mov        cx, dx
- func_24_ax_smaller_do_copy:
-
- ret
-
-; ax gets MAX(16384-si, 16384-di)
-func_24_prep_extended_copy_length:
- push  dx
- mov   ax, 16384
- mov   dx, ax
- sub   ax, si
- sub   dx, di
- cmp   ax, dx
- jbe   keep_this_ax
- xchg  ax, dx
- keep_this_ax:
- pop   dx
- ret
-
- test  bl, 1
- jne   skip_ds_si_noramlize
- mov   dx, ds
- mov   ax, si
- and   si, 0FFF0h
- SHIFT_MACRO shr ax 4
- sub   dx, ax
- mov   ds, dx
-
- skip_ds_si_noramlize:
- test  bh, 1
- jne   skip_es_di_noramlize
- mov   dx, es
- mov   ax, di
- and   di, 0FFF0h
- SHIFT_MACRO shr ax 4
- sub   dx, ax
- mov   es, dx
-
- skip_es_di_noramlize:
- pop   ax
-
- ret
-
-
-; set up ds:es according to bl/bh memory types. prep extended pages if necessary
-func_24_set_up_segments:
- test  bl, 1
- jne   func_24_prep_source_logical
- mov   ds, dx
-
- test  bh, 1
- jne   func_24_prep_dest_logical
- func_24_use_dest_conventional:
- mov   es, ax
-
- ret
-
-func_24_prep_source_logical:
- push  ax   ; AAAA save ax (dest segment)
- mov   word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_current_page], dx
- mov   ax, FUNC_24_SOURCE_PAGE_FRAME_INDEX
- call  UTIL_get_page
- 
- mov   word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_original_page], ax
- mov   ax, FUNC_24_SOURCE_PAGE_FRAME_INDEX
- call  UTIL_set_page
- mov   ds, word ptr cs:[mappable_phys_page_struct_page_frame+(4 * FUNC_24_SOURCE_PAGE_FRAME_INDEX)] ; page 3 segment
- pop   ax   ; AAAA restore ax (dest segment)
- test  bh, 1
- je    func_24_use_dest_conventional
- 
-func_24_prep_dest_logical:
- mov   word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_current_page], ax
- push  ax
- mov   ax, FUNC_24_DEST_PAGE_FRAME_INDEX
- call  UTIL_get_page
- mov   word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_original_page], ax
- pop   dx
- mov   ax, FUNC_24_DEST_PAGE_FRAME_INDEX
- call  UTIL_set_page
- mov   es, word ptr cs:[mappable_phys_page_struct_page_frame+(4 * FUNC_24_DEST_PAGE_FRAME_INDEX)] ; page 3 segment
- ret
-
-func_24_clean_up_segments:
-  test  bl, 1
-  je    func_24_skip_source_cleanup
-  mov   dx, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_original_page]
-  mov   ax, FUNC_24_SOURCE_PAGE_FRAME_INDEX
-  call  UTIL_set_page
- func_24_skip_source_cleanup:
-  test  bh, 1
-  je    func_24_skip_dest_cleanup
-  mov   dx, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_original_page]
-  mov   ax, FUNC_24_DEST_PAGE_FRAME_INDEX
-  call  UTIL_set_page
-
- func_24_skip_dest_cleanup:
-  ret
-
-func_24_do_bounds_checks:
- ;TODO this
-  ; conventional 1M boundary checks?
-  ; logical page count checks?
-  
-
-  test       bl, 1
-  jne        func_24_skip_si_check
-  cmp        si, 16384
-  jae        func_24_offset_too_high
- func_24_skip_si_check:
-
-  test       bh, 1
-  jne        func_24_skip_di_check
-  cmp        di, 16384
-  jae        func_24_offset_too_high
- func_24_skip_di_check:
-  ret
-
-func_24_check_repage:
-  test    bl, 1
-  je      func_24_dont_repage_source
-  cmp     si, 16384
-  jbe     func_24_dont_repage_source
-  push    dx
-  push    ax
-  inc     word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_current_page]
-  mov     dx, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_current_page]
-  mov     ax, FUNC_24_SOURCE_PAGE_FRAME_INDEX
-  call    UTIL_set_page
-  pop     ax
-  pop     dx
-  xor     si, si
- func_24_dont_repage_source:
-  test    bh, 1
-  je      func_24_dont_repage_dest
-  cmp     di, 16384
-  jbe     func_24_dont_repage_dest
-  push    dx
-  push    ax
-  inc     word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_current_page]
-  mov     dx, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_current_page]
-  mov     ax, FUNC_24_DEST_PAGE_FRAME_INDEX
-  call    UTIL_set_page
-  pop     ax
-  pop     dx
-  xor     di, di
- func_24_dont_repage_dest:
-  ret
-
-func_24_offset_too_high:
-  mov    ah, 095h   ; The offset within the logical page exceeds the length of the logical page.
-  jmp    func_24_error
-
-
-
-
-
-;          14 Get All Handle Pages                           4Dh       
-; we write all handles and their page counts to es:di
-EMS_FUNCTION_04Dh:
-mov        ax, word ptr cs:[_RESIDENT_VARIABLE_handle_count+1]
-xor        al, 1  ; 0 or 1 unallocated -> 1 or 1 allocated
-xchg       ax, bx ; ah zero, bx gets  total_open_emm_handles
-mov        ax, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count+1]
-mov        word ptr es:[di+2], ax ; pages_alloc_to_handle
-jnz        func_14_wrote_all_handle_pages ; no handles allocated
-
-neg        ax
-add        ax, word ptr cs:[_RESIDENT_VARIABLE_total_EMS_page_count+1]
-mov        word ptr es:[di+6], ax ; total pages - unallocated = allocated
-mov        word ptr es:[di+4], 1
-
-func_14_wrote_all_handle_pages:
-xor        ax, ax
-mov        word ptr es:[di], 0 ; emm_handle
-
-inc bx ; (including the operating system handle [0]).  The number cannot be zero because the operating system handle is always active and
-
-iret
-
-
-;          15 Get Page Map                                   4E00h    
-;             Set Page Map                                   4E01h     
-;             Get & Set Page Map                             4E02h     
-;             Get Size of Page Map Save Array                4E03h     
-EMS_FUNCTION_04Eh:
-
-IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
-   INCLUDE func15\scamp.asm
-ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-   INCLUDE func15\fantasy.asm
-ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-   INCLUDE func15\rodney.asm
-ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-   INCLUDE func15\scat.asm
-ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-   INCLUDE func15\ht18.asm
-ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-   INCLUDE func15\ht12.asm
-ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-   INCLUDE func15\hedaka.asm
-ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-   INCLUDE func15\lotech.asm
-ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-   INCLUDE func15\neat.asm
-ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-   INCLUDE func15\intelab.asm
-ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-   INCLUDE func15\sarc.asm
-ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-   INCLUDE func15\standard.asm
-ENDIF
-
-; 16 Get Partial Page Map                           4F00h     
-;             Set Partial Page Map                           4F01h     
-;             Get Size of Partial Page Map Save Array        4F02h     
-EMS_FUNCTION_04Fh:
-
-IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
-   INCLUDE func16\scamp.asm
-ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-   INCLUDE func16\fantasy.asm
-ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-   INCLUDE func16\rodney.asm
-ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-   INCLUDE func16\scat.asm
-ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-   INCLUDE func16\ht18.asm
-ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-   INCLUDE func16\ht12.asm
-ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-   INCLUDE func16\hedaka.asm
-ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-   INCLUDE func16\lotech.asm
-ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-   INCLUDE func16\neat.asm
-ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-   INCLUDE func16\intelab.asm
-ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-   INCLUDE func16\sarc.asm
-ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-   INCLUDE func16\standard.asm
-ENDIF 
-
-
-
-; didnt handle the subfuncton
-EMS_FUNCTION_05001h:
-
-
-IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
-   INCLUDE func17-1\scamp.asm
-ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-   INCLUDE func17-1\fantasy.asm
-ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-   INCLUDE func17-1\rodney.asm
-ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-   INCLUDE func17-1\scat.asm
-ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-   INCLUDE func17-1\ht18.asm
-ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-   INCLUDE func17-1\ht12.asm
-ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-   INCLUDE func17-1\hedaka.asm
-ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-   INCLUDE func17-1\lotech.asm
-ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-   INCLUDE func17-1\neat.asm
-ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-   INCLUDE func17-1\intelab.asm
-ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-   INCLUDE func17-1\sarc.asm
-ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-   INCLUDE func17-1\standard.asm
+   INCLUDE small/func09\standard.asm
 ENDIF
 
 
 
 
-; cross platform utility function for getting the (application facing) page index for a segment.
-
-util_get_register_for_segment:
-   push  si
-   push  cx
-   mov   si, OFFSET mappable_phys_page_struct
-
-   check_next_segment_in_list:
-   cmp   ax, word ptr cs:[si]
-   je    found_page_in_list
-   add   si, 4
-   loop  check_next_segment_in_list
-
-   ; fail... undefined behavior? or just store FFFF in there?
-
-   found_page_in_list:
-   mov   ax, word ptr cs:[si+2]
-   pop   cx
-   pop   si
-   ret
-
-
-
-
-
-
-IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
-   INCLUDE util\scamp.asm
-ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-   INCLUDE util\fantasy.asm
-ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-   INCLUDE util\rodney.asm
-ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-   INCLUDE util\scat.asm
-ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-   INCLUDE util\ht18.asm
-ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-   INCLUDE util\ht12.asm
-ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-   INCLUDE util\hedaka.asm
-ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-   INCLUDE util\lotech.asm
-ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-   INCLUDE util\neat.asm
-ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-   INCLUDE util\intelab.asm
-ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-   INCLUDE util\sarc.asm
-ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-   INCLUDE util\standard.asm
-ENDIF
-; TODO: these
-
-EMS_FUNCTION_052h:
-EMS_FUNCTION_053h:
-EMS_FUNCTION_054h:
-
-EMS_FUNCTION_059h:
-
-EMS_FUNCTION_05Ah:
-EMS_FUNCTION_05Bh:
-EMS_FUNCTION_05Ch:
-
-EMS_FUNCTION_05Dh:
-
-xchg       ax, bx
-iret
-
-
-ELSE
    ; stubs for min driver.
 EMS_FUNCTION_04Dh:
 EMS_FUNCTION_04Eh:
@@ -1330,9 +632,8 @@ xchg       ax, bx
 iret
 
 
-ENDIF
 
-IF COMPILE_VERSION GE DRIVER_VERSION_SMALL
+
 
 
    _RESIDENT_VARIABLE_global_last_page:
@@ -1361,7 +662,7 @@ IF COMPILE_VERSION GE DRIVER_VERSION_SMALL
       dw  CURRENT_NEXT_POINTER
    ENDM
 
-ENDIF
+
 
 
 
@@ -1414,29 +715,29 @@ string_good_page_offset_param_EDIT_OFFSET   db            "0128",'$'
 
 
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for VLSI SCAMP', 0Dh, 0Ah,'$'
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for VLSI SCAMP', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Fantasy Card', 0Dh, 0Ah,'$'
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Fantasy Card', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Rodneys 286 Chipset', 0Dh, 0Ah,'$'
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Rodneys 286 Chipset', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for C&T SCAT', 0Dh, 0Ah,'$'
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for C&T SCAT', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Headland HT-18, HT-21, HT-22, HT-25', 0Dh, 0Ah,'$'
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Headland HT-18, HT-21, HT-22, HT-25', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Headland HT-12', 0Dh, 0Ah,'$'
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Headland HT-12', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for HEDAKA/CITYGATE/PCCHIPS Chipsets', 0Dh, 0Ah,'$'
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for HEDAKA/CITYGATE/PCCHIPS Chipsets', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Lo-tech EMS Board', 0Dh, 0Ah,'$'
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Lo-tech EMS Board', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Chips NEAT', 0Dh, 0Ah,'$'
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Chips NEAT', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Intel Above Board', 0Dh, 0Ah,'$'
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Intel Above Board', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for SARC RC2016A', 0Dh, 0Ah,'$'
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for SARC RC2016A', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Standard EMS Boards', 0Dh, 0Ah,'$'
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Standard EMS Boards', 0Dh, 0Ah,'$'
 ENDIF
 
 _INIT_PARAM_command_line_length:
@@ -1497,29 +798,29 @@ quiet_mode_off:
 
 
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
-   INCLUDE init\scamp.asm
+   INCLUDE small/init\scamp.asm
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-   INCLUDE init\fantasy.asm
+   INCLUDE small/init\fantasy.asm
 ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-   INCLUDE init\rodney.asm
+   INCLUDE small/init\rodney.asm
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-   INCLUDE init\scat.asm
+   INCLUDE small/init\scat.asm
 ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-   INCLUDE init\ht18.asm
+   INCLUDE small/init\ht18.asm
 ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-   INCLUDE init\ht12.asm
+   INCLUDE small/init\ht12.asm
 ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-   INCLUDE init\hedaka.asm
+   INCLUDE small/init\hedaka.asm
 ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-   INCLUDE init\lotech.asm
+   INCLUDE small/init\lotech.asm
 ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-   INCLUDE init\neat.asm
+   INCLUDE small/init\neat.asm
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-   INCLUDE init\intelab.asm
+   INCLUDE small/init\intelab.asm
 ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-   INCLUDE init\sarc.asm
+   INCLUDE small/init\sarc.asm
 ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-   INCLUDE init\standard.asm
+   INCLUDE small/init\standard.asm
 ENDIF
 
 mov        ax, PAGE_FRAME_COUNT

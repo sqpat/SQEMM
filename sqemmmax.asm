@@ -1,29 +1,29 @@
 
 
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
-   INCLUDE min\defs\scamp.asm
+   INCLUDE max/defs\scamp.asm
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-   INCLUDE min\defs\fantasy.asm
+   INCLUDE max/defs\fantasy.asm
 ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-   INCLUDE min\defs\rodney.asm
+   INCLUDE max/defs\rodney.asm
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-   INCLUDE min\defs\scat.asm
+   INCLUDE max/defs\scat.asm
 ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-   INCLUDE min\defs\ht18.asm
+   INCLUDE max/defs\ht18.asm
 ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-   INCLUDE min\defs\ht12.asm
+   INCLUDE max/defs\ht12.asm
 ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-   INCLUDE min\defs\hedaka.asm
+   INCLUDE max/defs\hedaka.asm
 ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-   INCLUDE min\defs\lotech.asm
+   INCLUDE max/defs\lotech.asm
 ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-   INCLUDE min\defs\neat.asm
+   INCLUDE max/defs\neat.asm
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-   INCLUDE min\defs\intelab.asm
+   INCLUDE max/defs\intelab.asm
 ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-   INCLUDE min\defs\sarc.asm
+   INCLUDE max/defs\sarc.asm
 ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-   INCLUDE min\defs\standard.asm
+   INCLUDE max/defs\standard.asm
 ENDIF
 
 
@@ -110,29 +110,29 @@ ALIGN 2
 
 
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
-   INCLUDE min\vars\scamp.asm
+   INCLUDE max/vars\scamp.asm
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-   INCLUDE min\vars\fantasy.asm
+   INCLUDE max/vars\fantasy.asm
 ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-   INCLUDE min\vars\rodney.asm
+   INCLUDE max/vars\rodney.asm
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-   INCLUDE min\vars\scat.asm
+   INCLUDE max/vars\scat.asm
 ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-   INCLUDE min\vars\ht18.asm
+   INCLUDE max/vars\ht18.asm
 ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-   INCLUDE min\vars\ht12.asm
+   INCLUDE max/vars\ht12.asm
 ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-   INCLUDE min\vars\hedaka.asm
+   INCLUDE max/vars\hedaka.asm
 ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-   INCLUDE min\vars\lotech.asm
+   INCLUDE max/vars\lotech.asm
 ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-   INCLUDE min\vars\neat.asm
+   INCLUDE max/vars\neat.asm
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-   INCLUDE min\vars\intelab.asm
+   INCLUDE max/vars\intelab.asm
 ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-   INCLUDE min\vars\sarc.asm
+   INCLUDE max/vars\sarc.asm
 ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-   INCLUDE min\vars\standard.asm
+   INCLUDE max/vars\standard.asm
 ENDIF
  
 ; CHIPSET SPECIFIC END
@@ -173,7 +173,6 @@ dw  OFFSET EMS_FUNCTION_04dh
 dw  OFFSET EMS_FUNCTION_04eh
 dw  OFFSET EMS_FUNCTION_04fh
 dw  OFFSET EMS_FUNCTION_05001h
-IF COMPILE_VERSION GE DRIVER_VERSION_MAX
 dw  OFFSET EMS_FUNCTION_051h
 dw  OFFSET EMS_FUNCTION_052h
 dw  OFFSET EMS_FUNCTION_053h
@@ -182,7 +181,7 @@ dw  OFFSET EMS_FUNCTION_055h
 dw  OFFSET EMS_FUNCTION_056h
 dw  OFFSET EMS_FUNCTION_057h
 dw  OFFSET EMS_FUNCTION_058h_JUMP
-ENDIF
+
 
 _current_call_subfunction_value:
 db  0
@@ -220,29 +219,29 @@ EMS_FUNCTION_050h:
 
 
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
-   INCLUDE min\func17-0\scamp.asm
+   INCLUDE max/func17-0\scamp.asm
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-   INCLUDE min\func17-0\fantasy.asm
+   INCLUDE max/func17-0\fantasy.asm
 ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-   INCLUDE min\func17-0\rodney.asm
+   INCLUDE max/func17-0\rodney.asm
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-   INCLUDE min\func17-0\scat.asm
+   INCLUDE max/func17-0\scat.asm
 ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-   INCLUDE min\func17-0\ht18.asm
+   INCLUDE max/func17-0\ht18.asm
 ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-   INCLUDE min\func17-0\ht12.asm
+   INCLUDE max/func17-0\ht12.asm
 ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-   INCLUDE min\func17-0\hedaka.asm
+   INCLUDE max/func17-0\hedaka.asm
 ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-   INCLUDE min\func17-0\lotech.asm
+   INCLUDE max/func17-0\lotech.asm
 ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-   INCLUDE min\func17-0\neat.asm
+   INCLUDE max/func17-0\neat.asm
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-   INCLUDE min\func17-0\intelab.asm
+   INCLUDE max/func17-0\intelab.asm
 ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-   INCLUDE min\func17-0\sarc.asm
+   INCLUDE max/func17-0\sarc.asm
 ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-   INCLUDE min\func17-0\standard.asm
+   INCLUDE max/func17-0\standard.asm
 ENDIF
 
 
@@ -280,29 +279,29 @@ NOT_FUNC_50h:
 EMS_FUNCTION_044h:
 
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
-   INCLUDE min\func05\scamp.asm
+   INCLUDE max/func05\scamp.asm
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-   INCLUDE min\func05\fantasy.asm
+   INCLUDE max/func05\fantasy.asm
 ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-   INCLUDE min\func05\rodney.asm
+   INCLUDE max/func05\rodney.asm
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-   INCLUDE min\func05\scat.asm
+   INCLUDE max/func05\scat.asm
 ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-   INCLUDE min\func05\ht18.asm
+   INCLUDE max/func05\ht18.asm
 ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-   INCLUDE min\func05\ht12.asm
+   INCLUDE max/func05\ht12.asm
 ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-   INCLUDE min\func05\hedaka.asm
+   INCLUDE max/func05\hedaka.asm
 ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-   INCLUDE min\func05\lotech.asm
+   INCLUDE max/func05\lotech.asm
 ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-   INCLUDE min\func05\neat.asm
+   INCLUDE max/func05\neat.asm
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-   INCLUDE min\func05\intelab.asm
+   INCLUDE max/func05\intelab.asm
 ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-   INCLUDE min\func05\sarc.asm
+   INCLUDE max/func05\sarc.asm
 ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-   INCLUDE min\func05\standard.asm
+   INCLUDE max/func05\standard.asm
 ENDIF
 
 
@@ -339,12 +338,7 @@ mov        byte ptr cs:[_current_call_subfunction_value], al
 mov        al, ah
 cmp        al, 05dh
 ja         bad_function
-IF COMPILE_VERSION GE DRIVER_VERSION_MIN
-cmp        al, 58h
-je         EMS_FUNCTION_058h
-cmp        al, 050h
-jae        EMS_FUNCTION_UNIMPLEMENTED  ; not implementing
-ENDIF
+
 ; don't support calls below 040h
 sub        al, 040h
 jb         bad_function
@@ -530,7 +524,7 @@ iret
 
 
 
-IF COMPILE_VERSION GE DRIVER_VERSION_SMALL
+
 
 ;          13 Get Handle Pages                               4Ch       
 
@@ -554,29 +548,29 @@ iret
 EMS_FUNCTION_047h:
 
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
-   INCLUDE min\func08\scamp.asm
+   INCLUDE max/func08\scamp.asm
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-   INCLUDE min\func08\fantasy.asm
+   INCLUDE max/func08\fantasy.asm
 ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-   INCLUDE min\func08\rodney.asm
+   INCLUDE max/func08\rodney.asm
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-   INCLUDE min\func08\scat.asm
+   INCLUDE max/func08\scat.asm
 ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-   INCLUDE min\func08\ht18.asm
+   INCLUDE max/func08\ht18.asm
 ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-   INCLUDE min\func08\ht12.asm
+   INCLUDE max/func08\ht12.asm
 ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-   INCLUDE min\func08\hedaka.asm
+   INCLUDE max/func08\hedaka.asm
 ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-   INCLUDE min\func08\lotech.asm
+   INCLUDE max/func08\lotech.asm
 ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-   INCLUDE min\func08\neat.asm
+   INCLUDE max/func08\neat.asm
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-   INCLUDE min\func08\intelab.asm
+   INCLUDE max/func08\intelab.asm
 ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-   INCLUDE min\func08\sarc.asm
+   INCLUDE max/func08\sarc.asm
 ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-   INCLUDE min\func08\standard.asm
+   INCLUDE max/func08\standard.asm
 ENDIF
 
  
@@ -586,44 +580,35 @@ ENDIF
 EMS_FUNCTION_048h:
 
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
-   INCLUDE min\func09\scamp.asm
+   INCLUDE max/func09\scamp.asm
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-   INCLUDE min\func09\fantasy.asm
+   INCLUDE max/func09\fantasy.asm
 ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-   INCLUDE min\func09\rodney.asm
+   INCLUDE max/func09\rodney.asm
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-   INCLUDE min\func09\scat.asm
+   INCLUDE max/func09\scat.asm
 ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-   INCLUDE min\func09\ht18.asm
+   INCLUDE max/func09\ht18.asm
 ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-   INCLUDE min\func09\ht12.asm
+   INCLUDE max/func09\ht12.asm
 ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-   INCLUDE min\func09\hedaka.asm
+   INCLUDE max/func09\hedaka.asm
 ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-   INCLUDE min\func09\lotech.asm
+   INCLUDE max/func09\lotech.asm
 ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-   INCLUDE min\func09\neat.asm
+   INCLUDE max/func09\neat.asm
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-   INCLUDE min\func09\intelab.asm
+   INCLUDE max/func09\intelab.asm
 ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-   INCLUDE min\func09\sarc.asm
+   INCLUDE max/func09\sarc.asm
 ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-   INCLUDE min\func09\standard.asm
-ENDIF
-
-ELSE
-
-EMS_FUNCTION_047h:
-EMS_FUNCTION_048h:
-EMS_FUNCTION_04Ch:
-   xchg   ax, bx
-   iret
-
+   INCLUDE max/func09\standard.asm
 ENDIF
 
 
 
-IF COMPILE_VERSION GE DRIVER_VERSION_MAX
+
+
 
 ;          18 Reallocate Pages                               51h       
 ; DX = handle
@@ -1143,29 +1128,29 @@ iret
 EMS_FUNCTION_04Eh:
 
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
-   INCLUDE min\func15\scamp.asm
+   INCLUDE max/func15\scamp.asm
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-   INCLUDE min\func15\fantasy.asm
+   INCLUDE max/func15\fantasy.asm
 ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-   INCLUDE min\func15\rodney.asm
+   INCLUDE max/func15\rodney.asm
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-   INCLUDE min\func15\scat.asm
+   INCLUDE max/func15\scat.asm
 ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-   INCLUDE min\func15\ht18.asm
+   INCLUDE max/func15\ht18.asm
 ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-   INCLUDE min\func15\ht12.asm
+   INCLUDE max/func15\ht12.asm
 ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-   INCLUDE min\func15\hedaka.asm
+   INCLUDE max/func15\hedaka.asm
 ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-   INCLUDE min\func15\lotech.asm
+   INCLUDE max/func15\lotech.asm
 ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-   INCLUDE min\func15\neat.asm
+   INCLUDE max/func15\neat.asm
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-   INCLUDE min\func15\intelab.asm
+   INCLUDE max/func15\intelab.asm
 ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-   INCLUDE min\func15\sarc.asm
+   INCLUDE max/func15\sarc.asm
 ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-   INCLUDE min\func15\standard.asm
+   INCLUDE max/func15\standard.asm
 ENDIF
 
 ; 16 Get Partial Page Map                           4F00h     
@@ -1174,29 +1159,29 @@ ENDIF
 EMS_FUNCTION_04Fh:
 
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
-   INCLUDE min\func16\scamp.asm
+   INCLUDE max/func16\scamp.asm
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-   INCLUDE min\func16\fantasy.asm
+   INCLUDE max/func16\fantasy.asm
 ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-   INCLUDE min\func16\rodney.asm
+   INCLUDE max/func16\rodney.asm
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-   INCLUDE min\func16\scat.asm
+   INCLUDE max/func16\scat.asm
 ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-   INCLUDE min\func16\ht18.asm
+   INCLUDE max/func16\ht18.asm
 ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-   INCLUDE min\func16\ht12.asm
+   INCLUDE max/func16\ht12.asm
 ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-   INCLUDE min\func16\hedaka.asm
+   INCLUDE max/func16\hedaka.asm
 ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-   INCLUDE min\func16\lotech.asm
+   INCLUDE max/func16\lotech.asm
 ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-   INCLUDE min\func16\neat.asm
+   INCLUDE max/func16\neat.asm
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-   INCLUDE min\func16\intelab.asm
+   INCLUDE max/func16\intelab.asm
 ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-   INCLUDE min\func16\sarc.asm
+   INCLUDE max/func16\sarc.asm
 ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-   INCLUDE min\func16\standard.asm
+   INCLUDE max/func16\standard.asm
 ENDIF 
 
 
@@ -1206,29 +1191,29 @@ EMS_FUNCTION_05001h:
 
 
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
-   INCLUDE min\func17-1\scamp.asm
+   INCLUDE max/func17-1\scamp.asm
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-   INCLUDE min\func17-1\fantasy.asm
+   INCLUDE max/func17-1\fantasy.asm
 ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-   INCLUDE min\func17-1\rodney.asm
+   INCLUDE max/func17-1\rodney.asm
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-   INCLUDE min\func17-1\scat.asm
+   INCLUDE max/func17-1\scat.asm
 ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-   INCLUDE min\func17-1\ht18.asm
+   INCLUDE max/func17-1\ht18.asm
 ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-   INCLUDE min\func17-1\ht12.asm
+   INCLUDE max/func17-1\ht12.asm
 ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-   INCLUDE min\func17-1\hedaka.asm
+   INCLUDE max/func17-1\hedaka.asm
 ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-   INCLUDE min\func17-1\lotech.asm
+   INCLUDE max/func17-1\lotech.asm
 ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-   INCLUDE min\func17-1\neat.asm
+   INCLUDE max/func17-1\neat.asm
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-   INCLUDE min\func17-1\intelab.asm
+   INCLUDE max/func17-1\intelab.asm
 ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-   INCLUDE min\func17-1\sarc.asm
+   INCLUDE max/func17-1\sarc.asm
 ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-   INCLUDE min\func17-1\standard.asm
+   INCLUDE max/func17-1\standard.asm
 ENDIF
 
 
@@ -1261,29 +1246,29 @@ util_get_register_for_segment:
 
 
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
-   INCLUDE min\util\scamp.asm
+   INCLUDE max/util\scamp.asm
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-   INCLUDE min\util\fantasy.asm
+   INCLUDE max/util\fantasy.asm
 ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-   INCLUDE min\util\rodney.asm
+   INCLUDE max/util\rodney.asm
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-   INCLUDE min\util\scat.asm
+   INCLUDE max/util\scat.asm
 ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-   INCLUDE min\util\ht18.asm
+   INCLUDE max/util\ht18.asm
 ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-   INCLUDE min\util\ht12.asm
+   INCLUDE max/util\ht12.asm
 ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-   INCLUDE min\util\hedaka.asm
+   INCLUDE max/util\hedaka.asm
 ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-   INCLUDE min\util\lotech.asm
+   INCLUDE max/util\lotech.asm
 ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-   INCLUDE min\util\neat.asm
+   INCLUDE max/util\neat.asm
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-   INCLUDE min\util\intelab.asm
+   INCLUDE max/util\intelab.asm
 ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-   INCLUDE min\util\sarc.asm
+   INCLUDE max/util\sarc.asm
 ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-   INCLUDE min\util\standard.asm
+   INCLUDE max/util\standard.asm
 ENDIF
 ; TODO: these
 
@@ -1303,36 +1288,6 @@ xchg       ax, bx
 iret
 
 
-ELSE
-   ; stubs for min driver.
-EMS_FUNCTION_04Dh:
-EMS_FUNCTION_04Eh:
-EMS_FUNCTION_04Fh:
-EMS_FUNCTION_05001h:
-; Do not implement OS level 4.0 functions for single application driver.
-EMS_FUNCTION_051h:
-EMS_FUNCTION_052h:
-EMS_FUNCTION_053h:
-EMS_FUNCTION_054h:
-EMS_FUNCTION_055h:
-EMS_FUNCTION_056h:
-EMS_FUNCTION_057h:
-
-
-EMS_FUNCTION_059h:
-
-EMS_FUNCTION_05Ah:
-EMS_FUNCTION_05Bh:
-EMS_FUNCTION_05Ch:
-
-EMS_FUNCTION_05Dh:
-xchg       ax, bx
-iret
-
-
-ENDIF
-
-IF COMPILE_VERSION GE DRIVER_VERSION_SMALL
 
 
    _RESIDENT_VARIABLE_global_last_page:
@@ -1361,7 +1316,6 @@ IF COMPILE_VERSION GE DRIVER_VERSION_SMALL
       dw  CURRENT_NEXT_POINTER
    ENDM
 
-ENDIF
 
 
 
@@ -1414,29 +1368,29 @@ string_good_page_offset_param_EDIT_OFFSET   db            "0128",'$'
 
 
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for VLSI SCAMP', 0Dh, 0Ah,'$'
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for VLSI SCAMP', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Fantasy Card', 0Dh, 0Ah,'$'
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Fantasy Card', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Rodneys 286 Chipset', 0Dh, 0Ah,'$'
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Rodneys 286 Chipset', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for C&T SCAT', 0Dh, 0Ah,'$'
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for C&T SCAT', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Headland HT-18, HT-21, HT-22, HT-25', 0Dh, 0Ah,'$'
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Headland HT-18, HT-21, HT-22, HT-25', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Headland HT-12', 0Dh, 0Ah,'$'
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Headland HT-12', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for HEDAKA/CITYGATE/PCCHIPS Chipsets', 0Dh, 0Ah,'$'
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for HEDAKA/CITYGATE/PCCHIPS Chipsets', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Lo-tech EMS Board', 0Dh, 0Ah,'$'
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Lo-tech EMS Board', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Chips NEAT', 0Dh, 0Ah,'$'
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Chips NEAT', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Intel Above Board', 0Dh, 0Ah,'$'
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Intel Above Board', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for SARC RC2016A', 0Dh, 0Ah,'$'
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for SARC RC2016A', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.1 for Standard EMS Boards', 0Dh, 0Ah,'$'
+  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Standard EMS Boards', 0Dh, 0Ah,'$'
 ENDIF
 
 _INIT_PARAM_command_line_length:
@@ -1497,29 +1451,29 @@ quiet_mode_off:
 
 
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
-   INCLUDE min\init\scamp.asm
+   INCLUDE max/init\scamp.asm
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-   INCLUDE min\init\fantasy.asm
+   INCLUDE max/init\fantasy.asm
 ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-   INCLUDE min\init\rodney.asm
+   INCLUDE max/init\rodney.asm
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-   INCLUDE min\init\scat.asm
+   INCLUDE max/init\scat.asm
 ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-   INCLUDE min\init\ht18.asm
+   INCLUDE max/init\ht18.asm
 ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-   INCLUDE min\init\ht12.asm
+   INCLUDE max/init\ht12.asm
 ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-   INCLUDE min\init\hedaka.asm
+   INCLUDE max/init\hedaka.asm
 ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-   INCLUDE min\init\lotech.asm
+   INCLUDE max/init\lotech.asm
 ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-   INCLUDE min\init\neat.asm
+   INCLUDE max/init\neat.asm
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-   INCLUDE min\init\intelab.asm
+   INCLUDE max/init\intelab.asm
 ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-   INCLUDE min\init\sarc.asm
+   INCLUDE max/init\sarc.asm
 ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-   INCLUDE min\init\standard.asm
+   INCLUDE max/init\standard.asm
 ENDIF
 
 mov        ax, PAGE_FRAME_COUNT
