@@ -103,7 +103,8 @@
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_4+1], al
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_6+1], al
 
-  add  al, 0Ch
+; additional 4 for minus cases.
+  add  al, (SCAT_CHIPSET_CONVENTIONAL_PAGEFRAME_DELTA)
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_1+1], al
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_7+1], al
 
@@ -111,7 +112,7 @@
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_8+1], al
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_9+1], al
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_10+1], al
-  sub  al, 0Ch
+  sub  al, (SCAT_CHIPSET_CONVENTIONAL_PAGEFRAME_DELTA)
 
   or   al, SCAT_CHIPSET_AUTOINCREMENT_FLAG
 

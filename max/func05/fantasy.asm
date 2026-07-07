@@ -7,10 +7,10 @@
   ; but only page frame is exposed as indexes 0-4
 
   cli
-  cmp   al, 12
-  jae   NOT_CONVENTIONAL_REGISTER
+  cmp   al, FANTASY_CHIPSET_CONVENTIONAL_PAGEFRAME_DELTA
+  jae   func_05_conventional_register
 SELFMODIFY_FANTASY_add_page_frame_offset_2:  
-  add   al, 4 ; need to add 4 for d000 case for scamp...  we do this branch knowing it may need to undone eventually
+  add   al, 4 ; need to offset by proper chipset page frame to hardward amount
   out   FANTASY_PAGE_SELECT_REGISTER, al   ; select EMS page
   cmp   bx, 0FFFFh   ; -1 check
   je    handle_default_page_44h
@@ -20,8 +20,9 @@ SELFMODIFY_FANTASY_add_page_frame_offset_2:
   xor   ax, ax
   iret
 
-  NOT_CONVENTIONAL_REGISTER:
-
+  func_05_conventional_register:
+  ; normalize to register 0x4000 hw value
+  add   al, (FANTASY_CHIPSET_CONVENTIONAL_PAGE_4000 - FANTASY_CHIPSET_CONVENTIONAL_PAGEFRAME_DELTA) 
 
   ; write ems port... select chipset register
   out   FANTASY_PAGE_SELECT_REGISTER, al   ; select EMS page

@@ -5,7 +5,7 @@ UTIL_get_page:
 SELFMODIFY_SCAT_set_page_select_register_9:
   mov   dx, SCAT_PAGE_SELECT_REGISTER
 
-  sub   al, 0Ch
+  sub   al, SCAT_CHIPSET_CONVENTIONAL_PAGEFRAME_DELTA
   jb    util_get_page_handle_page_frame
   ; pre-incremented by 2
   out   dx, al   ; select EMS page
@@ -40,7 +40,7 @@ SELFMODIFY_SCAT_set_page_select_register_10:
   mov   dx, SCAT_PAGE_SELECT_REGISTER
 
 
-  sub   al, 0Ch
+  sub   al, SCAT_CHIPSET_CONVENTIONAL_PAGEFRAME_DELTA
   jb    util_set_page_handle_page_frame
   ; pre-incremented by 2
   out   dx, al   ; select EMS page
@@ -53,7 +53,7 @@ SELFMODIFY_SCAT_set_page_select_register_10:
   util_set_page_handle_page_frame:
 
 SELFMODIFY_SCAT_add_page_frame_register_offset_10:
-  add   al, SCAT_PAGE_C000_REGISTER_OFFSET  ; includes 00Ch
+  add   al, SCAT_PAGE_C000_REGISTER_OFFSET  ; includes SCAT_CHIPSET_CONVENTIONAL_PAGEFRAME_DELTA
 
   dec   dx
   dec   dx

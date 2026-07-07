@@ -13,10 +13,10 @@
  
 SELFMODIFY_SCAT_set_page_select_register_2:
   mov   dx, SCAT_PAGE_SELECT_REGISTER
-  sub   al, 0Ch
+  sub   al, SCAT_CHIPSET_CONVENTIONAL_PAGEFRAME_DELTA
   jae   func_05_do_conventional_map
   SELFMODIFY_SCAT_add_page_frame_register_offset_1:
-  add   al, SCAT_PAGE_C000_REGISTER_OFFSET ; convert 0-4 to page frame. adds back subtracted 0Ch too
+  add   al, SCAT_PAGE_C000_REGISTER_OFFSET ; convert 0-4 to page frame. adds back subtracted 04h too
   func_05_do_conventional_map:   ; conventional page should be good.
   cli
   out   dx, al   ; select EMS page

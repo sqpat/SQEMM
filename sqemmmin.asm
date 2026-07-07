@@ -269,6 +269,15 @@ NOT_FUNC_50h:
 
 EMS_FUNCTION_044h:
 
+_RESIDENT_VARIABLE_pageable_frame_count_1:
+  cmp        al, 010h
+  jae        func_05_page_too_high
+
+  ENOUGH_PAGES:
+  cmp        dx,  1
+  jne        func_05_handle_not_found
+
+
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
    INCLUDE min\func05\scamp.asm
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS

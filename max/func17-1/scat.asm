@@ -18,7 +18,7 @@
 
 SELFMODIFY_SCAT_set_page_select_register_8:
   mov   dx, SCAT_PAGE_SELECT_REGISTER
-  sub   al, 0Ch
+  sub   al, SCAT_CHIPSET_CONVENTIONAL_PAGEFRAME_DELTA
   jae   func_1701_do_conventional_map
   SELFMODIFY_SCAT_add_page_frame_register_offset_8:
   add   al, SCAT_PAGE_C000_REGISTER_OFFSET ; convert 0-4 to page frame. adds back subtracted 0Ch too

@@ -1,13 +1,6 @@
 
   ; page frame's pages are 208, 4208, 8208, c208. 
-
-_RESIDENT_VARIABLE_pageable_frame_count_1:
-  cmp        al, 010h
-  jae        func_05_page_too_high
-
-  ENOUGH_PAGES:
-  cmp        dx,  1
-  jne        func_05_handle_not_found
+ 
   
   ; al and bx are still the args
 

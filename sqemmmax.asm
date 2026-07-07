@@ -331,7 +331,6 @@ func_05_handle_not_found:
 mov        ah, 083h  ; The memory manager couldn't find the EMM handle your program specified.
 iret
 
-func_17_page_too_high:
 func_05_page_too_high:
 mov        ah, 08Bh
 iret
@@ -478,7 +477,8 @@ je         func_43_no_handles_Left
 
 dec        word ptr cs:[_RESIDENT_VARIABLE_handle_count+1]
 
-xchg       ax, bx
+; ax still has num pages to allocate..
+mov        bx, ax  ; restore bx
 call       COMMON_allocate_pages
 
 xor        ax, ax ; return good
@@ -1284,9 +1284,12 @@ util_get_register_for_segment:
    loop  check_next_segment_in_list
 
    ; fail... undefined behavior? or just store FFFF in there?
-
+   dec   cx     ; cx = -1
+   xchg  ax, cx ; ax = -1
+   jmp   return_bad_register
    found_page_in_list:
    mov   ax, word ptr cs:[si+2]
+   return_bad_register:
    pop   cx
    pop   si
    ret
@@ -1382,6 +1385,7 @@ COMMON_allocate_pages:
 COMMON_deallocate_pages:
    ; deallocate all pages from handle dx
    push bx
+   push dx
    mov  bx, dx
    SHIFT_MACRO shl  bx 2
 
@@ -1399,11 +1403,12 @@ COMMON_deallocate_pages:
    je   skip_loop
 
    PAGE_loop_deallocate_next_page:
-   mov  bx, word ptr cs:[bx + PAGE_INFO.page_info_next_page]
-   cmp  bx, -1
+    mov  dx, bx
+    mov  bx, word ptr cs:[bx + PAGE_INFO.page_info_next_page]
+    cmp  bx, -1
+    jne  PAGE_loop_deallocate_next_page
 
-   jbe  PAGE_loop_deallocate_next_page
-
+   ; dx is last page before -1.
    ; bx is -1
    ; ax is pointer to handle.
 
@@ -1411,18 +1416,25 @@ COMMON_deallocate_pages:
 
    ; ax is -1
    
+   ; 1. handle first page becomes -1.
+   ; 2. global/free linked list points to old handle first page
+   ; 3. handle last page poinst to old global/free first page
+
    xchg word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page], ax  ; -1
-   lock mov  word ptr cs:[_RESIDENT_VARIABLE_handle_list + PAGE_INFO.page_info_next_page], ax  ; point to first page 
+   lock mov  bx, dx  ; bx gets ptr
+   xchg word ptr cs:[_RESIDENT_VARIABLE_handle_list + PAGE_INFO.page_info_next_page], ax  ; point to first page 
+   lock mov  word ptr cs:[bx + PAGE_INFO.page_info_next_page], ax
 
    skip_loop:
+   deallocate_return:
+   pop  dx
    pop  bx
    ret
 
    handle_zero_page_deallocation:
    dec  ax  ; -1
    mov  word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page], ax ; write -1
-   pop  bx
-   ret
+   jmp  deallocate_return
 
 
 COMMON_get_next_free_handle:

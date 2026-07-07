@@ -5,9 +5,12 @@ UTIL_get_page:
 
   mov   dx, FANTASY_PAGE_SELECT_REGISTER
 
-  sub   al, 0Ch
+  cmp   al, FANTASY_CHIPSET_CONVENTIONAL_PAGEFRAME_DELTA
   jb    util_get_page_handle_page_frame
-  ; pre-incremented by 2
+
+  ; normalize to register 0x4000 hw value
+  add   al, (FANTASY_CHIPSET_CONVENTIONAL_PAGE_4000 - FANTASY_CHIPSET_CONVENTIONAL_PAGEFRAME_DELTA) 
+
   out   dx, al   ; select EMS page
 
   inc   dx
@@ -22,7 +25,6 @@ UTIL_get_page:
 SELFMODIFY_FANTASY_add_page_frame_offset_3:
   add   al, 4
 
-  ; pre-incremented by 2
   out   dx, al   ; select EMS page
 
   dec   dx
@@ -40,9 +42,12 @@ UTIL_set_page:
   mov   dx, FANTASY_PAGE_SELECT_REGISTER
 
 
-  sub   al, 0Ch
+  cmp   al, FANTASY_CHIPSET_CONVENTIONAL_PAGEFRAME_DELTA
   jb    util_set_page_handle_page_frame
-  ; pre-incremented by 2
+
+  ; normalize to register 0x4000 hw value
+  add   al, (FANTASY_CHIPSET_CONVENTIONAL_PAGE_4000 - FANTASY_CHIPSET_CONVENTIONAL_PAGEFRAME_DELTA) 
+
   out   dx, al   ; select EMS page
 
   inc   dx

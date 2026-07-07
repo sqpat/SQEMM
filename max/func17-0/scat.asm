@@ -1,25 +1,56 @@
-  push cx
-  push bx
-  push si
-  push dx
+
+  PUSHA_MACRO 
 
 
   ; physical page number mode
-  cli
+  mov   bp, dx
+  SHIFT_MACRO shl bp 2  ;  SIZE HANDLE_INFO
+  mov   di, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bp + HANDLE_INFO.handle_num_pages]
+  cmp   di, -1
+  je    func_17_handle_not_found
+  mov   bp, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bp + HANDLE_INFO.handle_first_page]
+
+; bp has first page ptr.
+; di has num logical pages
+
 
 func1700_loop_next_page:
   ; next page in ax....
   lodsw
-  xchg  ax, bx
+
+
+_RESIDENT_VARIABLE_pageable_frame_count_func17_00:
+    cmp        al, 010h
+    jae        func_17_page_too_high
+    cmp        ax, di
+    ja         func_17_logical_page_too_high
+
+  ; get actual page bx for handle dx
+
+  mov   bx, bp  ; first page
+  xchg  ax, cx  ; loop counter.
+  jcxz  func_17_done_looping
+
+  func_17_loop_next_page:
+    mov   bx, word ptr cs:[bx + PAGE_INFO.page_info_next_page]
+    loop  func_17_loop_next_page
+
+  func_17_done_looping:
+  ; bx is now ptr to the actual page...
+  sub   bx, OFFSET _RESIDENT_VARIABLE_page_list
+  shr   bx, 1  ; board physical page number
+
+
+
   lodsw
-  ; read two words - bx and ax
+  ; read two words - bx has logical page and ax has register.
 
 SELFMODIFY_SCAT_set_page_select_register_3:
   mov   dx, SCAT_PAGE_SELECT_REGISTER
-  sub   al, 0Ch
+  sub   al, SCAT_CHIPSET_CONVENTIONAL_PAGEFRAME_DELTA
   jae   func_1700_do_conventional_map
   SELFMODIFY_SCAT_add_page_frame_register_offset_7:
-  add   al, SCAT_PAGE_C000_REGISTER_OFFSET ; convert 0-4 to page frame. adds back subtracted 0Ch too
+  add   al, SCAT_PAGE_C000_REGISTER_OFFSET ; convert 0-4 to page frame. adds back subtracted SCAT_CHIPSET_CONVENTIONAL_PAGEFRAME_DELTA too
   func_1700_do_conventional_map:   ; conventional page should be good.
 
   
@@ -35,16 +66,25 @@ SELFMODIFY_SCAT_set_page_set_register_3:
 
   loop  func1700_loop_next_page
 
-  sti
 
-  
 
   ; exit fall thru
-  xor ax, ax
-  pop dx
-  pop si
-  pop bx
-  pop cx
+  POPA_MACRO
+  xor ax, ax  ; success
+  iret
+
+func_17_logical_page_too_high:
+  POPA_MACRO
+  mov   ah, 08Ah  ; One or more of the mapped logical pages is out of the range of logical pages allocated to the EMM handle.
+  iret
+func_17_page_too_high:
+  POPA_MACRO
+  mov   ah, 08Bh  ; One or more of the physical pages is out of the range of mappable physical pages, or the log_to_phys_map_len exceeds the number of mappable pages in the system.
+  iret
+
+func_17_handle_not_found:
+  POPA_MACRO
+  mov   ah, 083h  ; The memory manager couldn't find the EMM handle your program specified.
   iret
 
   func_1700_handle_default_page:
@@ -52,13 +92,10 @@ SELFMODIFY_SCAT_set_page_set_register_3:
   mov   ax, SCAT_CHIPSET_UNMAP_VALUE
   out   dx, ax   ; write 16 bit page num. 
   loop  func1700_loop_next_page
-  sti
+
 
 
   ; exit fall thru
-  xor ax, ax
-  pop dx
-  pop si
-  pop bx
-  pop cx
+  POPA_MACRO
+  xor ax, ax  ; success
   iret

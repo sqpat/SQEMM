@@ -33,7 +33,7 @@ func_16_sub_00_save_next_page_frame_register:
   lodsw
   ; ax has segment... 
   call  util_get_register_for_segment
-  sub   al, 0Ch
+  sub   al, SCAT_CHIPSET_CONVENTIONAL_PAGEFRAME_DELTA
   jae   func_16_do_conventional_map
   add   al, bl
   func_16_do_conventional_map:
