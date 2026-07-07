@@ -28,8 +28,8 @@ COMPILE_8086 = 0
 
 
 
-COMPILE_VERSION = DRIVER_VERSION_MIN
-COMPILE_CHIPSET = SCAT_CHIPSET
+COMPILE_VERSION = DRIVER_VERSION_FULL
+COMPILE_CHIPSET = FANTASY_EMS
 
 RET_OPCODE = 0C3h
 
@@ -311,7 +311,7 @@ dw  OFFSET EMS_FUNCTION_04dh
 dw  OFFSET EMS_FUNCTION_04eh
 dw  OFFSET EMS_FUNCTION_04fh
 dw  OFFSET EMS_FUNCTION_05001h
-IF COMPISA GE DRIVER_VERSION_FULL
+IF COMPILE_VERSION GE DRIVER_VERSION_FULL
 dw  OFFSET EMS_FUNCTION_051h
 dw  OFFSET EMS_FUNCTION_052h
 dw  OFFSET EMS_FUNCTION_053h
@@ -477,7 +477,7 @@ mov        byte ptr cs:[_current_call_subfunction_value], al
 mov        al, ah
 cmp        al, 05dh
 ja         bad_function
-IF COMPISA GE DRIVER_VERSION_MIN
+IF COMPILE_VERSION GE DRIVER_VERSION_MIN
 cmp        al, 58h
 je         EMS_FUNCTION_058h
 cmp        al, 050h
@@ -604,7 +604,6 @@ cwd        ; dx = 0
 mov        ah, 085h  ; All EMM handles are being used.
 iret
 func_43_allocated_too_many_pages_above_total:
-func_51_allocated_too_many_pages_above_total:
 xchg       ax, bx
 cwd        ; dx = 0
 mov        ah, 087h  ; There aren't enough expanded memory pages present in the system to satisfy your program's request.
@@ -669,7 +668,7 @@ iret
 
 
 
-IF COMPISA GE DRIVER_VERSION_SMALL
+IF COMPILE_VERSION GE DRIVER_VERSION_SMALL
 
 ;          13 Get Handle Pages                               4Ch       
 
@@ -762,7 +761,7 @@ ENDIF
 
 
 
-IF COMPISA GE DRIVER_VERSION_FULL
+IF COMPILE_VERSION GE DRIVER_VERSION_FULL
 
 ;          18 Reallocate Pages                               51h       
 ; DX = handle
@@ -776,6 +775,11 @@ sub        ax, bx
 jb         func_51_allocated_too_many_pages_above_total
 xchg       ax, bx
 xor        ax, ax  ; ah = 0
+iret
+func_51_allocated_too_many_pages_above_total:
+xchg       ax, bx
+cwd        ; dx = 0
+mov        ah, 087h  ; There aren't enough expanded memory pages present in the system to satisfy your program's request.
 iret
 
 
@@ -1151,6 +1155,7 @@ func_24_prep_source_logical:
  mov   word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_current_page], dx
  mov   ax, FUNC_24_SOURCE_PAGE_FRAME_INDEX
  call  UTIL_get_page
+ 
  mov   word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_original_page], ax
  mov   ax, FUNC_24_SOURCE_PAGE_FRAME_INDEX
  call  UTIL_set_page

@@ -14,7 +14,7 @@
 
   cmp   ax, 12
   ; default, lets assume backfill
-  jb PAGEFRAME_REGISTER_5000
+  jb func_17_0_pageframe_register
 
   out SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
  
@@ -36,7 +36,7 @@
   iret
 
 
-  PAGEFRAME_REGISTER_5000:
+  func_17_0_pageframe_register:
   
   add   ax, 4 ; need to add 4 for d000 case for scamp...  c000, e000  not supported
   out   SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page

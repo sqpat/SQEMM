@@ -16,7 +16,7 @@
 
   cmp   al, 12  ; after 12 is conventional backfill
   ; default, lets assume backfill
-  jb PAGEFRAME_REGISTER_5000
+  jb func_17_1_pageframe_register
 
   out FANTASY_PAGE_SELECT_REGISTER, al   ; select EMS page
  
@@ -37,9 +37,9 @@
   iret
 
 
-  PAGEFRAME_REGISTER_5000:
+  func_17_1_pageframe_register:
 
-SELFMODIFY_FANTASY_add_page_frame_offset_1:  
+SELFMODIFY_FANTASY_add_page_frame_offset_5:  
   add   al, 4 ; need to add 4 for d000 case for FANTASY...  c000, e000  not supported
   out   FANTASY_PAGE_SELECT_REGISTER, al   ; select EMS page
   cmp   bx, 0FFFFh   ; -1 check
