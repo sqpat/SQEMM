@@ -1107,23 +1107,36 @@ func_24_offset_too_high:
 ;          14 Get All Handle Pages                           4Dh       
 ; we write all handles and their page counts to es:di
 EMS_FUNCTION_04Dh:
-mov        ax, word ptr cs:[_RESIDENT_VARIABLE_handle_count+1]
-xor        al, 1  ; 0 or 1 unallocated -> 1 or 1 allocated
-xchg       ax, bx ; ah zero, bx gets  total_open_emm_handles
-mov        ax, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count+1]
-mov        word ptr es:[di+2], ax ; pages_alloc_to_handle
-jnz        func_14_wrote_all_handle_pages ; no handles allocated
+push  di
+xor   ax, ax ; count
+stosw ; handle 0
 
-neg        ax
-add        ax, word ptr cs:[_RESIDENT_VARIABLE_total_EMS_page_count+1]
-mov        word ptr es:[di+6], ax ; total pages - unallocated = allocated
-mov        word ptr es:[di+4], 1
+mov   ax, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count+1]
+stosw
+xor   ax, ax ; zero again
+mov   bx, OFFSET _RESIDENT_VARIABLE_handle_list + SIZE HANDLE_INFO
+  
+  func_14_check_next_handle:
+   cmp   word ptr cs:[bx], -1 ; 
+   je    func_14_free_handle
+   stosw ; handle number
+   push  ax
+   mov   ax, word ptr cs:[bx + HANDLE_INFO.handle_num_pages]
+   stosw ; handle page count
+   pop   ax ; restore ax
+   func_14_free_handle:
+   inc   ax
+   add   bx, SIZE HANDLE_INFO
+   cmp   bx, offset _RESIDENT_VARIABLE_handle_list_END
+   jb    func_14_check_next_handle
 
-func_14_wrote_all_handle_pages:
-xor        ax, ax
-mov        word ptr es:[di], 0 ; emm_handle
 
-inc bx ; (including the operating system handle [0]).  The number cannot be zero because the operating system handle is always active and
+
+mov  bx, di
+pop  di ; restore original di
+sub  bx, di 
+SHIFT_MACRO shr bx 2
+xor  ax, ax ; return success
 
 iret
 
@@ -1414,7 +1427,7 @@ dw  OFFSET _RESIDENT_VARIABLE_page_list + (MAX_PAGE_COUNT * (SIZE PAGE_INFO))
 _RESIDENT_VARIABLE_handle_list:
 
    dw MAX_PAGE_COUNT  ; num pages for handle. -1 means unallocated.
-   dw OFFSET _RESIDENT_VARIABLE_handle_list ; ptr to first page. Can be -1 if the above is 0 for ems 4.0 driver
+   dw OFFSET _RESIDENT_VARIABLE_page_list ; ptr to first page. Can be -1 if the above is 0 for ems 4.0 driver
 
 
 REPT (MAX_HANDLE_COUNT - 1)
