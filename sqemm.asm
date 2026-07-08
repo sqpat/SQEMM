@@ -21,7 +21,7 @@ RODNEY_EMS = 12
 
 DRIVER_VERSION_MIN   = 1  ; around 600-700 bytes, main functions implemented, single handle
 DRIVER_VERSION_SMALL = 2  ; around 2-3 kb, full 3,2 implementation
-DRIVER_VERSION_MAX  = 3   ; several KB full 4.0 implementation.
+DRIVER_VERSION_MAX   = 3   ; several KB full 4.0 implementation.
 
 
 COMPILE_386  = 3
@@ -117,12 +117,21 @@ ENDIF
 
 ENDM
 
+
 MOVSW_MACRO MACRO
    shr        cx, 1
    rep        movsw
-   jnc        $+1
+   jnc        $+3
    movsb
 ENDM
+COMMENT @
+
+
+
+MOVSW_MACRO MACRO
+   rep        movsb
+ENDM
+@
 
 .MODEL  tiny
 

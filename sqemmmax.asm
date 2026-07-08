@@ -724,6 +724,10 @@ _RESIDENT_VARIABLE_FUNC_24_source_current_page:
 dw 0
 _RESIDENT_VARIABLE_FUNC_24_dest_current_page:
 dw 0
+_RESIDENT_VARIABLE_FUNC_24_source_handle:
+dw 0
+_RESIDENT_VARIABLE_FUNC_24_dest_handle:
+dw 0
 
 ; The function code passed to the memory manager is not defined.
 func_24_bad_subfunction:
@@ -788,10 +792,14 @@ cmp        al, 1
 ja         func_24_invalid_memtype
 xchg       ax, bx ; bl gets this byte.
 lodsw      
-call       check_valid_handle 
+jb         func_24_skip_handle_check_source   ; not extended memory
+call       COMMON_check_valid_handle 
 jc         func_24_bad_handle
+SHIFT_MACRO shl ax 2
+mov        word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_handle], ax
+func_24_skip_handle_check_source:
 lodsw      ; initial offset
-xchg       ax, si
+xchg       ax, di  ; goes into si later
 lodsw      ; initial page
 xchg       ax, dx
 
@@ -801,11 +809,17 @@ cmp        al, 1
 ja         func_24_invalid_memtype
 mov        bh, al
 lodsw      
-call       check_valid_handle 
+jb         func_24_skip_handle_check_dest   ; not extended memory
+call       COMMON_check_valid_handle 
 jc         func_24_bad_handle
+SHIFT_MACRO shl ax 2
+mov        word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_handle], ax
+func_24_skip_handle_check_dest:
 lodsw      ; dest offset
+mov        si, word ptr ds:[si] ; dest page
 xchg       ax, di
-lodsw      ; dest page
+xchg       ax, si
+
 
 
 ; dx, ax have source, dest segs
@@ -826,26 +840,35 @@ mov        dx, cx
 
 
 
+
 cmp   byte ptr cs:[_current_call_subfunction_value], 1
 je    do_func_24_01    
 
 
 ; MAIN COPY LOOP: 
+
+
+
 func_24_copy_more_memory:
 
+
    call       func_24_prep_copy_pointers ; does all the loop/copy setup
+   ; note: bp:dx comes out of the above holding 32 bit count.
+   ; cx comes out with the current copy amount.
    mov        ax, cx  ; copy len
    MOVSW_MACRO
 
-   call       func_24_check_repage ; does all the logical page repaging
-
-
    sub        dx, ax
-   sbb        bp, cx ; known 0   
+   sbb        bp, cx ; known 0      
 
    mov        ax, dx
    or         ax, bp
-   jnz        func_24_copy_more_memory
+   jz         func_24_done
+
+   call       func_24_check_repage ; does all the logical page repaging
+
+   jmp        func_24_copy_more_memory
+
 
 func_24_done:
 
@@ -888,69 +911,64 @@ func_24_exchange_more_memory:
    loop       func_24_exchange_more_bytes
    pop        ax ; get length
 
-   call       func_24_check_repage ; does all the logical page repaging
-
-
-
    sub        dx, ax
    sbb        bp, cx ; known 0   
 
+
+
+
+
    mov        ax, dx
    or         ax, bp
-   jnz        func_24_copy_more_memory
+   jz         func_24_done
+   call       func_24_check_repage ; does all the logical page repaging
 
-jmp  func_24_done
+
+   jmp  func_24_exchange_more_memory
 
 
-; carry flag means bad handle
-check_valid_handle:
- cmp       ax, 1
- jne       ret_bad_handle
- cmp       word ptr cs: [_RESIDENT_VARIABLE_handle_count+1], ax  ; known 1
- jae       ret_bad_handle  ; the one handle is unalloced..
- clc
- ret
- ret_bad_handle:
- stc
- ret
 
 ; ds:si and es:di get normalized such that si/di are is 000n
 ; bl/bh still carry copy types
 
-func_24_prep_copy_pointers:
-   ; ax/dx free
+func_24_prep_copy_pointers:   ; return copy amount in cx
+   ; ax/cx free
+   ; now bp:dx carries count...
 
- test  bl, 1
- jne   func_24_skip_ds_si_noramlize
- mov   dx, ds
+ test  bl, bl
+ jnz   func_24_skip_ds_si_noramlize
+ mov   cx, ds
  mov   ax, si
- and   si, 0FFF0h
  SHIFT_MACRO shr ax 4
- sub   dx, ax
- mov   ds, dx
+ and   si, 0000Fh
+ add   ax, cx
+ mov   ds, ax
 
  func_24_skip_ds_si_noramlize:
- test  bh, 1
- jne   func_24_skip_es_di_noramlize
- mov   dx, es
+ test  bh, bh
+ jnz   func_24_skip_es_di_noramlize
+ mov   cx, es
  mov   ax, di
- and   di, 0FFF0h
  SHIFT_MACRO shr ax 4
- sub   dx, ax
- mov   es, dx
+ and   di, 0000Fh
+ add   ax, cx
+ mov   es, ax
  func_24_skip_es_di_noramlize:
 
 
  ; segments/offsets were normalized if conventional.
  ; now calculate copy length for this iter.
  ;
+ ; bp:dx still count
+
  test  bx, bx
  jz    func_24_use_conventional_max
+ 
  mov   cx, 16384
  cmp   bx, 0100h  
- je    func_24_use_di_value
- ja    func_24_use_min_of_both
- func_24_use_si_value:
+ je    func_24_use_di_value    ; only dest is extended
+ ja    func_24_use_min_of_both ; both are extended
+ func_24_use_si_value:         ; only source is extended
  sub   cx, si
  jmp   func_24_bounds_check
  func_24_use_di_value:
@@ -969,11 +987,14 @@ func_24_prep_copy_pointers:
 func_24_use_conventional_max:
  mov   cx, dx
  cmp   cx, 32768
- ja    func_24_cap_conventional_size
+ jb    func_24_skip_cap_conventional_size
+func_24_do_max_after_all:
  mov   cx, 32768
-func_24_cap_conventional_size:
+func_24_skip_cap_conventional_size:
+ jcxz  func_24_do_max_after_all   ; bp must be nonzero?
 
 func_24_bounds_check:
+ ; dx has original count.
  cmp        cx, dx   ; is length smaller than bp:dx?
  jbe        func_24_ax_smaller_do_copy
  test       bp, bp
@@ -983,93 +1004,91 @@ func_24_bounds_check:
 
  ret
 
-; ax gets MAX(16384-si, 16384-di)
-func_24_prep_extended_copy_length:
- push  dx
- mov   ax, 16384
- mov   dx, ax
- sub   ax, si
- sub   dx, di
- cmp   ax, dx
- jbe   keep_this_ax
- xchg  ax, dx
- keep_this_ax:
- pop   dx
- ret
-
- test  bl, 1
- jne   skip_ds_si_noramlize
- mov   dx, ds
- mov   ax, si
- and   si, 0FFF0h
- SHIFT_MACRO shr ax 4
- sub   dx, ax
- mov   ds, dx
-
- skip_ds_si_noramlize:
- test  bh, 1
- jne   skip_es_di_noramlize
- mov   dx, es
- mov   ax, di
- and   di, 0FFF0h
- SHIFT_MACRO shr ax 4
- sub   dx, ax
- mov   es, dx
-
- skip_es_di_noramlize:
- pop   ax
-
- ret
-
 
 ; set up ds:es according to bl/bh memory types. prep extended pages if necessary
 func_24_set_up_segments:
- test  bl, 1
- jne   func_24_prep_source_logical
+ test  bl, bl
+ jnz   func_24_prep_source_logical
  mov   ds, dx
 
- test  bh, 1
- jne   func_24_prep_dest_logical
+ test  bh, bh
+ jnz   func_24_prep_dest_logical
  func_24_use_dest_conventional:
  mov   es, ax
 
  ret
 
 func_24_prep_source_logical:
- push  ax   ; AAAA save ax (dest segment)
- mov   word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_current_page], dx
+ push  ax   ; AAAA save ax
+
+ ; look up logical page 
+ push  bx
+ mov   bx, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_handle] ; preshifted 2
+ mov   bx, word ptr cs:[_RESIDENT_VARIABLE_handle_list + BX + HANDLE_INFO.handle_first_page]
+ 
+ mov   ax, dx   ; dx has logical page number. 
+ dec   ax
+ js    func_24_have_next_source_page
+
+func_24_loop_get_next_source_page:
+ mov   bx, word ptr cs:[bx + PAGE_INFO.page_info_next_page]
+ dec   ax
+ jns   func_24_loop_get_next_source_page
+func_24_have_next_source_page:
+
+ mov   word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_current_page], bx
+ pop   bx
+ ; dx still has logical page number.
  mov   ax, FUNC_24_SOURCE_PAGE_FRAME_INDEX
  call  UTIL_get_page
- 
  mov   word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_original_page], ax
+
  mov   ax, FUNC_24_SOURCE_PAGE_FRAME_INDEX
  call  UTIL_set_page
+ 
  mov   ds, word ptr cs:[mappable_phys_page_struct_page_frame+(4 * FUNC_24_SOURCE_PAGE_FRAME_INDEX)] ; page 3 segment
- pop   ax   ; AAAA restore ax (dest segment)
+ pop   ax   ; AAAA restore ax
  test  bh, 1
  je    func_24_use_dest_conventional
  
 func_24_prep_dest_logical:
- mov   word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_current_page], ax
- push  ax
- mov   ax, FUNC_24_DEST_PAGE_FRAME_INDEX
+
+; look up logical page 
+ push  bx
+ mov   bx, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_handle] ; preshifted 2
+ mov   bx, word ptr cs:[_RESIDENT_VARIABLE_handle_list + BX + HANDLE_INFO.handle_first_page]
+  
+ mov   dx, ax   ; ax already has logical page number. backup in dx
+ dec   ax
+ js    func_24_have_next_dest_page
+func_24_loop_get_next_dest_page:
+ mov   bx, word ptr cs:[bx + PAGE_INFO.page_info_next_page]
+ dec   ax
+ jns   func_24_loop_get_next_dest_page
+func_24_have_next_dest_page:
+
+ mov   word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_current_page], bx
+ pop   bx
+ 
+ mov   ax, FUNC_24_DEST_PAGE_FRAME_INDEX  ; dx has logical page number
  call  UTIL_get_page
  mov   word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_original_page], ax
- pop   dx
- mov   ax, FUNC_24_DEST_PAGE_FRAME_INDEX
+ 
+ mov   ax, FUNC_24_DEST_PAGE_FRAME_INDEX   ; dx (still) has logical page number
  call  UTIL_set_page
+
  mov   es, word ptr cs:[mappable_phys_page_struct_page_frame+(4 * FUNC_24_DEST_PAGE_FRAME_INDEX)] ; page 3 segment
  ret
 
 func_24_clean_up_segments:
-  test  bl, 1
-  je    func_24_skip_source_cleanup
+  test  bl, bl
+  jz    func_24_skip_source_cleanup
   mov   dx, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_original_page]
   mov   ax, FUNC_24_SOURCE_PAGE_FRAME_INDEX
   call  UTIL_set_page
  func_24_skip_source_cleanup:
-  test  bh, 1
-  je    func_24_skip_dest_cleanup
+  test  bh, bh
+  jz    func_24_skip_dest_cleanup
   mov   dx, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_original_page]
   mov   ax, FUNC_24_DEST_PAGE_FRAME_INDEX
   call  UTIL_set_page
@@ -1083,42 +1102,58 @@ func_24_do_bounds_checks:
   ; logical page count checks?
   
 
-  test       bl, 1
-  jne        func_24_skip_si_check
+  test       bl, bl
+  jz         func_24_skip_si_check
   cmp        si, 16384
   jae        func_24_offset_too_high
  func_24_skip_si_check:
 
-  test       bh, 1
-  jne        func_24_skip_di_check
+  test       bh, bh
+  jz         func_24_skip_di_check
   cmp        di, 16384
   jae        func_24_offset_too_high
  func_24_skip_di_check:
   ret
 
 func_24_check_repage:
-  test    bl, 1
-  je      func_24_dont_repage_source
+  
+  test    bl, bl
+  jz      func_24_dont_repage_source
   cmp     si, 16384
-  jbe     func_24_dont_repage_source
+  jne     func_24_dont_repage_source
+
   push    dx
   push    ax
-  inc     word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_current_page]
-  mov     dx, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_current_page]
+  push    bx
+  mov     bx, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_current_page]
+  mov     bx, word ptr cs:[bx + PAGE_INFO.page_info_next_page]
+  mov     word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_current_page], bx
+  mov     dx, bx
+  sub     dx, OFFSET _RESIDENT_VARIABLE_page_list
+  shr     dx, 1
+  pop     bx
   mov     ax, FUNC_24_SOURCE_PAGE_FRAME_INDEX
   call    UTIL_set_page
   pop     ax
   pop     dx
   xor     si, si
+
  func_24_dont_repage_source:
-  test    bh, 1
-  je      func_24_dont_repage_dest
+  test    bh, bh
+  jz      func_24_dont_repage_dest
   cmp     di, 16384
-  jbe     func_24_dont_repage_dest
+  jne     func_24_dont_repage_dest
+
   push    dx
   push    ax
-  inc     word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_current_page]
-  mov     dx, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_current_page]
+  push    bx
+  mov     bx, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_current_page]
+  mov     bx, word ptr cs:[bx + PAGE_INFO.page_info_next_page]
+  mov     word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_current_page], bx
+  mov     dx, bx
+  sub     dx, OFFSET _RESIDENT_VARIABLE_page_list
+  shr     dx, 1
+  pop     bx
   mov     ax, FUNC_24_DEST_PAGE_FRAME_INDEX
   call    UTIL_set_page
   pop     ax
@@ -1342,6 +1377,23 @@ xchg       ax, bx
 iret
 
 
+; carry flag means bad handle
+COMMON_check_valid_handle:
+ cmp       ax, 0
+ je        ret_bad_handle
+ xchg      ax, bx
+ SHIFT_MACRO  shl bx 2
+ cmp       word ptr cs: [_RESIDENT_VARIABLE_handle_list + bx], -1
+ xchg      ax, bx
+ je        ret_bad_handle  ; the one handle is unalloced..
+ SHIFT_MACRO  shr ax 2
+   ; clear known 0
+ ret
+ ret_bad_handle:
+ SHIFT_MACRO  shr ax 2
+ stc
+ ret
+
 COMMON_reallocate_pages:
 push bx
 ; allocate ax pages to (pre-existing) handle dx
@@ -1375,7 +1427,7 @@ COMMON_allocate_pages:
 
    ; ax is -1
    xchg ax, word ptr cs:[bx + PAGE_INFO.page_info_next_page] ; mark end -1
-   lock mov  word ptr cs:[_RESIDENT_VARIABLE_handle_list + PAGE_INFO.page_info_next_page], ax 
+   lock mov  word ptr cs:[_RESIDENT_VARIABLE_handle_list + HANDLE_INFO.handle_first_page], ax 
 
 
    pop  bx
@@ -1460,7 +1512,7 @@ COMMON_get_next_free_handle:
    pop   bx
    ret
 
-
+ALIGN 2
 
 _RESIDENT_VARIABLE_global_last_page:
 dw  OFFSET _RESIDENT_VARIABLE_page_list + (MAX_PAGE_COUNT * (SIZE PAGE_INFO))
@@ -1479,16 +1531,17 @@ REPT (MAX_HANDLE_COUNT - 1)
 ENDM
 
 _RESIDENT_VARIABLE_handle_list_END:
-
-
+public _RESIDENT_VARIABLE_handle_list
+public _RESIDENT_VARIABLE_page_list
 _RESIDENT_VARIABLE_page_list:
 
 CURRENT_NEXT_POINTER = _RESIDENT_VARIABLE_page_list
 
-REPT MAX_PAGE_COUNT
+REPT (MAX_PAGE_COUNT - 1)
    CURRENT_NEXT_POINTER = CURRENT_NEXT_POINTER + (SIZE PAGE_INFO)
    dw  CURRENT_NEXT_POINTER
 ENDM
+dw  -1   ; last entry
 
 
 
@@ -1660,8 +1713,13 @@ shl        ax, 1
 mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_5+2], ax
 mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_2+1], ax
 
+mov        ax, word ptr ds:[_RESIDENT_VARIABLE_total_EMS_page_count]
+xchg       ax, si
+shl        si, 1
+add        si, OFFSET  _RESIDENT_VARIABLE_page_list
+mov        word ptr ds:[si-2], -1    ; last offset.
 
-
+; bx is end of driver.
 
 
 ; set page table to page frame.
@@ -1678,7 +1736,7 @@ mov        word ptr ds:[mappable_phys_page_struct_page_frame+12], ax
 push       cs
 pop        es
 std
-mov        ax, OFFSET end_of_driver_label
+mov        ax, si   ; end of driver 
 mov        bx, 10
 mov        di, OFFSET string_resident_driver_size_EDIT_OFFSET + 3
 
@@ -1728,11 +1786,11 @@ mov        ah, 9  ; PRINT_STRING
 int        021h
 
 lds        bx, dword ptr ds:[request_header_pointer]
-mov        word ptr es:[bx + 3], 0100h
+mov        word ptr ds:[bx + 3], 0100h
 
 ; 0Eh: MS-DOS 5 set pointer to end of memory used by driver
 ; 10h: the segment for above
-mov        word ptr ds:[bx + 0eh], OFFSET  end_of_driver_label
+mov        word ptr ds:[bx + 0eh], si  ; end of driver
 mov        word ptr ds:[bx + 010h], cs
 ;mov        word ptr ds:[bx + 017h], 00
 ret

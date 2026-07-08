@@ -212,4 +212,6 @@ SELFMODIFY_SCAT_set_page_set_register_1:
   mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_2+2], ax
   
   mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_3+2], ax
+  mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_4+1], ax
+  mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_5+1], ax
 

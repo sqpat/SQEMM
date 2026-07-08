@@ -908,7 +908,7 @@ mov        ah, 9  ; PRINT_STRING
 int        021h
 
 lds        bx, dword ptr ds:[request_header_pointer]
-mov        word ptr es:[bx + 3], 0100h
+mov        word ptr ds:[bx + 3], 0100h
 
 ; 0Eh: MS-DOS 5 set pointer to end of memory used by driver
 ; 10h: the segment for above
