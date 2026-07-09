@@ -79,7 +79,7 @@ found_chipset_bounds_value:
 
   page_count_bounds_ok:
 
-  mov   word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count+1], ax
+  mov   word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count], ax
   mov   word ptr ds:[_RESIDENT_VARIABLE_total_EMS_page_count+1], ax
 
 

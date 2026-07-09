@@ -37,11 +37,11 @@ COMPILE_CHIPSET = SCAT_CHIPSET
 RET_OPCODE = 0C3h
 XCHG_AX_CX_OPCODE = 091h
 
-MAX_HANDLE_COUNT = 128  ; TODO whats the right number?
+MAX_HANDLE_COUNT = 255  ; TODO whats the right number?
 
 HANDLE_INFO STRUC 
     handle_num_pages   dw ?  ; 0
-    handle_first_page  dw ?  ; 0
+    handle_first_page  dw ?  ; 2
 HANDLE_INFO ENDS  ; 04h
 
 PAGE_INFO STRUC 

@@ -447,8 +447,7 @@ iret
 EMS_FUNCTION_042h:
 ;      FUNCTION 3    GET UNALLOCATED PAGE COUNT
 xchg       ax, bx ; zero ah
-_RESIDENT_VARIABLE_unallocated_page_count:
-mov        bx, 01000h
+mov        bx, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count]
 _RESIDENT_VARIABLE_total_EMS_page_count:
 mov        dx, 01000h  ; return in dx
 ; ah is already 0 because bh was 0 from jump table lookup
@@ -464,7 +463,7 @@ EMS_FUNCTION_043h:
 test       ax, ax
 jz         func_43_alloc_pages_0_error
 
-cmp        ax, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count+1]
+cmp        ax, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count]
 ja         func_43_allocated_too_many_pages
 cmp        ax, word ptr cs:[_RESIDENT_VARIABLE_total_EMS_page_count+1]
 ja         func_43_allocated_too_many_pages_above_total
@@ -520,23 +519,29 @@ iret
 
 EMS_FUNCTION_045h:
 xchg       ax, bx  ; put bx back
-; todo check handle info for real
-cmp        dx, 1
-jne        func_45_no_emm_handle_found
+test       dx, dx
+je         func_45_no_emm_handle_found ; zero handle illegal
+push       bx
+mov        bx, dx ; handle
+SHIFT_MACRO shl bx 2
+cmp        word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages], -1
+pop        bx
+je         func_45_no_emm_handle_found
+
+
 
 GOOD_EMM_HANDLE:
 
 call       COMMON_deallocate_pages
-mov        ax, word ptr cs:[_RESIDENT_VARIABLE_total_EMS_page_count+1]
 
-mov        word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count+1], ax
 inc        word ptr cs:[_RESIDENT_VARIABLE_handle_count+1]  ; handle freed, increment handle count
 
 xor        ax, ax
 iret
 
-func_45_no_emm_handle_found:
 func_4C_no_emm_handle_found:
+xchg       ax, bx  ; restore bx
+func_45_no_emm_handle_found:
 func_51_no_emm_handle_found:
 mov        ah, 083h  ; The memory manager couldn't find the EMM handle your program specified.
 iret
@@ -555,7 +560,7 @@ iret
 ;          12 Get Handle Count                               4Bh       
 
 EMS_FUNCTION_04Bh:
-xchg       ax, bx
+xchg       ax, bx ; ah 0
 _RESIDENT_VARIABLE_handle_count:
 mov        bx, 01000h
 iret
@@ -567,12 +572,17 @@ iret
 ;          13 Get Handle Pages                               4Ch       
 
 EMS_FUNCTION_04Ch:
-xchg       ax, bx
-cmp        dx, 1
-jne        func_4C_no_emm_handle_found
 
-mov        bx, word ptr cs:[_RESIDENT_VARIABLE_total_EMS_page_count+1]
-sub        bx, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count+1]
+test       dx, dx
+je         func_4C_no_emm_handle_found ; zero handle illegal
+
+mov        bx, dx ; handle
+SHIFT_MACRO shl bx 2
+mov        bx, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages]
+cmp        bx, -1
+je         func_4C_no_emm_handle_found
+xor        ax, ax ; return 0
+
 iret
 
 
@@ -1177,7 +1187,7 @@ push  di
 xor   ax, ax ; count
 stosw ; handle 0
 
-mov   ax, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count+1]
+mov   ax, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count]
 stosw
 xor   ax, ax ; zero again
 mov   bx, OFFSET _RESIDENT_VARIABLE_handle_list + SIZE HANDLE_INFO
@@ -1383,7 +1393,7 @@ COMMON_check_valid_handle:
  je        ret_bad_handle
  xchg      ax, bx
  SHIFT_MACRO  shl bx 2
- cmp       word ptr cs: [_RESIDENT_VARIABLE_handle_list + bx], -1
+ cmp       word ptr cs: [_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages], -1
  xchg      ax, bx
  je        ret_bad_handle  ; the one handle is unalloced..
  SHIFT_MACRO  shr ax 2
@@ -1409,7 +1419,7 @@ SHIFT_MACRO shr  dx 2 ; dx has original page, bx has its first allocation..
 COMMON_allocate_pages:
    ; allocate ax pages to handle dx
    push bx
-   sub  word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count+1], ax
+   sub  word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count], ax
 
    mov  bx, word ptr cs:[_RESIDENT_VARIABLE_handle_list + HANDLE_INFO.handle_first_page] ; get first unallocated page
    SHIFT_MACRO shl  dx 2
@@ -1435,6 +1445,7 @@ COMMON_allocate_pages:
 
 
 COMMON_deallocate_pages:
+public  COMMON_deallocate_pages
    ; deallocate all pages from handle dx
    push bx
    push dx
@@ -1443,7 +1454,7 @@ COMMON_deallocate_pages:
 
    mov  ax, -1   
    xchg ax, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages] ; set -1 and get page count
-   add  word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count+1], ax
+   add  word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count], ax
 
    test ax, ax
    jz   handle_zero_page_deallocation
@@ -1474,7 +1485,7 @@ COMMON_deallocate_pages:
 
    xchg word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page], ax  ; -1
    lock mov  bx, dx  ; bx gets ptr
-   xchg word ptr cs:[_RESIDENT_VARIABLE_handle_list + PAGE_INFO.page_info_next_page], ax  ; point to first page 
+   xchg word ptr cs:[_RESIDENT_VARIABLE_handle_list + HANDLE_INFO.handle_first_page], ax  ; point to first page 
    lock mov  word ptr cs:[bx + PAGE_INFO.page_info_next_page], ax
 
    skip_loop:
@@ -1520,7 +1531,7 @@ dw  OFFSET _RESIDENT_VARIABLE_page_list + (MAX_PAGE_COUNT * (SIZE PAGE_INFO))
 ; global handle (first allocation)
 
 _RESIDENT_VARIABLE_handle_list:
-
+_RESIDENT_VARIABLE_unallocated_page_count:  ; free pages is handle 0 free pages
    dw MAX_PAGE_COUNT  ; num pages for handle. -1 means unallocated.
    dw OFFSET _RESIDENT_VARIABLE_page_list ; ptr to first page. Can be -1 if the above is 0 for ems 4.0 driver
 
