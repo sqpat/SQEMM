@@ -1400,7 +1400,6 @@ ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
 ENDIF
 ; TODO: these
 
-EMS_FUNCTION_054h:
 
 EMS_FUNCTION_059h:
 
@@ -1412,10 +1411,109 @@ EMS_FUNCTION_05Dh:
 
 
 
-EMS_FUNCTION_053h:
 xchg ax, bx
 iret
 
+EMS_FUNCTION_053h:
+
+;          20 Get Handle Name                                5300h     68
+;             Set Handle Name                                5301h     70
+xchg  ax, bx
+cmp   byte ptr cs:[_current_call_subfunction_value], 1
+ja    func_20_bad_subfunction
+; 5301 same shared start
+func_5300:
+
+push  si
+mov   si, dx ; handle
+SHIFT_MACRO shl si 2
+mov   ax, word ptr cs:[_RESIDENT_VARIABLE_handle_list + si + HANDLE_INFO.handle_num_pages]
+cmp   ax, -1
+je    func_20_bad_handle
+shl   si, 1
+add   si, OFFSET _RESIDENT_VARIABLE_handlename_list
+cmp   byte ptr cs:[_current_call_subfunction_value], 1
+je    func_5301
+push  di
+
+movs  word ptr es:[di], cs:[si]
+movs  word ptr es:[di], cs:[si]
+movs  word ptr es:[di], cs:[si]
+movs  word ptr es:[di], cs:[si]
+
+pop   di
+pop   si
+xor   ax, ax
+iret
+
+
+func_5301:
+xchg  ax, si  ; ax gets handlename offset 
+pop   si  ; restore si
+
+
+PUSHA_MACRO
+xchg  ax, di   ; write to di if all is good.
+
+lodsw
+xchg  ax, dx
+lodsw
+xchg  ax, bp
+lodsw
+xchg  ax, bx
+lodsw
+
+; the string is dx:bp:bx:ax. search for a dupe
+
+mov   si, OFFSET _RESIDENT_VARIABLE_handlename_list
+mov   cx, MAX_HANDLE_COUNT
+func_20_loop_check_for_dupe_name:
+   cmp cs:[si+0], dx
+   jne func_20_not_match
+   cmp cs:[si+2], bp
+   jne func_20_not_match
+   cmp cs:[si+4], bx
+   jne func_20_not_match
+   cmp cs:[si+6], ax
+   jne func_20_not_match
+   func_20_duplicate_name:
+   POPA_MACRO
+   mov        ah, 0A1h
+   iret
+
+   func_20_not_match:
+   add  si, 8   ; handle_name length
+   loop func_20_loop_check_for_dupe_name
+
+mov   word ptr cs:[di], dx
+mov   word ptr cs:[di+2], bp
+mov   word ptr cs:[di+4], bx
+mov   word ptr cs:[di+6], ax
+POPA_MACRO
+xor   ax, ax 
+iret
+
+func_20_bad_handle:
+pop   si
+mov   ah, 083h   ; The manager couldn't find either the source or destination EMM handles.
+iret
+
+func_20_bad_subfunction:
+mov        ah, 08fh
+iret
+
+
+
+EMS_FUNCTION_054h:
+
+;          21 Get Handle Directory                           5400h     72
+;             Search for Named Handle                        5401h     74
+;             Get Total Handles                              5402h     76
+
+xchg ax, bx
+
+
+iret
 
 
 ; carry flag means bad handle
@@ -1574,6 +1672,14 @@ ENDM
 
 _RESIDENT_VARIABLE_handle_list_END:
 public _RESIDENT_VARIABLE_handle_list
+
+
+_RESIDENT_VARIABLE_handlename_list:
+db "SQEMMEMM"
+REPT (MAX_HANDLE_COUNT - 1)
+db 0, 0, 0, 0, 0, 0, 0, 0
+ENDM
+
 public _RESIDENT_VARIABLE_page_list
 _RESIDENT_VARIABLE_page_list:
 
