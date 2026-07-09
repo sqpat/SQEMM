@@ -1368,8 +1368,6 @@ ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
 ENDIF
 ; TODO: these
 
-EMS_FUNCTION_052h:
-EMS_FUNCTION_053h:
 EMS_FUNCTION_054h:
 
 EMS_FUNCTION_059h:
@@ -1382,6 +1380,13 @@ EMS_FUNCTION_05Dh:
 
 xchg       ax, bx
 iret
+
+EMS_FUNCTION_052h:
+EMS_FUNCTION_053h:
+xchg       ax, bx
+mov        ah, 091h ; This feature is not supported.
+iret
+
 
 
 ; carry flag means bad handle
