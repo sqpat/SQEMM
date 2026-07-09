@@ -1333,10 +1333,11 @@ mov   bx, OFFSET _RESIDENT_VARIABLE_handle_list
    add   bx, SIZE HANDLE_INFO
    loop  func_14_check_next_handle
 
-xchg ax, bx  ; bx gets count
-
+mov  bx, di
 pop  cx  ; restore original cx
 pop  di  ; restore original di
+sub  bx, di
+SHIFT_MACRO shr bx 2
 
 
 xor  ax, ax ; return success
@@ -1517,6 +1518,7 @@ mov        ah, 08fh
 iret
 
 check_func_58:
+; todo: is this doable in fewer bytes... some parity compare case ?
 cmp   al, 6
 ja    do_func_5b07
 je    do_func_5b06
@@ -1526,7 +1528,7 @@ je    do_func_5b04
 cmp   al, 2
 ja    do_func_5b03
 je    do_func_5b02
-cmp   al, ah
+cmp   al, ah ; 0
 ja    do_func_5b01
 do_func_5b00:
 
