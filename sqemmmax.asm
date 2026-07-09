@@ -140,7 +140,7 @@ mappable_phys_page_struct_END:
 page_stack: 
 LENGTH_OF_STACK = (OFFSET page_stack - mappable_phys_page_struct) SHR 1
 REPT LENGTH_OF_STACK
-  dw 0
+  db 0
 ENDM
 
 
@@ -449,11 +449,76 @@ _RESIDENT_VARIABLE_pageable_frame_count_3:
 mov        cx, 01000h
 ; ah already 0.
 iret
-func_52_bad_subfunction:
+
 func_58_invalid_subfunction:
-func_26_bad_subfunction:
 mov        ah, 08fh
 iret
+
+;   30 Enable OS/E Function Set                       5D00h     135
+;             Disable OS/E Function Set               5D01h     138
+;             Return OS/E Access Key                  5D02h     140
+
+EMS_FUNCTION_05Dh:
+xchg  ax, bx  ; ah 0
+cmp   byte ptr cs:[_RESIDENT_VARIABLE_access_reenabled], ah  ; 0
+mov   al, byte ptr cs:[_current_call_subfunction_value]
+jne   func_30_return_key
+
+cmp   al, 2
+ja    func_30_bad_subfunction
+je    func_30_check_key
+
+cmp   word ptr cs:[_RESIDENT_VARIABLE_access_key+0], DEFAULT_ACCESS_KEY_LOW
+jne   func_30_check_key
+cmp   word ptr cs:[_RESIDENT_VARIABLE_access_key+2], DEFAULT_ACCESS_KEY_HIGH
+jne   func_30_check_key
+
+func_30_generate_key:
+mov   cx, 01234h  ; todo
+mov   bx, 04321h  ; todo
+mov   word ptr cs:[_RESIDENT_VARIABLE_access_key+0], bx
+mov   word ptr cs:[_RESIDENT_VARIABLE_access_key+2], cx
+
+func_30_check_key:
+cmp   word ptr cs:[_RESIDENT_VARIABLE_access_key+0], bx
+jne   func_3000_bad_access
+cmp   word ptr cs:[_RESIDENT_VARIABLE_access_key+2], cx
+jne   func_3000_bad_access
+cmp   al, 2
+je    do_func_5D02
+mov   byte ptr cs:[_RESIDENT_VARIABLE_access_blocked], al ; 0 or 1 based on subfunction
+
+iret
+
+do_func_5D02:
+mov   byte ptr cs:[_RESIDENT_VARIABLE_access_reenabled], 1
+
+iret
+
+func_30_return_key:
+; return key if subfunction 0 or 1. (and also do whatever function 0/1 needed to be done)
+cmp   al, 2
+ja    func_30_bad_subfunction
+je    func_30_check_key
+mov   bx, word ptr cs:[_RESIDENT_VARIABLE_access_key+0]
+mov   cx, word ptr cs:[_RESIDENT_VARIABLE_access_key+2]
+mov   byte ptr cs:[_RESIDENT_VARIABLE_access_reenabled], ah
+mov   byte ptr cs:[_RESIDENT_VARIABLE_access_blocked], al ; 0 or 1 based on subfunction
+iret
+
+func_3000_bad_access:
+func_3001_bad_access:
+func_3002_bad_access:
+func_26_access_denied:
+mov   ah, 0A4h
+iret
+
+func_52_bad_subfunction:
+func_26_bad_subfunction:
+func_30_bad_subfunction:
+mov        ah, 08fh
+iret
+
 
 ;           19 Get Handle Attribute                           5200h     62
 ;             Set Handle Attribute                           5201h     65
@@ -499,6 +564,9 @@ iret
 
 EMS_FUNCTION_059h:
 xchg     ax, bx
+cmp      byte ptr cs:[_RESIDENT_VARIABLE_access_blocked], ah  ; 0 
+jne      func_26_access_denied
+
 xor      ax, ax
 cmp      byte ptr cs:[_current_call_subfunction_value], 1
 ja       func_26_bad_subfunction
@@ -1433,15 +1501,86 @@ ENDIF
 
 
 EMS_FUNCTION_05Ah:
-EMS_FUNCTION_05Bh:
 EMS_FUNCTION_05Ch:
 
-EMS_FUNCTION_05Dh:
+
 
 
 
 xchg ax, bx
 iret
+func_28_access_denied:
+mov   ah, 0A4h
+iret
+func_28_bad_subfunction:
+mov        ah, 08fh
+iret
+
+check_func_58:
+cmp   al, 6
+ja    do_func_5b07
+je    do_func_5b06
+cmp   al, 4
+ja    do_func_5b05
+je    do_func_5b04
+cmp   al, 2
+ja    do_func_5b03
+je    do_func_5b02
+cmp   al, ah
+ja    do_func_5b01
+do_func_5b00:
+
+iret
+
+do_func_5b08:
+do_func_5b07:
+do_func_5b06:
+test  bl, bl
+jz    func_28_return_ok ; value 0 is fine.
+func_28_return_not_supported:
+mov   ah, 09Ch ; Alternate DMA register sets are not supported, and the DMA register set specified is not zero.
+func_28_return_ok:
+iret
+do_func_5b05:
+xor   bx, bx ; no dma register sets.
+iret
+
+do_func_5b04:
+
+test  bl, bl
+jnz   func_28_return_not_supported 
+
+iret
+do_func_5b03:
+xor   bx, bx ; no alternate register sets supported (for now)
+iret
+do_func_5b02:
+mov   dx, LENGTH_OF_STACK
+iret
+do_func_5b01:
+iret
+
+
+;          28 Get Alternate Map Register Set                 5B00h     112
+;             Set Alternate Map Register Set                 5B01h     117
+;             Get Alternate Map Save Array Size              5B02h     120
+;             Allocate Alternate Map Register Set            5B03h     122
+;             Deallocate Alternate Map Register Set          5B04h     124
+;             Allocate DMA Register Set                      5B05h     126
+;             Enable DMA on Alternate Map Register Set       5B06h     128
+;             Disable DMA on Alternate Map Register Set      5B07h     130
+;             Deallocate DMA Register Set                    5B08h     132
+EMS_FUNCTION_05Bh:
+xchg  ax, bx
+cmp   byte ptr cs:[_RESIDENT_VARIABLE_access_blocked], ah  ; 0 
+jne   func_28_access_denied
+mov   al, byte ptr cs:[_current_call_subfunction_value]
+cmp   al, 8
+ja    func_28_bad_subfunction  
+je    do_func_5b08
+jmp   check_func_58
+
+
 
 EMS_FUNCTION_053h:
 
@@ -1786,6 +1925,15 @@ COMMON_get_next_free_handle:
    ret
 
 ALIGN 2
+
+;; uh.. todo make this secure
+_RESIDENT_VARIABLE_access_key:
+dw DEFAULT_ACCESS_KEY_LOW, DEFAULT_ACCESS_KEY_HIGH
+
+_RESIDENT_VARIABLE_access_blocked:
+db 0
+_RESIDENT_VARIABLE_access_reenabled:
+db 0
 
 _RESIDENT_VARIABLE_global_last_page:
 dw  OFFSET _RESIDENT_VARIABLE_page_list + (MAX_PAGE_COUNT * (SIZE PAGE_INFO))

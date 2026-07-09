@@ -39,6 +39,9 @@ XCHG_AX_CX_OPCODE = 091h
 
 MAX_HANDLE_COUNT = 40  ; TODO whats the right number?
 
+DEFAULT_ACCESS_KEY_HIGH = 01717h
+DEFAULT_ACCESS_KEY_LOW  = 07171h
+
 HANDLE_INFO STRUC 
     handle_num_pages   dw ?  ; 0
     handle_first_page  dw ?  ; 2
