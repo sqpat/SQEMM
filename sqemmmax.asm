@@ -196,6 +196,13 @@ dw  OFFSET EMS_FUNCTION_055h
 dw  OFFSET EMS_FUNCTION_056h
 dw  OFFSET EMS_FUNCTION_057h
 dw  OFFSET EMS_FUNCTION_058h_JUMP
+dw  OFFSET EMS_FUNCTION_059h
+dw  OFFSET EMS_FUNCTION_05Ah
+dw  OFFSET EMS_FUNCTION_05Bh
+dw  OFFSET EMS_FUNCTION_05Ch
+dw  OFFSET EMS_FUNCTION_05Ch
+dw  OFFSET EMS_FUNCTION_05Dh
+
 
 
 _current_call_subfunction_value:
@@ -444,6 +451,7 @@ mov        cx, 01000h
 iret
 func_52_bad_subfunction:
 func_58_invalid_subfunction:
+func_26_bad_subfunction:
 mov        ah, 08fh
 iret
 
@@ -479,11 +487,33 @@ iret
 EMS_FUNCTION_042h:
 ;      FUNCTION 3    GET UNALLOCATED PAGE COUNT
 xchg       ax, bx ; zero ah
+do_func_5901:
 mov        bx, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count]
 _RESIDENT_VARIABLE_total_EMS_page_count:
 mov        dx, 01000h  ; return in dx
 ; ah is already 0 because bh was 0 from jump table lookup
 iret
+
+;         26 Get Hardware Configuration Array               5900h     101
+;            Get Unallocated Raw Page Count                 5901h     104
+
+EMS_FUNCTION_059h:
+xchg     ax, bx
+xor      ax, ax
+cmp      byte ptr cs:[_current_call_subfunction_value], 1
+ja       func_26_bad_subfunction
+je       do_func_5901
+do_func_5900:
+mov      word ptr es:[di], 0400h   ; 16kb page size
+mov      word ptr es:[di+2], ax    ; 0 alternate mapping sets
+mov      word ptr es:[di+4], LENGTH_OF_STACK    ; 0 alternate mapping sets
+mov      word ptr es:[di+6], ax    ; 0 dma mapping sets
+mov      word ptr es:[di+8], ax    ; 0 dma set behaivor
+iret
+
+ 
+
+
 
 ;          4  Allocate Pages                                 43h      
 ;           BX = num_of_pages_to_alloc
@@ -1401,7 +1431,6 @@ ENDIF
 ; TODO: these
 
 
-EMS_FUNCTION_059h:
 
 EMS_FUNCTION_05Ah:
 EMS_FUNCTION_05Bh:
@@ -1617,6 +1646,7 @@ POPA_MACRO
 ; ah 0
 
 iret
+
 
 
 ; carry flag means bad handle
