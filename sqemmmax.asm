@@ -1499,9 +1499,14 @@ mov   ah, 083h   ; The manager couldn't find either the source or destination EM
 iret
 
 func_20_bad_subfunction:
+func_21_bad_subfunction:
 mov        ah, 08fh
 iret
-
+func_21_null_name:
+POPA_MACRO
+pop   es
+mov   ah, 0A1h  ; A handle found had no name (all ASCII nulls).
+iret
 
 
 EMS_FUNCTION_054h:
@@ -1512,6 +1517,104 @@ EMS_FUNCTION_054h:
 
 xchg ax, bx
 
+cmp  byte ptr cs:[_current_call_subfunction_value], 1
+jb   do_func_5400
+je   do_func_5401
+cmp  byte ptr cs:[_current_call_subfunction_value], 2
+jne  func_21_bad_subfunction
+mov  bx, MAX_HANDLE_COUNT
+iret
+do_func_5401:
+; search for handle
+push  es
+PUSHA_MACRO
+
+lodsw
+xchg  ax, dx
+lodsw
+xchg  ax, bp
+lodsw
+xchg  ax, bx
+lodsw
+
+mov   si, ax
+or    si, dx
+or    si, bp
+or    si, bx
+jz    func_21_null_name
+
+; the string is dx:bp:bx:ax. search for a dupe
+
+mov   si, OFFSET _RESIDENT_VARIABLE_handlename_list
+mov   cx, MAX_HANDLE_COUNT
+func_21_loop_check_for_dupe_name:
+   cmp cs:[si+0], dx
+   jne func_21_not_match
+   cmp cs:[si+2], bp
+   jne func_21_not_match
+   cmp cs:[si+4], bx
+   jne func_21_not_match
+   cmp cs:[si+6], ax
+   jne func_21_not_match
+   func_21_found_name:
+   mov es, cx
+   POPA_MACRO
+   mov dx, es
+   neg dx
+   add dx, MAX_HANDLE_COUNT
+   pop es
+
+   ; ah is 0
+   iret
+
+   func_21_not_match:
+   add  si, 8   ; handle_name length
+   loop func_21_loop_check_for_dupe_name
+
+POPA_MACRO
+pop   es
+
+mov   ah, 0A0h ; No corresponding handle could be found for the handle name specified.
+
+iret
+
+do_func_5400:  
+
+PUSHA_MACRO
+push  ds
+push  cs
+pop   ds
+
+mov   cx, MAX_HANDLE_COUNT
+xor   ax, ax
+cwd
+dec   dx  ; dx = -1
+mov   bx, OFFSET _RESIDENT_VARIABLE_handle_list
+mov   si, OFFSET _RESIDENT_VARIABLE_handlename_list
+mov   bp, 8
+
+func_21_loop_next_handle:
+  
+  cmp  word ptr ds:[bx + HANDLE_INFO.handle_num_pages], dx
+  je   func_21_inactive_handle_skip
+
+  stosw ; copy handle number
+
+  movsw ; copy name
+  movsw
+  movsw
+  movsw
+  sub  si, bp
+  func_21_inactive_handle_skip:
+  inc  ax
+  add  bx, SIZE HANDLE_INFO
+  add  si, bp
+  loop func_21_loop_next_handle
+
+pop   ds
+
+POPA_MACRO
+; ah 0
 
 iret
 
