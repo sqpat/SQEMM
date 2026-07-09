@@ -27,6 +27,7 @@ func_16_sub_00:
 
 
   lodsw
+  stosw        ; count
   xchg  ax, cx ; count
 
 func_16_sub_00_save_next_page_frame_register:
@@ -48,11 +49,7 @@ func_16_sub_00_save_next_page_frame_register:
   inc   dx
   inc   bx
   loop  func_16_sub_00_save_next_page_frame_register
-cmp bx, 24
-je  func_16_sub_00_done_recording_registers
-mov cx, 24
-xor bx, bx
-jmp func_16_sub_00_save_next_page_frame_register
+  jmp  func_16_sub_00_done_recording_registers
 
 not_func_16_sub_00:
 cmp   byte ptr cs:[_current_call_subfunction_value], 2
@@ -64,13 +61,12 @@ func_16_sub_02:
 
 mov  ax, bx ; num pages
 SHIFT_MACRO shl  ax 2 ; two words per entry.
+add  ax, 2  ; count
 ; fall thru
 
 func_16_sub_00_done_recording_registers:
 func_16_sub_01_done_recording_registers:
 
-SELFMODIFY_func_16_return:
-  xchg  ax, cx  ; zero out ah for ret
 func_16_pop_and_return:
   pop   si
   pop   di
@@ -83,7 +79,8 @@ iret
 
 
 func_16_sub_01:
-
+  lodsw
+  xchg ax, cx  ; count
 func_16_sub_01_save_next_page_frame_register:
   lodsw
   out   dx, al   ; select EMS page
@@ -95,14 +92,8 @@ func_16_sub_01_save_next_page_frame_register:
 
   inc   dx
   inc   dx
-  inc   bx
   loop  func_16_sub_01_save_next_page_frame_register
-cmp bx, 24
-je  func_16_sub_01_done_recording_registers
-mov cx, 24
-xor bx, bx
-jmp func_16_sub_01_save_next_page_frame_register
-
+jmp func_16_sub_01_done_recording_registers
 
 
 func_16_bad_subfunction:

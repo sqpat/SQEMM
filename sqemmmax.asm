@@ -134,6 +134,21 @@ ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
 ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
    INCLUDE max/vars\standard.asm
 ENDIF
+
+; for function 15/16 'push/pop' like operation.
+mappable_phys_page_struct_END:
+page_stack: 
+LENGTH_OF_STACK = (OFFSET page_stack - mappable_phys_page_struct) SHR 1
+REPT LENGTH_OF_STACK
+  dw 0
+ENDM
+
+
+; for function 8/9 'push/pop' like operation.
+page_frame_stack:
+dw 0, 0, 0, 0
+
+
  
 ; CHIPSET SPECIFIC END
 
@@ -427,10 +442,26 @@ _RESIDENT_VARIABLE_pageable_frame_count_3:
 mov        cx, 01000h
 ; ah already 0.
 iret
+func_52_bad_subfunction:
 func_58_invalid_subfunction:
 mov        ah, 08fh
 iret
 
+;           19 Get Handle Attribute                           5200h     62
+;             Set Handle Attribute                           5201h     65
+;             Get Handle Attribute Capability                5202h     67
+
+
+EMS_FUNCTION_052h:
+xchg       ax, bx
+cmp        byte ptr cs:[_current_call_subfunction_value], 2
+jb         func_52_unsupported
+ja         func_52_bad_subfunction
+xor        ax, ax
+
+func_52_unsupported:
+mov        ah, 091h ; This feature is not supported.
+iret
 
 
 ;          2  Get Page Frame Segment Address                 41h       
@@ -1318,7 +1349,7 @@ util_get_register_for_segment:
    push  si
    push  cx
    mov   si, OFFSET mappable_phys_page_struct
-
+   mov   cx, PAGE_FRAME_COUNT
    check_next_segment_in_list:
    cmp   ax, word ptr cs:[si]
    je    found_page_in_list
@@ -1378,13 +1409,10 @@ EMS_FUNCTION_05Ch:
 
 EMS_FUNCTION_05Dh:
 
-xchg       ax, bx
-iret
 
-EMS_FUNCTION_052h:
+
 EMS_FUNCTION_053h:
-xchg       ax, bx
-mov        ah, 091h ; This feature is not supported.
+xchg ax, bx
 iret
 
 

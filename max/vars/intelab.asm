@@ -3,6 +3,16 @@
 ; 144 bytes long 
 ; i think a clone of the above struct in practice except pre-formatted for return in function 5800h (2nd arg a word, ordered lowest segment first)
 
+
+; todo unused?
+  default_page_struct:
+  db 090h, 091h, 092h, 093h
+  db 094h, 095h, 096h, 097h
+  db 088h, 089h, 08Ah, 08Bh
+  db 08Ch, 08Dh, 08Eh, 08Fh
+  db 080h, 081h, 082h, 083h
+  db 084h, 085h, 086h, 087h
+  db 08Ch, 08Dh, 08Eh, 08Fh
   ; you can hardcode the chipset's mappable page list here for call 5800
 mappable_phys_page_struct:
 
@@ -16,27 +26,3 @@ mappable_phys_page_struct_page_frame:
   dw 0D000h, 0018h, 0D400h, 0019h, 0D800h, 001Ah, 0DC00h, 001Bh
 
 
-
-
-; for function 15/16 'push/pop' like operation.
-page_stack: 
-LENGTH_OF_STACK = (OFFSET page_stack - mappable_phys_page_struct) SHR 1
-REPT LENGTH_OF_STACK
-  dw 0
-ENDM
-
-
-; for function 8/9 'push/pop' like operation.
-page_frame_stack:
-dw 0, 0, 0, 0
-
-
-; todo unused?
-  default_page_struct:
-  db 090h, 091h, 092h, 093h
-  db 094h, 095h, 096h, 097h
-  db 088h, 089h, 08Ah, 08Bh
-  db 08Ch, 08Dh, 08Eh, 08Fh
-  db 080h, 081h, 082h, 083h
-  db 084h, 085h, 086h, 087h
-  db 08Ch, 08Dh, 08Eh, 08Fh

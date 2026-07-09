@@ -37,7 +37,7 @@ COMPILE_CHIPSET = FANTASY_EMS
 RET_OPCODE = 0C3h
 XCHG_AX_CX_OPCODE = 091h
 
-MAX_HANDLE_COUNT = 255  ; TODO whats the right number?
+MAX_HANDLE_COUNT = 40  ; TODO whats the right number?
 
 HANDLE_INFO STRUC 
     handle_num_pages   dw ?  ; 0

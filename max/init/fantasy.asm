@@ -44,6 +44,11 @@
   mov   byte ptr ds:[SELFMODIFY_FANTASY_add_page_frame_offset_3+1], bl 
   mov   byte ptr ds:[SELFMODIFY_FANTASY_add_page_frame_offset_4+1], bl 
   mov   byte ptr ds:[SELFMODIFY_FANTASY_add_page_frame_offset_5+1], bl 
+  mov   byte ptr ds:[SELFMODIFY_FANTASY_add_page_frame_offset_6+1], bl 
+  mov   byte ptr ds:[SELFMODIFY_FANTASY_add_page_frame_offset_7+1], bl 
+  mov   byte ptr ds:[SELFMODIFY_FANTASY_add_page_frame_offset_8+1], bl 
+  mov   byte ptr ds:[SELFMODIFY_FANTASY_add_page_frame_offset_9+1], bl 
+  mov   byte ptr ds:[SELFMODIFY_FANTASY_add_page_frame_offset_10+1], bl 
 
   SHIFT_MACRO   shl ah 4  ; 0 1 2 to 00 10 20  (C D E)
   or    al, ah

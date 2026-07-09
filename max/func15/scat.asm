@@ -32,15 +32,15 @@ func_15_sub_00_save_next_page_frame_register:
   inc   dx
   inc   bx
   loop  func_15_sub_00_save_next_page_frame_register
-cmp bx, 24 ; catch 2nd loop thru
+cmp bl, 24 ; catch 2nd loop thru
 je  func_15_sub_00_done_recording_registers
-mov cx, 24
+mov cl, 24
 xor bx, bx
 jmp func_15_sub_00_save_next_page_frame_register
 
 func_15_sub_03:
 ;          GET SIZE OF PAGE MAP SAVE ARRAY SUBFUNCTION
-mov  cx, (2 * LENGTH_OF_STACK)
+mov  cx, LENGTH_OF_STACK
 ; fall thru
 
 func_15_sub_00_done_recording_registers:
@@ -75,6 +75,7 @@ func_15_sub_02:
 
 SELFMODIFY_SCAT_add_page_frame_register_offset_6:
   mov   bl, SCAT_PAGE_C000_REGISTER_OFFSET
+  mov   cl, 4 ; page frame count
 
 ; fall thru and run this one
 
@@ -94,9 +95,9 @@ func_15_sub_01_save_next_page_frame_register:
   inc   dx
   inc   bx
   loop  func_15_sub_01_save_next_page_frame_register
-cmp bx, 24
+cmp bl, 24
 je  func_15_sub_01_done_recording_registers
-mov cx, 24
+mov cl, 24
 xor bx, bx
 jmp func_15_sub_01_save_next_page_frame_register
 
