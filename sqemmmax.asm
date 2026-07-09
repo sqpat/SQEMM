@@ -458,6 +458,7 @@ cmp        byte ptr cs:[_current_call_subfunction_value], 2
 jb         func_52_unsupported
 ja         func_52_bad_subfunction
 xor        ax, ax
+iret
 
 func_52_unsupported:
 mov        ah, 091h ; This feature is not supported.
