@@ -1185,12 +1185,10 @@ func_24_offset_too_high:
 EMS_FUNCTION_04Dh:
 push  di
 xor   ax, ax ; count
-stosw ; handle 0
+push  cx
+mov   cx, MAX_HANDLE_COUNT
 
-mov   ax, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count]
-stosw
-xor   ax, ax ; zero again
-mov   bx, OFFSET _RESIDENT_VARIABLE_handle_list + SIZE HANDLE_INFO
+mov   bx, OFFSET _RESIDENT_VARIABLE_handle_list
   
   func_14_check_next_handle:
    cmp   word ptr cs:[bx], -1 ; 
@@ -1203,15 +1201,14 @@ mov   bx, OFFSET _RESIDENT_VARIABLE_handle_list + SIZE HANDLE_INFO
    func_14_free_handle:
    inc   ax
    add   bx, SIZE HANDLE_INFO
-   cmp   bx, offset _RESIDENT_VARIABLE_handle_list_END
-   jb    func_14_check_next_handle
+   loop  func_14_check_next_handle
+
+xchg ax, bx  ; bx gets count
+
+pop  cx  ; restore original cx
+pop  di  ; restore original di
 
 
-
-mov  bx, di
-pop  di ; restore original di
-sub  bx, di 
-SHIFT_MACRO shr bx 2
 xor  ax, ax ; return success
 
 iret
