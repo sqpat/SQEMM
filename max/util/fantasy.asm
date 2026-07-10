@@ -48,6 +48,7 @@ UTIL_set_page:
 
 SELFMODIFY_FANTASY_add_page_frame_offset_4:
   add   al, 4
+  out   FANTASY_PAGE_SELECT_REGISTER, al   ; select EMS page
 
   mov   ax, dx
   add   ax, FANTASY_PAGE_OFFSET_AMT

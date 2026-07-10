@@ -151,12 +151,7 @@ dw 0, 0, 0, 0
 ALIGN 2
 
 _RESIDENT_VARIABLE_alternate_register_set_default:
- 
-
-REPT  LENGTH_OF_STACK
-   db 0
-ENDM
-
+ dw 0, 0
 
 _RESIDENT_VARIABLE_current_alternate_register_set:
 dw 0
@@ -611,10 +606,21 @@ call       COMMON_get_next_free_handle
 cmp        dx, -1
 je         func_43_no_handles_Left
 
-dec        word ptr cs:[_RESIDENT_VARIABLE_handle_count+1]
+inc        word ptr cs:[_RESIDENT_VARIABLE_handle_count]
+mov        bx, dx
+push       ax
+SHIFT_MACRO shl bx 3
+add        bx, OFFSET _RESIDENT_VARIABLE_handlename_list
+xor        ax, ax
+mov        word ptr cs:[bx], ax    ; zero handle name
+mov        word ptr cs:[bx+2], ax 
+mov        word ptr cs:[bx+4], ax
+mov        word ptr cs:[bx+6], ax
 
 ; ax still has num pages to allocate..
+pop        ax 
 mov        bx, ax  ; restore bx
+
 call       COMMON_allocate_pages
 
 xor        ax, ax ; return good
@@ -662,23 +668,32 @@ push       bx
 mov        bx, dx ; handle
 SHIFT_MACRO shl bx 2
 cmp        word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages], -1
-pop        bx
+
 je         func_45_no_emm_handle_found
+shl        bx, 1
+add        bx, OFFSET _RESIDENT_VARIABLE_handlename_list
+xor        ax, ax
+mov        word ptr cs:[bx], ax   ; zero handle name
+mov        word ptr cs:[bx+2], ax
+mov        word ptr cs:[bx+4], ax
+mov        word ptr cs:[bx+6], ax
 
-
-
-GOOD_EMM_HANDLE:
+pop        bx
 
 call       COMMON_deallocate_pages
 
-inc        word ptr cs:[_RESIDENT_VARIABLE_handle_count+1]  ; handle freed, increment handle count
+dec        word ptr cs:[_RESIDENT_VARIABLE_handle_count]  ; handle freed, increment handle count
 
 xor        ax, ax
+iret
+func_45_no_emm_handle_found:
+pop        bx
+mov        ah, 083h  ; The memory manager couldn't find the EMM handle your program specified.
 iret
 
 func_4C_no_emm_handle_found:
 xchg       ax, bx  ; restore bx
-func_45_no_emm_handle_found:
+
 func_51_no_emm_handle_found:
 mov        ah, 083h  ; The memory manager couldn't find the EMM handle your program specified.
 iret
@@ -698,8 +713,9 @@ iret
 
 EMS_FUNCTION_04Bh:
 xchg       ax, bx ; ah 0
+db  0BBh
 _RESIDENT_VARIABLE_handle_count:
-mov        bx, 01000h
+db  1, 0  ; mov        bx, 00001
 iret
 
 
@@ -1339,15 +1355,12 @@ mov   bx, OFFSET _RESIDENT_VARIABLE_handle_list
    inc   ax
    add   bx, SIZE HANDLE_INFO
    loop  func_14_check_next_handle
-
-mov  bx, di
+xchg ax, cx  ; zero ah. return success
 pop  cx  ; restore original cx
 pop  di  ; restore original di
-sub  bx, di
-SHIFT_MACRO shr bx 2
+mov  bx, word ptr cs:[_RESIDENT_VARIABLE_handle_count]
 
 
-xor  ax, ax ; return success
 
 iret
 
@@ -1584,12 +1597,11 @@ je    do_func_5b02
 cmp   al, ah ; 0
 ja    do_func_5b01
 do_func_5b00:
+les   di, dword ptr cs:[_RESIDENT_VARIABLE_alternate_register_set_default]  ; return pointer.
 mov   bl, byte ptr cs:[_RESIDENT_VARIABLE_current_alternate_register_set]
 test  bl, bl
 jnz   func_5b00_nonzero
-push  cs
-pop   es
-mov   di, OFFSET _RESIDENT_VARIABLE_alternate_register_set_default
+
 iret
 func_5b00_nonzero:
 
@@ -1603,7 +1615,56 @@ func_5b00_nonzero:
 ;   memory manager does not allocate the space for the
 ;   context: the operating system must do so.
 
+push  di
+push  cx
+push  bx
 
+call  FUNCTION_15_GET_PAGE_MAP
+
+pop   bx
+pop   cx
+pop   di
+; ah should be 0
+iret
+
+do_func_5b01:
+
+;    Regardless of its value, the map register context restore area
+;    pointer is saved within the memory manager.  It will be used
+;    during the Get Alternate Map Register Set subfunction.
+
+mov   word ptr cs:[_RESIDENT_VARIABLE_alternate_register_set_default+0], di
+mov   word ptr cs:[_RESIDENT_VARIABLE_alternate_register_set_default+2], es ; save pointer.
+
+mov   byte ptr cs:[_RESIDENT_VARIABLE_current_alternate_register_set], bl
+test  bl, bl
+jz    func_5b01_zero
+
+func_5b01_nonzero:
+
+;    If the map register context restore area
+;    pointer is not equal to zero, the contents of the restore area
+;    pointed to by ES:DI are copied into register set zero on each
+;    expanded memory board in the system.
+   push  di
+push  ds
+push  si
+push  cx
+push  bx
+
+push  es
+pop   ds
+mov   si, di  ; function uses ds:si
+
+call  FUNCTION_15_SAVE_PAGE_MAP
+
+pop   bx
+pop   cx
+pop   si
+pop   ds
+pop   di
+func_5b01_zero:
+; ah should be 0
 iret
 
 
@@ -1631,8 +1692,6 @@ xor   bx, bx ; no alternate register sets supported (for now)
 iret
 do_func_5b02:
 mov   dx, LENGTH_OF_STACK
-iret
-do_func_5b01:
 iret
 
 
@@ -2276,7 +2335,7 @@ int        021h
 
 ; todo variableize, remap pointers etc.
 
-mov        word ptr ds:[_RESIDENT_VARIABLE_handle_count+1], MAX_HANDLE_COUNT  
+
 public _RESIDENT_VARIABLE_handle_count
 ; set interrupt vector  067h
 mov        dx, OFFSET MAIN_EMS_INTERRUPT_VECTOR
