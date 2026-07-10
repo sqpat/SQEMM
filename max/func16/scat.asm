@@ -47,9 +47,20 @@ func_16_sub_00_save_next_page_frame_register:
   stosw
   inc   dx
   inc   dx
-  inc   bx
+
   loop  func_16_sub_00_save_next_page_frame_register
-  jmp  func_16_sub_00_done_recording_registers
+
+func_16_sub_00_done_recording_registers:
+func_16_sub_01_done_recording_registers:
+  xchg  ax, cx  ; zero ax
+
+func_16_pop_and_return:
+  pop   si
+  pop   di
+  pop   cx
+  pop   dx
+  pop   bx ; restore from ax
+iret
 
 not_func_16_sub_00:
 cmp   byte ptr cs:[_current_call_subfunction_value], 2
@@ -58,24 +69,23 @@ ja    func_16_bad_subfunction
 
 func_16_sub_02:
 ;          GET SIZE OF PARTIAL PAGE MAP SAVE ARRAY SUBFUNCTION
-
-mov  ax, bx ; num pages
-SHIFT_MACRO shl  ax 2 ; two words per entry.
-add  ax, 2  ; count
-; fall thru
-
-func_16_sub_00_done_recording_registers:
-func_16_sub_01_done_recording_registers:
-
-func_16_pop_and_return:
   pop   si
   pop   di
   pop   cx
   pop   dx
   pop   bx ; restore from ax
 
+xor  ax, ax
+mov  al, bl ; num pages
 
+SHIFT_MACRO shl  al 2 ; two words per entry.
+add  al, 2  ; count
 iret
+
+
+
+
+
 
 
 func_16_sub_01:

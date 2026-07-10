@@ -24,6 +24,7 @@
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_8+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_9+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_10+1], al
+  add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_11+1], al
   mov   ax, 0218h
 
   use_default_ports:

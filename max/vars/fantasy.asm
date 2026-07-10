@@ -6,7 +6,7 @@
   ; you can hardcode the chipset's mappable page list here for call 5800
 mappable_phys_page_struct:
 
-  dw 04000h, 0004h, 04400h, 0005h, 04800h, 0007h, 04C00h, 0006h
+  dw 04000h, 0004h, 04400h, 0005h, 04800h, 0006h, 04C00h, 0007h
   dw 05000h, 0008h, 05400h, 0009h, 05800h, 000Ah, 05C00h, 000Bh
   dw 06000h, 000Ch, 06400h, 000Dh, 06800h, 000Eh, 06C00h, 000Fh
   dw 07000h, 0010h, 07400h, 0011h, 07800h, 0012h, 07C00h, 0013h

@@ -148,11 +148,18 @@ ENDM
 page_frame_stack:
 dw 0, 0, 0, 0
 
+ALIGN 2
 
+_RESIDENT_VARIABLE_alternate_register_set_default:
  
-; CHIPSET SPECIFIC END
+
+REPT  LENGTH_OF_STACK
+   db 0
+ENDM
 
 
+_RESIDENT_VARIABLE_current_alternate_register_set:
+dw 0
 
 ALIGN 2
 
@@ -1351,6 +1358,52 @@ iret
 ;             Get Size of Page Map Save Array                4E03h     
 EMS_FUNCTION_04Eh:
 
+; chipset needs to implement  FUNCTION_15_GET_PAGE_MAP and FUNCTION_15_SET_PAGE_MAP
+
+  push ax  ; restore into bx 
+  push cx
+  push di
+  push si
+  cmp   byte ptr cs:[_current_call_subfunction_value], 1
+  je    func_15_sub_01
+  ja    not_func_15_sub_00
+func_15_sub_00:
+  call  FUNCTION_15_GET_PAGE_MAP
+
+
+func_15_pop_and_return:
+  pop   si
+  pop   di
+  pop   cx
+  pop   bx ; restore from ax 
+  iret  
+func_15_bad_subfunction:
+  mov        ah, 084h
+  jmp   func_15_pop_and_return
+
+func_15_sub_01:
+  call  FUNCTION_15_SAVE_PAGE_MAP
+  jmp   func_15_pop_and_return
+
+not_func_15_sub_00:
+  cmp   byte ptr cs:[_current_call_subfunction_value], 3
+  ja    func_15_bad_subfunction
+  je    func_15_sub_03
+  ; fall thru
+
+func_15_sub_02:
+
+ call FUNCTION_15_GET_PAGE_MAP
+ call FUNCTION_15_SAVE_PAGE_MAP
+ jmp func_15_pop_and_return
+func_15_sub_03:
+;          GET SIZE OF PAGE MAP SAVE ARRAY SUBFUNCTION
+mov  ax, LENGTH_OF_STACK
+ jmp func_15_pop_and_return
+
+
+; todo externalize to util?
+
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
    INCLUDE max/func15\scamp.asm
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
@@ -1531,8 +1584,28 @@ je    do_func_5b02
 cmp   al, ah ; 0
 ja    do_func_5b01
 do_func_5b00:
+mov   bl, byte ptr cs:[_RESIDENT_VARIABLE_current_alternate_register_set]
+test  bl, bl
+jnz   func_5b00_nonzero
+push  cs
+pop   es
+mov   di, OFFSET _RESIDENT_VARIABLE_alternate_register_set_default
+iret
+func_5b00_nonzero:
+
+;  If the context save area pointer returned is not equal to
+;   zero, this subfunction copies the contents of the mapping
+;   registers on each expanded memory board in the system into
+;   the save area specified by the pointer.  The format of
+;   this save area is the same as that returned by Function 15
+;   (Get Page Map subfunction).  This is intended to simulate
+;   getting an alternate map register set.  Note that the
+;   memory manager does not allocate the space for the
+;   context: the operating system must do so.
+
 
 iret
+
 
 do_func_5b08:
 do_func_5b07:
