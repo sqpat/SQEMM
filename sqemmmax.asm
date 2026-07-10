@@ -891,6 +891,8 @@ _RESIDENT_VARIABLE_FUNC_24_source_handle:
 dw 0
 _RESIDENT_VARIABLE_FUNC_24_dest_handle:
 dw 0
+_RESIDENT_VARIABLE_FUNC_24_overlap_detected_do_backwards:
+db 0
 
 ; The function code passed to the memory manager is not defined.
 func_24_bad_subfunction:
@@ -903,10 +905,7 @@ func_24_unowned_memory:
 ; TODO catch
 mov        ah, 08Ah   ; One or more of the logical pages is out of the range of logical pages allocated to the source/destination handle.
 jmp        func_24_error
-func_24_region_overlap:
-; TODO catch
-mov        ah, 094h   ; The conventional memory region and expanded memory region overlap.
-jmp        func_24_error
+
 func_24_too_large:
 mov        ah, 096h   ; Region length exceeds 1M Byte limit.
 jmp        func_24_error
@@ -964,6 +963,7 @@ func_24_skip_handle_check_source:
 lodsw      ; initial offset
 xchg       ax, di  ; goes into si later
 lodsw      ; initial page
+mov        word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_logical_page+1], ax
 xchg       ax, dx
 
 
@@ -982,6 +982,7 @@ lodsw      ; dest offset
 mov        si, word ptr ds:[si] ; dest page
 xchg       ax, di
 xchg       ax, si
+mov        word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_logical_page+1], ax
 
 
 
@@ -994,7 +995,8 @@ xchg       ax, si
 call       func_24_do_bounds_checks
 
 call       func_24_set_up_segments
-
+call       func_24_do_overlap_check
+mov        byte ptr cs:[_RESIDENT_VARIABLE_FUNC_24_overlap_detected+1], al
 mov        dx, cx
 
 ; ds and es are now set up.
@@ -1004,14 +1006,15 @@ mov        dx, cx
 
 
 
-cmp   byte ptr cs:[_current_call_subfunction_value], 1
-je    do_func_24_01    
+cmp   byte ptr cs:[_current_call_subfunction_value], ah  ; 0
+jne   do_func_24_01    
 
 
 ; MAIN COPY LOOP: 
 
-
-
+test  al, al
+jnz   func_24_copy_memory_backwards
+func_24_copy_forward_after_all:
 func_24_copy_more_memory:
 
 
@@ -1019,7 +1022,8 @@ func_24_copy_more_memory:
    ; note: bp:dx comes out of the above holding 32 bit count.
    ; cx comes out with the current copy amount.
    mov        ax, cx  ; copy len
-   MOVSW_MACRO
+   ;MOVSW_MACRO
+   rep        movsb
 
    sub        dx, ax
    sbb        bp, cx ; known 0      
@@ -1040,7 +1044,9 @@ call   func_24_clean_up_segments ; restore pagination if necessary
 POPA_MACRO
 pop    ds
 pop    es
-xor    ax, ax ; success
+
+_RESIDENT_VARIABLE_FUNC_24_overlap_detected:
+mov    ah, 0  ; 0, 92h, 97h
 iret
 
 
@@ -1060,7 +1066,10 @@ iret
 ;          DS:SI = pointer to move_source_dest structure
 ;     FUNCTION 24   MOVE/EXCHANGE MEMORY REGION
 do_func_24_01:
-
+   test al, al
+   je   func_24_exchange_more_memory  ; no overlap detected
+   mov  byte ptr cs:[_RESIDENT_VARIABLE_FUNC_24_overlap_detected+1], 097h
+   jmp  func_24_done
 ; MAIN EXCHANGE LOOP: 
 func_24_exchange_more_memory:
 
@@ -1089,7 +1098,68 @@ func_24_exchange_more_memory:
 
    jmp  func_24_exchange_more_memory
 
+func_24_copy_memory_backwards:
+; gross.
+; TODO source to end.
 
+cmp  byte ptr cs:[_RESIDENT_VARIABLE_FUNC_24_overlap_detected_do_backwards], ah
+je   func_24_copy_forward_after_all
+
+mov ax, ds
+SHIFT_MACRO rol ax 4
+mov cx, ax
+and ax, 0Fh
+and cx, 0FFF0h
+add si, cx
+adc ax, 0  
+add si, dx
+adc ax, bp
+sub  si, 1
+sbb  ax, 0
+
+SHIFT_MACRO ror ax 4
+mov ds, ax  ; ds:si modified.
+
+mov ax, es
+SHIFT_MACRO rol ax 4
+mov cx, ax
+and ax, 0Fh
+and cx, 0FFF0h
+add di, cx
+adc ax, 0  
+sub  di, 1
+sbb  ax, 0
+
+add di, dx
+adc ax, bp
+SHIFT_MACRO ror ax 4
+mov es, ax  ; es:di modified.
+
+
+std
+
+func_24_copy_more_memory_backwards:
+
+
+   call       func_24_prep_copy_pointers_backwards ; does all the loop/copy setup
+   ; note: bp:dx comes out of the above holding 32 bit count.
+   ; cx comes out with the current copy amount.
+   mov        ax, cx  ; copy len
+   rep        movsb
+
+   sub        dx, ax
+   sbb        bp, cx ; known 0      
+
+   mov        ax, dx
+   or         ax, bp
+   jz         jump_to_func_24_done
+
+   ;call       func_24_check_repage ; does all the logical page repaging
+
+   jmp        func_24_copy_more_memory_backwards
+
+jump_to_func_24_done:
+   jmp func_24_done
 
 ; ds:si and es:di get normalized such that si/di are is 000n
 ; bl/bh still carry copy types
@@ -1164,6 +1234,110 @@ func_24_bounds_check:
  jne        func_24_ax_smaller_do_copy
  mov        cx, dx
  func_24_ax_smaller_do_copy:
+
+ ret
+
+func_24_prep_copy_pointers_backwards:   ; return copy amount in cx
+   ; ax/cx free
+   ; now bp:dx carries count...
+
+ test  bx, bx
+ jnz   func_24_skip_backwards_normalize
+ ; we want ds:FFFx
+ mov   ax, si
+ or    ax, 0FFF0h ; create FFFn
+ mov   cx, ax  ; copy
+ sub   cx, si  ; get offset difference
+ xchg  ax, si  ; si gets the new offset
+
+ SHIFT_MACRO shr cx 4
+ mov   ax, ds
+ sub   ax, cx
+ jnc   func_24_backwards_dssi_pointer_good
+ neg   ax   ; ds underflowed, add back to si
+ SHIFT_MACRO shl ax 4
+ add   si, ax
+ xor   ax, ax
+ func_24_backwards_dssi_pointer_good:   
+ mov   ds, ax  ; new ds:si set
+
+ ; and es:FFFx
+ mov   ax, di
+ or    ax, 0FFF0h ; create FFFn
+ mov   cx, ax  ; copy
+ sub   cx, di  ; get offset difference
+ xchg  ax, di  ; di gets the new offset
+
+ SHIFT_MACRO shr cx 4
+ mov   ax, es
+ sub   ax, cx
+
+ jnc   func_24_backwards_esdi_pointer_good
+ neg   ax   ; ds underflowed, add back to si
+ SHIFT_MACRO shl ax 4
+ add   di, ax
+ xor   ax, ax
+ func_24_backwards_esdi_pointer_good:   
+
+ mov   es, ax  ; new es:di set
+
+ mov   cx, dx
+ cmp   cx, 32768
+ jb    func_24_skip_cap_conventional_size_backwards
+func_24_do_max_after_all_backwards:
+ mov   cx, 32768
+func_24_skip_cap_conventional_size_backwards:
+ jcxz  func_24_do_max_after_all_backwards   ; bp must be nonzero?
+
+func_24_bounds_check_backwards:
+ ; dx has original count.
+ cmp        cx, dx   ; is length smaller than bp:dx?
+ jbe        func_24_ax_smaller_do_copy_backwards
+ test       bp, bp
+ jne        func_24_ax_smaller_do_copy_backwards
+ mov        cx, dx
+ func_24_ax_smaller_do_copy_backwards:
+
+
+
+func_24_skip_backwards_normalize:
+
+ ; todo: backwards step thru expanded memory 
+ret
+
+COMMENT @
+; TODO THE BELOW
+ ; segments/offsets were normalized if conventional.
+ ; now calculate copy length for this iter.
+ ;
+ ; bp:dx still count
+
+ test  bx, bx
+ jz    func_24_use_conventional_max
+ 
+ mov   cx, 16384
+ cmp   bx, 0100h  
+ je    func_24_use_di_value    ; only dest is extended
+ ja    func_24_use_min_of_both ; both are extended
+ func_24_use_si_value:         ; only source is extended
+ sub   cx, si
+ jmp   func_24_bounds_check_backwards
+ func_24_use_di_value:
+ sub   cx, di
+ jmp   func_24_bounds_check_backwards
+ func_24_use_min_of_both:
+ mov   ax, cx
+ sub   cx, si
+ sub   ax, di
+ cmp   cx, ax
+ jbe   func_24_bounds_check_backwards
+ xchg  ax, cx
+ jmp   func_24_bounds_check_backwards
+ @
+
+
+
+
 
  ret
 
@@ -1328,6 +1502,120 @@ func_24_check_repage:
 func_24_offset_too_high:
   mov    ah, 095h   ; The offset within the logical page exceeds the length of the logical page.
   jmp    func_24_error
+
+func_24_do_overlap_check:
+  push   di
+  push   si
+  test   bx, bx
+  jnz    func_24_skip_conventional_overlap_check
+
+  mov    ax, ds
+  SHIFT_MACRO  rol ax 4
+  mov    dx, ax
+  and    dx, 0FFF0h
+  and    ax, 0Fh
+  add    si, dx
+  adc    ax, 0
+
+  push   ax
+
+  mov     ax, es
+  SHIFT_MACRO  rol ax 4
+  mov    dx, ax
+  and    dx, 0FFF0h
+  and    ax, 0Fh
+  add    di, dx
+  adc    ax, 0
+
+func_24_compare_overlap:
+  ; source dx.
+  ; dest ax
+
+  pop   dx
+
+; is DS:SI > ES:DI?
+  ; dx:ds
+  cmp   dx, ax
+
+  ja    func_24_check_backwards_overlap
+  jb    func_24_check_forwards_overlap
+  cmp   si, di
+  ja    func_24_check_backwards_overlap
+
+func_24_check_forwards_overlap:
+  mov   byte ptr cs:[_RESIDENT_VARIABLE_FUNC_24_overlap_detected_do_backwards], 1
+
+func_24_continue_overlap_check:
+  add    si, cx
+  adc    dx, bp
+; does DS:SI + BP:CX overlap ES:DI?
+
+
+  cmp   dx, ax
+
+  ja    func_24_overlap_occurred
+  jb    func_24_no_overlap
+  cmp   si, di
+  ja    func_24_overlap_occurred
+  
+func_24_no_overlap:
+
+  xor   ax, ax
+  pop   si
+  pop   di
+  ret
+
+func_24_overlap_occurred:
+  mov   ax, 092h
+  pop   si
+  pop   di
+  ret
+
+
+
+func_24_skip_conventional_overlap_check:
+  cmp    bl, bh
+  jne    func_24_no_overlap  ; extended/conventional cant overlap
+  ; both extended!
+  ; are handles the same?
+  mov   ax, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_handle]
+  cmp   ax, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_handle]
+  jne   func_24_no_overlap
+
+
+; does (logical_source):SI + BP:CX overlap (logical_dest):DI?
+
+
+
+  _RESIDENT_VARIABLE_FUNC_24_source_logical_page:
+  mov   ax, 01000h
+  cwd
+  shr   ax, 1
+  rcr   dx, 1
+  shr   ax, 1
+  rcr   dx, 1  ; 16384 * page
+  or    si, dx ; plus offset
+
+
+
+  push   ax
+  _RESIDENT_VARIABLE_FUNC_24_dest_logical_page:
+  mov   ax, 01000h
+  cwd
+  shr   ax, 1
+  rcr   dx, 1
+  shr   ax, 1
+  rcr   dx, 1  ; 16384 * page
+  or    di, dx ; plus offset
+
+  jmp   func_24_compare_overlap
+func_24_check_backwards_overlap:
+  xchg  ax, dx
+  xchg  di, si
+  mov   byte ptr cs:[_RESIDENT_VARIABLE_FUNC_24_overlap_detected_do_backwards], 0
+  jmp   func_24_continue_overlap_check
+
+
 
 
 
