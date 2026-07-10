@@ -202,7 +202,6 @@ dw  OFFSET EMS_FUNCTION_059h
 dw  OFFSET EMS_FUNCTION_05Ah
 dw  OFFSET EMS_FUNCTION_05Bh
 dw  OFFSET EMS_FUNCTION_05Ch
-dw  OFFSET EMS_FUNCTION_05Ch
 dw  OFFSET EMS_FUNCTION_05Dh
 
 
@@ -1856,6 +1855,9 @@ ENDIF
 
 
 EMS_FUNCTION_05Ah:
+xchg ax, bx
+iret
+
 EMS_FUNCTION_05Ch:
 
 
@@ -1863,12 +1865,6 @@ EMS_FUNCTION_05Ch:
 
 
 xchg ax, bx
-iret
-func_28_access_denied:
-mov   ah, 0A4h
-iret
-func_28_bad_subfunction:
-mov        ah, 08fh
 iret
 
 check_func_58:
@@ -1886,11 +1882,14 @@ cmp   al, ah ; 0
 ja    do_func_5b01
 do_func_5b00:
 les   di, dword ptr cs:[_RESIDENT_VARIABLE_alternate_register_set_default]  ; return pointer.
+mov   ax, es
+or    ax, di
+jz    skip_pointer_record
 mov   bl, byte ptr cs:[_RESIDENT_VARIABLE_current_alternate_register_set]
 test  bl, bl
-jnz   func_5b00_nonzero
+jnz   func_5b00_nonzero_register_set
 
-iret
+
 func_5b00_nonzero:
 
 ;  If the context save area pointer returned is not equal to
@@ -1920,13 +1919,15 @@ do_func_5b01:
 ;    Regardless of its value, the map register context restore area
 ;    pointer is saved within the memory manager.  It will be used
 ;    during the Get Alternate Map Register Set subfunction.
-
 mov   word ptr cs:[_RESIDENT_VARIABLE_alternate_register_set_default+0], di
 mov   word ptr cs:[_RESIDENT_VARIABLE_alternate_register_set_default+2], es ; save pointer.
-
+mov   ax, es
+or    ax, di
 mov   byte ptr cs:[_RESIDENT_VARIABLE_current_alternate_register_set], bl
+jz    skip_pointer_record
+les   di, dword ptr cs:[_RESIDENT_VARIABLE_alternate_register_set_default]
 test  bl, bl
-jz    func_5b01_zero
+jnz   func_5b01_nonzero_register_set
 
 func_5b01_nonzero:
 
@@ -1951,7 +1952,8 @@ pop   cx
 pop   si
 pop   ds
 pop   di
-func_5b01_zero:
+skip_pointer_record:
+
 ; ah should be 0
 iret
 
@@ -1961,6 +1963,8 @@ do_func_5b07:
 do_func_5b06:
 test  bl, bl
 jz    func_28_return_ok ; value 0 is fine.
+func_5b00_nonzero_register_set:
+func_5b01_nonzero_register_set:
 func_28_return_not_supported:
 mov   ah, 09Ch ; Alternate DMA register sets are not supported, and the DMA register set specified is not zero.
 func_28_return_ok:
@@ -2002,6 +2006,12 @@ ja    func_28_bad_subfunction
 je    do_func_5b08
 jmp   check_func_58
 
+func_28_access_denied:
+mov   ah, 0A4h
+iret
+func_28_bad_subfunction:
+mov        ah, 08fh
+iret
 
 
 EMS_FUNCTION_053h:
