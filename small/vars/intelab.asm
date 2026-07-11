@@ -27,7 +27,8 @@ ENDM
 
 
 ; for function 8/9 'push/pop' like operation.
-page_frame_stack:
+_RESIDENT_VARIABLE_handle_page_stack:
+:
 dw 0, 0, 0, 0
 
 

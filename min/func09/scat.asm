@@ -8,7 +8,8 @@
 
 
 
-  mov  si, OFFSET page_frame_stack
+  mov  si, OFFSET _RESIDENT_VARIABLE_handle_page_stack:
+
   mov  cx, 4
   
 SELFMODIFY_SCAT_set_page_select_register_5:

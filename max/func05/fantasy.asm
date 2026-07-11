@@ -6,7 +6,7 @@
   ; internally c000 - ec00 are pages 0-11 in order.
   ; but only page frame is exposed as indexes 0-4
 
-  cli
+
   cmp   al, FANTASY_CHIPSET_CONVENTIONAL_PAGEFRAME_DELTA
   jae   func_05_conventional_register
 SELFMODIFY_FANTASY_add_page_frame_offset_2:  
@@ -16,7 +16,7 @@ SELFMODIFY_FANTASY_add_page_frame_offset_2:
   je    handle_default_page_44h
   lea   ax, [bx + FANTASY_PAGE_OFFSET_AMT]   ; offset by default starting page
   out   FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
-  sti
+
   xor   ax, ax
   iret
 
@@ -26,9 +26,9 @@ SELFMODIFY_FANTASY_add_page_frame_offset_2:
 
   ; write ems port... select chipset register
   out   FANTASY_PAGE_SELECT_REGISTER, al   ; select EMS page
-  mov   ax, bx
+  lea   ax, [bx + FANTASY_PAGE_OFFSET_AMT]   ; offset by default starting page
   out   FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
-  sti
+
 
 
   RETURN_RESULT_00:
@@ -40,7 +40,7 @@ SELFMODIFY_FANTASY_add_page_frame_offset_2:
   ; mapping to page -1
   ; add four to get the default page value for the page 
   out   FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
-  sti
+
   xor   ax, ax
   iret
 

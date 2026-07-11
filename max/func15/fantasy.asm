@@ -22,10 +22,10 @@ func_15_sub_00_save_next_page_frame_register:
   stosw
   inc   bx
   loop  func_15_sub_00_save_next_page_frame_register
-cmp bl, (FANTASY_CHIPSET_CONVENTIONAL_PAGE_COUNT + FANTASY_CHIPSET_CONVENTIONAL_PAGE_4000) ; catch 2nd loop
+cmp bl, (DEFAULT_CONVENTIONAL_PAGE_COUNT + FANTASY_CHIPSET_CONVENTIONAL_PAGE_4000) ; catch 2nd loop
 
 je  func_15_sub_00_done_recording_registers
-mov cl, FANTASY_CHIPSET_CONVENTIONAL_PAGE_COUNT
+mov cl, DEFAULT_CONVENTIONAL_PAGE_COUNT
 mov bl, FANTASY_CHIPSET_CONVENTIONAL_PAGE_4000
 jmp func_15_sub_00_save_next_page_frame_register
 
@@ -55,10 +55,10 @@ func_15_sub_01_save_next_page_frame_register:
 
   inc   bx
   loop  func_15_sub_01_save_next_page_frame_register
-cmp bl, (FANTASY_CHIPSET_CONVENTIONAL_PAGE_COUNT + FANTASY_CHIPSET_CONVENTIONAL_PAGE_4000) ; catch 2nd loop
+cmp bl, (DEFAULT_CONVENTIONAL_PAGE_COUNT + FANTASY_CHIPSET_CONVENTIONAL_PAGE_4000) ; catch 2nd loop
 
 je  func_15_sub_01_done_recording_registers
-mov cl, FANTASY_CHIPSET_CONVENTIONAL_PAGE_COUNT
+mov cl, DEFAULT_CONVENTIONAL_PAGE_COUNT
 mov bl, FANTASY_CHIPSET_CONVENTIONAL_PAGE_4000
 jmp func_15_sub_01_save_next_page_frame_register
 
