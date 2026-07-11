@@ -514,6 +514,8 @@ func_26_access_denied:
 mov   ah, 0A4h
 iret
 
+func_27_bad_subfunction:
+xchg  ax, bx
 func_52_bad_subfunction:
 func_26_bad_subfunction:
 func_30_bad_subfunction:
@@ -538,6 +540,13 @@ func_52_unsupported:
 mov        ah, 091h ; This feature is not supported.
 iret
 
+;   27 Allocate Standard Pages                        5A00h     106
+;      Allocate Raw Pages                             5A01h     109
+
+EMS_FUNCTION_05Ah:
+cmp  byte ptr cs:[_current_call_subfunction_value], 1
+ja   func_27_bad_subfunction
+jmp  allocate_pages_skip_zero_check 
 
 ;          2  Get Page Frame Segment Address                 41h       
 
@@ -593,6 +602,7 @@ EMS_FUNCTION_043h:
 
 test       ax, ax
 jz         func_43_alloc_pages_0_error
+allocate_pages_skip_zero_check:
 
 cmp        ax, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count]
 ja         func_43_allocated_too_many_pages
@@ -1970,11 +1980,6 @@ ENDIF
 ; TODO: these
 
 
-
-EMS_FUNCTION_05Ah:
-xchg ax, bx
-iret
-
 EMS_FUNCTION_05Ch:
 
 
@@ -2376,8 +2381,11 @@ COMMON_allocate_pages:
    mov  bx, word ptr cs:[_RESIDENT_VARIABLE_handle_list + HANDLE_INFO.handle_first_page] ; get first unallocated page
    SHIFT_MACRO shl  dx 2
    xchg bx, dx
-   mov  word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page], dx
    mov  word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages], ax
+   test ax, ax
+   je   COMMON_allocate_zero_pages
+
+   mov  word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page], dx
    xchg bx, dx
    SHIFT_MACRO shr  dx 2
 
@@ -2394,6 +2402,13 @@ COMMON_allocate_pages:
 
    pop  bx
    ret
+COMMON_allocate_zero_pages:
+   mov  word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page], ax
+   xchg bx, dx
+   SHIFT_MACRO shr  dx 2
+   pop  bx
+   ret
+
 
 
 COMMON_deallocate_pages:
