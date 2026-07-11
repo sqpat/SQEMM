@@ -1,4 +1,4 @@
-PUSHA_MACRO
+PUSHA_MACRO_NO_AX
 
 
   ; physical page number mode
@@ -72,25 +72,49 @@ func_1700_skip_logical_check:
   loop       func_1700_loop_next_page
   
   ; exits if we fall thru loop with no error
-  POPA_MACRO
+func_1700_exit:
+IF COMPISA GE COMPILE_186
+  POPA_MACRO_NO_AX
   xor        ax, ax   
+ELSE
+  xor        ax, ax   
+  func_1700_pop_and_exit:
+  POPA_MACRO_NO_AX
+ENDIF
+
   iret
 
+IF COMPISA GE COMPILE_186
 
 func_1700_logical_page_too_high:
-  POPA_MACRO
+  POPA_MACRO_NO_AX
   mov   ah, 08Ah  ; One or more of the mapped logical pages is out of the range of logical pages allocated to the EMM handle.
   iret
 func_1700_physical_page_too_high:
-  POPA_MACRO
+  POPA_MACRO_NO_AX
   mov   ah, 08Bh  ; One or more of the physical pages is out of the range of mappable physical pages, or the log_to_phys_map_len exceeds the number of mappable pages in the system.
   iret
 
 func_1700_handle_not_found:
-  POPA_MACRO
+  POPA_MACRO_NO_AX
   mov   ah, 083h  ; The memory manager couldn't find the EMM handle your program specified.
   iret
 
+ELSE
+
+
+func_1700_logical_page_too_high:
+  mov   ah, 08Ah  ; One or more of the mapped logical pages is out of the range of logical pages allocated to the EMM handle.
+  jmp func_1700_pop_and_exit
+func_1700_physical_page_too_high:
+  mov   ah, 08Bh  ; One or more of the physical pages is out of the range of mappable physical pages, or the log_to_phys_map_len exceeds the number of mappable pages in the system.
+  jmp func_1700_pop_and_exit
+
+func_1700_handle_not_found:
+  mov   ah, 083h  ; The memory manager couldn't find the EMM handle your program specified.
+  jmp func_1700_pop_and_exit
+
+ENDIF
 
 func_1700_0_pageframe_register:
 
@@ -106,9 +130,14 @@ SELFMODIFY_FANTASY_add_page_frame_offset_1:
   
 
   ; exits if we fall thru loop with no error
-  POPA_MACRO
+IF COMPISA GE COMPILE_186
+  POPA_MACRO_NO_AX
   xor        ax, ax
   iret
+ELSE
+  jmp func_1700_exit
+ENDIF
+
 
   func_1700_handle_default_page:
   ; mapping to page -1
@@ -118,6 +147,11 @@ SELFMODIFY_FANTASY_add_page_frame_offset_1:
   
   ; fall thru if done..
 
-  POPA_MACRO
+IF COMPISA GE COMPILE_186
+
+  POPA_MACRO_NO_AX
   xor        ax, ax
   iret
+ELSE
+  jmp func_1700_exit
+ENDIF

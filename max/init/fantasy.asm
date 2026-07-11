@@ -73,6 +73,7 @@
   jc    found_chipset_bounds_value
 
   mov   ax, MAX_PAGE_COUNT
+  sub   ax, FANTASY_PAGE_OFFSET_AMT
 
 found_chipset_bounds_value:
 

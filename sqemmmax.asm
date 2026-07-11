@@ -2198,6 +2198,12 @@ func_20_loop_check_for_dupe_name:
    mov        ah, 0A1h
    iret
 
+func_20_bad_subfunction:
+func_21_bad_subfunction:
+   mov        ah, 08fh
+   iret
+
+
    func_20_not_match:
    add  si, 8   ; handle_name length
    loop func_20_loop_check_for_dupe_name
@@ -2215,10 +2221,6 @@ pop   si
 mov   ah, 083h   ; The manager couldn't find either the source or destination EMM handles.
 iret
 
-func_20_bad_subfunction:
-func_21_bad_subfunction:
-mov        ah, 08fh
-iret
 func_21_null_name:
 POPA_MACRO
 pop   es
@@ -2692,7 +2694,8 @@ shl        ax, 1
 mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_5+2], ax
 mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_2+1], ax
 
-mov        ax, word ptr ds:[_RESIDENT_VARIABLE_total_EMS_page_count]
+mov        ax, word ptr ds:[_RESIDENT_VARIABLE_total_EMS_page_count+1]
+mov        word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count], ax
 xchg       ax, si
 shl        si, 1
 add        si, OFFSET  _RESIDENT_VARIABLE_page_list

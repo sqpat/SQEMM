@@ -1,4 +1,6 @@
-PUSHA_MACRO
+
+
+PUSHA_MACRO_NO_AX
 
 
   ; physical page number mode
@@ -75,24 +77,56 @@ func_1701_skip_logical_check:
   loop       func_1701_loop_next_page
   
   ; exits if we fall thru loop with no error
-  POPA_MACRO
+  func_1701_exit:
+IF COMPISA GE COMPILE_186
+  POPA_MACRO_NO_AX
   xor        ax, ax   
+ELSE
+  xor        ax, ax   
+  func_1701_pop_and_exit:
+  POPA_MACRO_NO_AX
+ENDIF
   iret
+
+IF COMPISA GE COMPILE_186
 
 
 func_1701_logical_page_too_high:
-  POPA_MACRO
+  POPA_MACRO_NO_AX
   mov   ah, 08Ah  ; One or more of the mapped logical pages is out of the range of logical pages allocated to the EMM handle.
   iret
+
+
+func_1701_handle_not_found:
+  POPA_MACRO_NO_AX
+  mov   ah, 083h  ; The memory manager couldn't find the EMM handle your program specified.
+  iret
+
 func_1701_physical_page_too_high:
-  POPA_MACRO
+  POPA_MACRO_NO_AX
   mov   ah, 08Bh  ; One or more of the physical pages is out of the range of mappable physical pages, or the log_to_phys_map_len exceeds the number of mappable pages in the system.
   iret
 
+
+ELSE
+
+func_1701_logical_page_too_high:
+  mov   ah, 08Ah  ; One or more of the mapped logical pages is out of the range of logical pages allocated to the EMM handle.
+  jmp func_1701_pop_and_exit
+
+
 func_1701_handle_not_found:
-  POPA_MACRO
+
   mov   ah, 083h  ; The memory manager couldn't find the EMM handle your program specified.
-  iret
+  jmp func_1701_pop_and_exit
+
+func_1701_physical_page_too_high:
+
+  mov   ah, 08Bh  ; One or more of the physical pages is out of the range of mappable physical pages, or the log_to_phys_map_len exceeds the number of mappable pages in the system.
+  jmp func_1701_pop_and_exit
+  
+
+ENDIF
 
 
 func_1701_0_pageframe_register:
@@ -109,18 +143,27 @@ SELFMODIFY_FANTASY_add_page_frame_offset_5:
   
 
   ; exits if we fall thru loop with no error
-  POPA_MACRO
+IF COMPISA GE COMPILE_186
+
+  POPA_MACRO_NO_AX
   xor        ax, ax
   iret
+ELSE
+  jmp func_1701_exit
+ENDIF
 
-  func_1701_handle_default_page:
+func_1701_handle_default_page:
   ; mapping to page -1
   xchg ax, bx
   out  FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
   loop       func_1701_loop_next_page
   
   ; fall thru if done..
+IF COMPISA GE COMPILE_186
 
-  POPA_MACRO
+  POPA_MACRO_NO_AX
   xor        ax, ax
   iret
+ELSE
+  jmp func_1701_exit
+ENDIF
