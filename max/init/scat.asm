@@ -15,8 +15,6 @@
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_1+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_2+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_3+1], al
-  add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_4+1], al
-  add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_5+1], al
 
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_set_register_4+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_6+1], al
@@ -99,8 +97,6 @@
   or   al, ah  ; combine
   add  al, SCAT_PAGE_C000_REGISTER_OFFSET
 
-  mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_2+1], al
-  mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_3+1], al
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_4+1], al
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_6+1], al
 
@@ -153,6 +149,17 @@ SELFMODIFY_SCAT_set_page_set_register_1:
   xchg  ax, cx   ; cx = bounds + page count
   call  get_SCAT_chipset_total_memory_pages
 
+  push  es
+  push  ax
+  mov   ax, 08000h
+  mov   es, ax
+  pop   ax
+  mov   es:[0000], ax ; 200 ; 200
+  mov   es:[0002], cx ; 200 ; 200
+  mov   es:[0004], dx ; 180 ; 100  should be 400 - this right...?
+  pop   es
+
+
   cmp   cx, ax
   xchg  ax, dx
   jbe   page_count_bounds_ok
@@ -162,8 +169,10 @@ SELFMODIFY_SCAT_set_page_set_register_1:
 
   page_count_bounds_ok:
 
-  mov   word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count], ax
+; for now set to max. then parse offset and subtract.
+  mov   word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count], ax ;  we don't subtract, because this chipset does not include backfill in its total memory count i guess.
   mov   word ptr ds:[_RESIDENT_VARIABLE_total_EMS_page_count+1], ax
+
 
 
   mov   di, OFFSET string_good_page_count_param_EDIT_OFFSET
@@ -198,6 +207,9 @@ SELFMODIFY_SCAT_set_page_set_register_1:
   jmp  DRIVER_NOT_INSTALLED
 
   done_with_page_offset_bounds_check:
+
+  ; add this back for conventional region
+  add   word ptr ds:[_RESIDENT_VARIABLE_total_EMS_page_count+1], 24
 
   push  ax
 

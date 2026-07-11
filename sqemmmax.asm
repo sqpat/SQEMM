@@ -144,9 +144,6 @@ REPT LENGTH_OF_STACK
 ENDM
 
 
-; for function 8/9 'push/pop' like operation.
-page_frame_stack:
-dw 0, 0, 0, 0
 
 ALIGN 2
 
@@ -231,6 +228,7 @@ jne      NOT_FUNC_50h
 
 
 EMS_FUNCTION_050h:
+public EMS_FUNCTION_050h
 
 ;          17 Map/Unmap Multiple Handle Pages
 ;             (Physical page number mode)                    5000h     
@@ -321,7 +319,7 @@ func_05_done_looping:
 ; bx is now ptr to the actual page...
 sub   bx, OFFSET _RESIDENT_VARIABLE_page_list
 shr   bx, 1  ; board physical page
-
+; note: this number should be OFFSET BY THE CONVENTIONAL ETC offset!!
 pop   cx
 
 
@@ -544,6 +542,7 @@ iret
 ;      Allocate Raw Pages                             5A01h     109
 
 EMS_FUNCTION_05Ah:
+public EMS_FUNCTION_05Ah
 cmp  byte ptr cs:[_current_call_subfunction_value], 1
 ja   func_27_bad_subfunction
 jmp  allocate_pages_skip_zero_check 
@@ -755,64 +754,123 @@ iret
 ;          8  Save Page Map                                  47h       
 
 EMS_FUNCTION_047h:
+public EMS_FUNCTION_047h
 
-IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
-   INCLUDE max/func08\scamp.asm
-ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-   INCLUDE max/func08\fantasy.asm
-ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-   INCLUDE max/func08\rodney.asm
-ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-   INCLUDE max/func08\scat.asm
-ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-   INCLUDE max/func08\ht18.asm
-ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-   INCLUDE max/func08\ht12.asm
-ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-   INCLUDE max/func08\hedaka.asm
-ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-   INCLUDE max/func08\lotech.asm
-ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-   INCLUDE max/func08\neat.asm
-ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-   INCLUDE max/func08\intelab.asm
-ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-   INCLUDE max/func08\sarc.asm
-ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-   INCLUDE max/func08\standard.asm
-ENDIF
+; consider a small fixed size to save these..
 
- 
+  xchg ax, bx ; restore bx
+
+  test dx, dx
+  jz   func_08_bad_handle
+  mov  ax, dx
+  call COMMON_check_valid_handle
+  jc   func_08_bad_handle
+
+  push  bx
+  xchg ax, bx
+  SHIFT_MACRO shl bx 3  ; 8 bytes per handle 
+  add  bx, OFFSET _RESIDENT_VARIABLE_handle_page_stack
+
+
+  xor  ax, ax ; page 0
+
+  cmp  word ptr cs:[bx], -1  ; check one is enough.
+  jne  func_08_already_exists
+
+  call UTIL_get_page
+  mov  word ptr cs:[bx], ax
+
+  mov  ax, 1
+  call UTIL_get_page
+  mov  word ptr cs:[bx+2], ax
+
+  mov  ax, 2
+  call UTIL_get_page
+  mov  word ptr cs:[bx+4], ax
+
+  mov  ax, 3
+  call UTIL_get_page
+  mov  word ptr cs:[bx+6], ax
+
+  pop  bx
+  xor  ax, ax
+
+
+iret
+
+func_08_already_exists:
+pop   bx
+mov   ah,  08Dh ; The save area already contains the page mapping register state for the EMM handle your program specified.
+iret 
+
+func_08_bad_handle:
+func_09_bad_handle:
+mov   ah, 083h
+iret
+
+func_09_doesnt_exist:
+pop   si
+mov   ah,  08Eh ;  There is no page mapping register state in the save area for the specified EMM handle. 
+iret
+
+
 
 ;          9  Restore Page Map                               48h       
 
 EMS_FUNCTION_048h:
 
-IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
-   INCLUDE max/func09\scamp.asm
-ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-   INCLUDE max/func09\fantasy.asm
-ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-   INCLUDE max/func09\rodney.asm
-ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-   INCLUDE max/func09\scat.asm
-ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-   INCLUDE max/func09\ht18.asm
-ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-   INCLUDE max/func09\ht12.asm
-ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-   INCLUDE max/func09\hedaka.asm
-ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-   INCLUDE max/func09\lotech.asm
-ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-   INCLUDE max/func09\neat.asm
-ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-   INCLUDE max/func09\intelab.asm
-ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-   INCLUDE max/func09\sarc.asm
-ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-   INCLUDE max/func09\standard.asm
-ENDIF
+; consider a small fixed size to save these..
+
+  xchg ax, bx ; restore bx
+
+  test dx, dx
+  jz   func_09_bad_handle
+  mov  ax, dx
+  call COMMON_check_valid_handle
+  jc   func_09_bad_handle
+
+  push  si
+  xchg  ax, si
+  SHIFT_MACRO shl si 3  ; 8 bytes per handle 
+  add  si, OFFSET _RESIDENT_VARIABLE_handle_page_stack
+
+
+
+
+  lods word ptr cs:[si]
+  inc  ax
+  jz   func_09_doesnt_exist ; -1 check
+  dec  ax
+  
+  push  dx
+
+  xor  dx, dx
+  mov  word ptr cs:[si-2], -1  ; mark this one zero and we're good.
+  xchg ax, dx
+  call UTIL_set_page
+
+  mov  dx, 1
+  lods word ptr cs:[si]
+  xchg ax, dx
+  call UTIL_set_page
+
+  mov  dx, 2
+  lods word ptr cs:[si]
+  xchg ax, dx
+  call UTIL_set_page
+
+  mov  dx, 3
+  lods word ptr cs:[si]
+  xchg ax, dx
+  call UTIL_set_page
+
+  pop  dx
+  pop  si
+  xor  ax, ax
+
+
+iret
+
 
 
 func_51_no_emm_handle_found_popbx:
@@ -827,12 +885,19 @@ iret
 ; DX = handle
 ;BX = reallocation_count                     
 EMS_FUNCTION_051h:
+public EMS_FUNCTION_051h
 xchg       ax, bx ; todo juggle less
 
 
 test  dx, dx
-je    func_51_no_emm_handle_found ; zero handle illegal
+jne   func_51_done_with_os_hanlde_stuff ; zero handle illegal
+func_51_handle_os_handle:
+mov   ax, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages]
+cmp   bx, DEFAULT_CONVENTIONAL_PAGE_COUNT
+jb    func_51_done_with_os_hanlde_stuff
+mov   bx, DEFAULT_CONVENTIONAL_PAGE_COUNT  ; deallocating OS pages below minimum not allowed. (for now.)
 
+func_51_done_with_os_hanlde_stuff:
 push  cx
 mov   cx, bx ; reallocation count
 mov   bx, dx ; handle
@@ -2501,7 +2566,7 @@ COMMON_allocate_pages:
    push bx
    sub  word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count], ax
 
-   mov  bx, word ptr cs:[_RESIDENT_VARIABLE_handle_list + HANDLE_INFO.handle_first_page] ; get first unallocated page
+   mov  bx, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_head] ; get first unallocated page
    SHIFT_MACRO shl  dx 2
    xchg bx, dx
    mov  word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages], ax
@@ -2520,7 +2585,7 @@ COMMON_allocate_pages:
 
    ; ax is -1
    xchg ax, word ptr cs:[bx + PAGE_INFO.page_info_next_page] ; mark end -1
-   lock mov  word ptr cs:[_RESIDENT_VARIABLE_handle_list + HANDLE_INFO.handle_first_page], ax 
+   lock mov  word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_head], ax 
 
 
    pop  bx
@@ -2575,7 +2640,7 @@ public  COMMON_deallocate_pages
 
    xchg word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page], ax  ; -1
    lock mov  bx, dx  ; bx gets ptr
-   xchg word ptr cs:[_RESIDENT_VARIABLE_handle_list + HANDLE_INFO.handle_first_page], ax  ; point to first page 
+   xchg word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_head], ax  ; point to first page 
    lock mov  word ptr cs:[bx + PAGE_INFO.page_info_next_page], ax
 
    skip_loop:
@@ -2624,16 +2689,21 @@ db 0
 _RESIDENT_VARIABLE_access_reenabled:
 db 0
 
-_RESIDENT_VARIABLE_global_last_page:
-dw  OFFSET _RESIDENT_VARIABLE_page_list + (MAX_PAGE_COUNT * (SIZE PAGE_INFO))
 
 ; global handle (first allocation)
 
-_RESIDENT_VARIABLE_handle_list:
+
 _RESIDENT_VARIABLE_unallocated_page_count:  ; free pages is handle 0 free pages
    dw MAX_PAGE_COUNT  ; num pages for handle. -1 means unallocated.
 _RESIDENT_VARIABLE_unallocated_page_head:
-   dw OFFSET _RESIDENT_VARIABLE_page_list ; ptr to first page. Can be -1 if the above is 0 for ems 4.0 driver
+   dw OFFSET _RESIDENT_VARIABLE_conventional_page_list ; ptr to first page. Can be -1 if the above is 0 for ems 4.0 driver
+
+_RESIDENT_VARIABLE_handle_list:
+; handle 0 is the OS handle and owns 
+_RESIDENT_VARIABLE_OS_HANDLE_page_count:  ; free pages is handle 0 free pages
+   dw DEFAULT_CONVENTIONAL_PAGE_COUNT  ; num pages for handle. -1 means unallocated.
+_RESIDENT_VARIABLE_OS_HANDLE_first_page:
+   dw -1 ; OS ptr starts with no extra pages
 
 
 REPT (MAX_HANDLE_COUNT - 1)
@@ -2651,10 +2721,36 @@ REPT (MAX_HANDLE_COUNT - 1)
 db 0, 0, 0, 0, 0, 0, 0, 0
 ENDM
 
+; for function 8/9 'push/pop' like operation.
+_RESIDENT_VARIABLE_handle_page_stack:
+REPT MAX_HANDLE_COUNT
+  dw -1, -1, -1, -1
+ENDM
+
+
+
+_RESIDENT_VARIABLE_conventional_page_list:
 public _RESIDENT_VARIABLE_page_list
 _RESIDENT_VARIABLE_page_list:
 
 CURRENT_NEXT_POINTER = _RESIDENT_VARIABLE_page_list
+
+COMMENT @
+CURRENT_NEXT_POINTER = _RESIDENT_VARIABLE_conventi
+onal_page_list
+
+IF DEFAULT_CONVENTIONAL_PAGE_COUNT GE 1
+
+   REPT (DEFAULT_CONVENTIONAL_PAGE_COUNT - 1)
+      CURRENT_NEXT_POINTER = CURRENT_NEXT_POINTER + (SIZE PAGE_INFO)
+      dw  CURRENT_NEXT_POINTER
+   ENDM
+   dw  -1   ; last entry
+   CURRENT_NEXT_POINTER = CURRENT_NEXT_POINTER + (SIZE PAGE_INFO)
+
+ENDIF
+@
+
 
 REPT (MAX_PAGE_COUNT - 1)
    CURRENT_NEXT_POINTER = CURRENT_NEXT_POINTER + (SIZE PAGE_INFO)
@@ -2829,12 +2925,11 @@ mov        byte ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_1+1], al ; todo.
 mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_3+1], ax
 mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_4+1], ax
 shl        ax, 1
-mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_5+2], ax
 mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_2+1], ax
+shl        ax, 1
+mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_5+2], ax
 
-mov        ax, word ptr ds:[_RESIDENT_VARIABLE_total_EMS_page_count+1]
-mov        word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count], ax
-xchg       ax, si
+mov        si, word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count]
 shl        si, 1
 add        si, OFFSET  _RESIDENT_VARIABLE_page_list
 mov        word ptr ds:[si-2], -1    ; last offset.

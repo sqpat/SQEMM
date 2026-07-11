@@ -8,7 +8,8 @@
   push es
   push cs
   pop  es
-  mov  di, OFFSET page_frame_stack
+  mov  di, OFFSET _RESIDENT_VARIABLE_handle_page_stack:
+
   mov  cx, 4
   
 SELFMODIFY_SCAT_set_page_select_register_4:

@@ -44,8 +44,6 @@
   mov   byte ptr ds:[SELFMODIFY_FANTASY_add_page_frame_offset_3+1], bl 
   mov   byte ptr ds:[SELFMODIFY_FANTASY_add_page_frame_offset_4+1], bl 
   mov   byte ptr ds:[SELFMODIFY_FANTASY_add_page_frame_offset_5+1], bl 
-  mov   byte ptr ds:[SELFMODIFY_FANTASY_add_page_frame_offset_6+1], bl 
-  mov   byte ptr ds:[SELFMODIFY_FANTASY_add_page_frame_offset_7+1], bl 
   mov   byte ptr ds:[SELFMODIFY_FANTASY_add_page_frame_offset_8+1], bl 
   mov   byte ptr ds:[SELFMODIFY_FANTASY_add_page_frame_offset_9+1], bl 
   mov   byte ptr ds:[SELFMODIFY_FANTASY_add_page_frame_offset_10+1], bl 
@@ -73,7 +71,6 @@
   jc    found_chipset_bounds_value
 
   mov   ax, MAX_PAGE_COUNT
-  sub   ax, FANTASY_PAGE_OFFSET_AMT
 
 found_chipset_bounds_value:
 
@@ -85,8 +82,19 @@ found_chipset_bounds_value:
 
   page_count_bounds_ok:
 
-  mov   word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count], ax
+  ; start with 4096KB (256 pages)
+  ; subtract 16 pages 256 KB for backfill system (not pageable but shadowable). 
+  ;  - NOT IN PAGE LIST
+  ; subtract 24 pages 344 KB for backfill pageable
+  ;  - IN OS PAGE LIST AT START
+  ; subtract 12 pages 192 KB for C000-EFFF region defaults  (todo dont waste this, repage and waste only 4)
+  ;  - NOT IN PAGE LIST (?)
+  ; left with 3264KB (204 pages)
+  ;  - In default pagelist.
+
   mov   word ptr ds:[_RESIDENT_VARIABLE_total_EMS_page_count+1], ax
+  sub   ax, FANTASY_PAGE_OFFSET_AMT ; unallocate the default registers
+  mov   word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count], ax
 
 
   mov   di, OFFSET string_good_page_count_param_EDIT_OFFSET
