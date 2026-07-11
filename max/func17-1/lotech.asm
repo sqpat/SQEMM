@@ -12,7 +12,7 @@
   add  ax,  LOTECH_PAGE_REGISTER_0
   mov  dx, ax
   lodsw
-  call util_get_register_for_segment
+  call COMMON_util_get_register_for_segment
 
   out   dx, al   ; write 8 bit page num. 
 

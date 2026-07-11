@@ -12,7 +12,7 @@
   lodsw
   ; read two words - bx and ax
 
-  call util_get_register_for_segment
+  call COMMON_util_get_register_for_segment
 
   ror   ax, 2
   ; 0-4 becomes 0208, 4208, 8208, c208

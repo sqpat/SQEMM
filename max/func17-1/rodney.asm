@@ -11,7 +11,7 @@
   xchg  ax, bx
   lodsw
   ; read two words - bx and ax
-  call util_get_register_for_segment
+  call COMMON_util_get_register_for_segment
 
   
   out   RODNEY_PAGE_SELECT_REGISTER, al   ; select EMS page

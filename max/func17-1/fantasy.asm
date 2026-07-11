@@ -51,7 +51,7 @@ func_1701_skip_logical_check:
 
   lodsw   ; grab physical page
 
-  call util_get_register_for_segment
+  call COMMON_util_get_register_for_segment
     cmp        ax, -1
     je         func_1701_physical_page_too_high
     cmp        al, PAGE_FRAME_COUNT

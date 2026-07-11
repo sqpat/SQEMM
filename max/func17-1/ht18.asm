@@ -12,7 +12,7 @@
   mov        bx, ax
   lodsw
   ; read two words - bx and ax
-  call util_get_register_for_segment
+  call COMMON_util_get_register_for_segment
 
   mov   dx, HT18_PAGE_SELECT_REGISTER
   

@@ -22,6 +22,7 @@ SELFMODIFY_FANTASY_add_page_frame_offset_3:
 
   out   FANTASY_PAGE_SELECT_REGISTER, al   ; select EMS page
   in    ax, FANTASY_PAGE_SET_REGISTER
+  sub   ax, FANTASY_PAGE_OFFSET_AMT
 
 
   ret

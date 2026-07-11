@@ -1,7 +1,7 @@
 Open Watcom Linker Version 2.0 beta Sep  3 2024 02:05:05 (32-bit)
 Copyright (c) 2002-2024 The Open Watcom Contributors. All Rights Reserved.
 Portions Copyright (c) 1985-2002 Sybase, Inc. All Rights Reserved.
-Created on:       26/07/10 23:26:37
+Created on:       26/07/11 02:29:41
 Executable Image: sqemm.exe
 creating a DOS executable
 
@@ -13,7 +13,7 @@ creating a DOS executable
 Group                           Address              Size
 =====                           =======              ====
 
-DGROUP                          0000:0000            00001ff2
+DGROUP                          0000:0000            000020b4
 
 
 
@@ -24,8 +24,8 @@ DGROUP                          0000:0000            00001ff2
 Segment                Class          Group          Address         Size
 =======                =====          =====          =======         ====
 
-_TEXT                  CODE           DGROUP         0000:0000       00001ff2
-_DATA                  DATA           DGROUP         01ff:0002       00000000
+_TEXT                  CODE           DGROUP         0000:0000       000020b4
+_DATA                  DATA           DGROUP         020b:0004       00000000
 
 
                         +----------------+
@@ -40,11 +40,11 @@ Address        Symbol
 
 Module: sqemm.obj(sqemm.ASM)
 0000:03e3*     _RESIDENT_VARIABLE_HANDLE_COUNT
-0000:1b40*     END_OF_DRIVER_LABEL
-0000:0d4c*     _RESIDENT_VARIABLE_HANDLE_LIST
-0000:1940*     _RESIDENT_VARIABLE_PAGE_LIST
+0000:1c02*     END_OF_DRIVER_LABEL
+0000:0e0e*     _RESIDENT_VARIABLE_HANDLE_LIST
+0000:1a02*     _RESIDENT_VARIABLE_PAGE_LIST
 0000:0014*     EMS_DRIVER_INIT
-0000:0cd5*     COMMON_DEALLOCATE_PAGES
+0000:0d97*     COMMON_DEALLOCATE_PAGES
 Warning! W1014: stack segment not found
 Warning! W1023: no starting address found, using 0000:0000
 
@@ -54,6 +54,6 @@ Warning! W1023: no starting address found, using 0000:0000
                         +-----------------------+
 
 Stack size:  09e8 (2536.)
-Memory size:  1ff2 (8178.)
+Memory size:  20b4 (8372.)
 Entry point address: 0000:0000
 Link time: 00:00.55

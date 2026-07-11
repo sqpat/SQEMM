@@ -11,7 +11,7 @@
   mov  dx, ax
   lodsw
 
-  call util_get_register_for_segment
+  call COMMON_util_get_register_for_segment
 
   cmp dx, 0FFFFh
   je    func17_01_handle_default_page

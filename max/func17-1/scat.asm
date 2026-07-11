@@ -44,7 +44,7 @@ func_1701_done_looping:
 
 func_1701_skip_logical_check:
   lodsw   ; grab physical page
-  call util_get_register_for_segment
+  call COMMON_util_get_register_for_segment
 
 SELFMODIFY_SCAT_set_page_select_register_8:
   mov   dx, SCAT_PAGE_SELECT_REGISTER

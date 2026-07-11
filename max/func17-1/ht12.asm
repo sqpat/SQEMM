@@ -32,7 +32,7 @@
   sal dl, cl ; turn on the bit for this page
 
   lodsw
-  call util_get_register_for_segment
+  call COMMON_util_get_register_for_segment
 
   
   ; bl has previous config register  contents  

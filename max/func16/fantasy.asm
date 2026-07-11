@@ -31,7 +31,7 @@ func_16_sub_00:
 func_16_sub_00_save_next_page_frame_register:
   lodsw
   ; ax has segment... 
-  call  util_get_register_for_segment
+  call  COMMON_util_get_register_for_segment
   cmp   al, FANTASY_CHIPSET_CONVENTIONAL_PAGEFRAME_DELTA
   jae   func_16_do_conventional_map
   add   al, bl

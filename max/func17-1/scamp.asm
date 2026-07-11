@@ -11,7 +11,7 @@
   mov        bx, ax
   lodsw
   ; read two words - bx and ax
-  call util_get_register_for_segment
+  call COMMON_util_get_register_for_segment
 
   cmp   ax, 12
   ; default, lets assume backfill

@@ -957,20 +957,6 @@ jmp   func_51_add_pages_back_to_free
 
 
 
-
-
-
-;      22 Alter Page Map & Jump
-;             (Physical page number mode)                    5500h     
-;             Alter Page Map & Jump
-;             (Segment address mode)                         5501h     
-
-EMS_FUNCTION_055h:
-; TODO NOT DONE, should be done
-xchg       ax, bx
-iret
- 
-
 ;   BX = total_handles
 ; The value returned represents the maximum number of handles
 ; which a program may request the memory manager to allocate
@@ -983,11 +969,158 @@ iret
 ;             Alter Page Map & Call
 ;             (Segment address mode)                         5601h     
 ;             Get Page Map Stack Space Size                  5602h     
+func_23_bad_handle:
+mov   ah, 083h
+iret 
+func_23_error_bad_page:
+POPA_MACRO
+pop   ds
+mov   ah, 08Ah
+iret
+
+func_23_bad_subfunction:
+mov        ah, 08Fh  ;  The subfunction parameter is invalid.
+iret
+
+ALIGN 2
+
+do_func_5602:
+mov   bx, 020h   ; probably less ok... we use 18-20 bytes (decimal) at worst?
+iret
 
 EMS_FUNCTION_056h:
-; TODO NOT DONE, should be done
-xchg       ax, bx
-iret
+xchg  ax, bx ; restore bx
+mov   al, byte ptr cs:[_current_call_subfunction_value]
+; if ah = 0, then func 22. if ah = 1, then func 23.
+cmp   al, 2 
+ja    func_23_bad_subfunction
+je    do_func_5602
+
+xchg  ax, dx ; ax gets handle
+call  COMMON_check_valid_handle
+xchg  ax, dx ; handle back in dx
+jc    func_23_bad_handle
+
+; save registers.
+push  ds
+PUSHA_MACRO
+cbw
+xchg  ax, bp  ; bp = 0 or 1 for subfunction
+xor   cx, cx
+mov   cl, byte ptr ds:[si + 9]
+jcxz  func_56_loop_got_all_pages
+lds   si, dword ptr ds:[si + 10]
+func_56_loop_get_next_page:
+lodsw   ; unset, skip over
+lodsw
+test  bp, bp
+je    func_23_got_page_value
+call  COMMON_util_get_register_for_segment
+func_23_got_page_value:
+call  UTIL_get_page  ; we have an absolute page, not hande/logical page
+
+cmp   ax, -1
+je    func_23_error_bad_page
+mov   word ptr ds:[si-4], ax
+loop  func_56_loop_get_next_page
+func_56_loop_got_all_pages:
+
+POPA_MACRO
+pop   ds
+push  ds
+PUSHA_MACRO
+xor   cx, cx
+mov   cl, byte ptr ds:[si + 4]
+lds   si, dword ptr ds:[si + 5]
+mov   ah, 050h
+int   067h
+POPA_MACRO
+pop   ds
+
+push  ds
+push  si
+push  word ptr ds:[si + 10]
+push  word ptr ds:[si + 12]
+push  word ptr ds:[si + 9]
+push  ax
+push  ax
+xchg  ax, si
+mov   si, sp
+push  word ptr ss:[si+18] ; gross but ok
+popf
+xchg  ax, si
+pop   ax
+call  dword ptr ds:[si]  
+pop   ax
+pop   cx
+xor   ch, ch
+pop   ds
+pop   si
+
+
+push  bp
+push  dx
+
+xchg  ax, bp
+
+func_56_loop_get_next_page_for_restore:
+lodsw   ; page value
+xchg  ax, dx
+lodsw   ; page index
+test  bp, bp
+je    func_23_got_page_value_for_restore
+call  COMMON_util_get_register_for_segment
+func_23_got_page_value_for_restore:
+call  UTIL_set_page   ; we have an absolute page, not hande/logical page
+loop  func_56_loop_get_next_page_for_restore
+
+
+
+pop   dx
+pop   bp
+
+pop   si
+pop   ds
+
+xor   ax, ax
+iret 
+
+
+;      22 Alter Page Map & Jump
+;             (Physical page number mode)                    5500h     
+;             Alter Page Map & Jump
+;             (Segment address mode)                         5501h     
+
+EMS_FUNCTION_055h:
+
+
+xchg  ax, bx
+
+mov   al, byte ptr cs:[_current_call_subfunction_value]
+; if ah = 0, then func 22. if ah = 1, then func 23.
+cmp   al, 1
+ja    func_22_bad_subfunction
+
+
+push  ds
+PUSHA_MACRO
+
+xor   cx, cx
+mov   cl, byte ptr ds:[si + 4]
+lds   si, dword ptr ds:[si + 5]
+mov   ah, 050h
+int   067h
+POPA_MACRO
+pop   ds
+pop   ax
+pop   ax
+xor   ax, ax
+popf  ; restore flags, sp reset.
+
+jmp   dword ptr ds:[si]  ; far return will iret.
+
+
+ 
 
 
 ; REFER TO EMS 4.0 documentation, this is a doozy!
@@ -1021,6 +1154,7 @@ _RESIDENT_VARIABLE_FUNC_24_overlap_detected_do_backwards:
 db 0
 
 ; The function code passed to the memory manager is not defined.
+func_22_bad_subfunction:
 func_24_bad_subfunction:
 mov        ah, 08Fh  ;  The subfunction parameter is invalid.
 iret
@@ -1923,31 +2057,6 @@ ENDIF
 
 
 
-; cross platform utility function for getting the (application facing) page index for a segment.
-
-util_get_register_for_segment:
-   push  si
-   push  cx
-   mov   si, OFFSET mappable_phys_page_struct
-   mov   cx, PAGE_FRAME_COUNT
-   check_next_segment_in_list:
-   cmp   ax, word ptr cs:[si]
-   je    found_page_in_list
-   add   si, 4
-   loop  check_next_segment_in_list
-
-   ; fail... undefined behavior? or just store FFFF in there?
-   dec   cx     ; cx = -1
-   xchg  ax, cx ; ax = -1
-   jmp   return_bad_register
-   found_page_in_list:
-   mov   ax, word ptr cs:[si+2]
-   return_bad_register:
-   pop   cx
-   pop   si
-   ret
-
-
 
 
 
@@ -2342,6 +2451,33 @@ POPA_MACRO
 
 iret
 
+; cross platform utility function for getting the (application facing) page index for a segment.
+
+COMMON_util_get_register_for_segment:
+   push  si
+   push  cx
+   mov   si, OFFSET mappable_phys_page_struct
+   mov   cx, PAGE_FRAME_COUNT
+   check_next_segment_in_list:
+   cmp   ax, word ptr cs:[si]
+   je    found_page_in_list
+   add   si, 4
+   loop  check_next_segment_in_list
+
+   ; fail... undefined behavior? or just store FFFF in there?
+   dec   cx     ; cx = -1
+   xchg  ax, cx ; ax = -1
+   jmp   return_bad_register
+   found_page_in_list:
+   mov   ax, word ptr cs:[si+2]
+   return_bad_register:
+   pop   cx
+   pop   si
+   ret
+
+   
+
+
 
 
 ; carry flag means bad handle
@@ -2360,19 +2496,6 @@ COMMON_check_valid_handle:
  SHIFT_MACRO  shr ax 2
  stc
  ret
-
-COMMON_reallocate_pages:
-push bx
-; allocate ax pages to (pre-existing) handle dx
-SHIFT_MACRO shl  dx 2
-xchg bx, dx
-mov  dx, word ptr cs:[bx + HANDLE_INFO.handle_first_page]
-xchg bx, dx
-SHIFT_MACRO shr  dx 2 ; dx has original page, bx has its first allocation..
-
-
-;jmp  skip_first_page_set  ; TODO not this, need to catch the -1 case and switch over to unallocated?
-
 COMMON_allocate_pages:
    ; allocate ax pages to handle dx
    push bx
