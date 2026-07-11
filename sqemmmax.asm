@@ -693,7 +693,6 @@ iret
 func_4C_no_emm_handle_found:
 xchg       ax, bx  ; restore bx
 
-func_51_no_emm_handle_found:
 mov        ah, 083h  ; The memory manager couldn't find the EMM handle your program specified.
 iret
 
@@ -806,28 +805,146 @@ ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
 ENDIF
 
 
-
-
+func_51_no_emm_handle_found_popbx:
+mov     bx, cx
+pop     cx
+func_51_no_emm_handle_found:
+mov     ah, 083h  ; The memory manager couldn't find the EMM handle your program specified.
+iret
 
 
 ;          18 Reallocate Pages                               51h       
 ; DX = handle
 ;BX = reallocation_count                     
 EMS_FUNCTION_051h:
-xchg       ax, bx  ; on failure dont change bx
-cmp        dx, 1
-jne        func_51_no_emm_handle_found
-mov        ax, word ptr cs:[_RESIDENT_VARIABLE_total_EMS_page_count+1]
-sub        ax, bx
-jb         func_51_allocated_too_many_pages_above_total
-xchg       ax, bx
-xor        ax, ax  ; ah = 0
+xchg       ax, bx ; todo juggle less
+
+
+test  dx, dx
+je    func_51_no_emm_handle_found ; zero handle illegal
+
+push  cx
+mov   cx, bx ; reallocation count
+mov   bx, dx ; handle
+SHIFT_MACRO shl bx 2
+
+mov   ax, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages]
+cmp   ax, -1
+je    func_51_no_emm_handle_found_popbx
+cmp   ax, cx
+je    func_51_done_reallocating_equal_pages
+jcxz  func_51_set_0_page_case
+cmp   cx, word ptr cs:[_RESIDENT_VARIABLE_total_EMS_page_count+1]
+ja    func_51_allocated_too_many_pages_above_total
+add   ax, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count]
+cmp   cx, ax
+ja    func_51_allocated_too_many_pages_above_available
+mov   ax, cx
+xchg  ax, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages]    ; new num pages.
+add   word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count], ax
+sub   word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count], cx
+mov   ax, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page]  ; bx is page 0.
+
+; bx may be a bad pointer to start; 
+push  cx  ; numpages to pop into bx
+push  dx
+xor   dx, dx  ; keep track of overallocation.
+
+test  ax, ax
+jne   loop_func_51_add_page
+inc   dx
+mov   ax, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_head]  ; allocate from head.
+mov   word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page], ax
+loop_func_51_add_page:
+cmp   ax, -1
+jne   func_51_loop_good_page
+func_51_get_page_head_first:
+mov   ax, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_head]  ; allocate from head.
+mov   word ptr cs:[bx + PAGE_INFO.page_info_next_page], ax
+inc   dx  ; flag that we allocated new pages
+func_51_loop_good_page:
+
+xchg  ax, bx ; bx gets next page.
+mov   ax, word ptr cs:[bx + PAGE_INFO.page_info_next_page]
+loop  loop_func_51_add_page
+
+; we have reallocated. possble cleanup:
+; 1. need to FF end of realloc'd list.
+; AND
+; 2a. allocs grew, need to rehead free alloc. (easy)
+; OR
+; 2b. allocs shrunk. need to free unalloced page chunk. (hard, need to find old end)
+
+; 1:
+dec   cx ; -1
+mov  word ptr cs:[bx + PAGE_INFO.page_info_next_page], cx   ; last page points to -1. 
+mov   bx, ax
+; ax goes into here in either case for step 2a or 2b
+xchg   ax, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_head]  ; 2A is done
+
+;1:
+dec   dx
+pop   dx
+jz    func_51_clean_up_and_return_success
+; 2b
+
+func_51_add_pages_back_to_free:
+; ax has new first page
+
+
+loop_func_51_addback_page:
+
+cmp   word ptr cs:[bx + PAGE_INFO.page_info_next_page], cx    ; -1 check
+je    func_51_found_new_end_page
+mov   bx, word ptr cs:[bx + PAGE_INFO.page_info_next_page]
+jmp  loop_func_51_addback_page
+func_51_found_new_end_page:
+mov   word ptr cs:[bx + PAGE_INFO.page_info_next_page], ax  ; old free head.
+
+
+
+
+func_51_clean_up_and_return_success:
+
+pop   bx ; numpages
+func_51_clean_up_and_return_success_no_popbx:
+pop   cx ; original cx
+
+xor   ax, ax  ; ah = 0
 iret
+
 func_51_allocated_too_many_pages_above_total:
-xchg       ax, bx
-cwd        ; dx = 0
 mov        ah, 087h  ; There aren't enough expanded memory pages present in the system to satisfy your program's request.
+func_51_done_reallocating_equal_pages:
+mov        bx, cx
+pop        cx
 iret
+func_51_allocated_too_many_pages_above_available:
+mov        bx, cx
+pop        cx
+mov        ah, 088h  ; The number of unallocated pages is insufficient for the new allocation request. 
+iret
+
+func_51_set_0_page_case:
+
+; todo remove all pages and set a null first page.
+push  cx        ; zero to pop into numpages/bx later.
+
+mov   word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages], cx  ; zero
+add   word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count], ax ; was num pages...
+
+mov   ax, cx ; known zero.
+dec   cx ; -1
+
+xchg  word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page], ax; zero
+mov   bx, ax
+xchg  word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_head], ax
+
+; ax has old free head.
+
+jmp   func_51_add_pages_back_to_free
+
+
 
 
 
@@ -2375,6 +2492,7 @@ dw  OFFSET _RESIDENT_VARIABLE_page_list + (MAX_PAGE_COUNT * (SIZE PAGE_INFO))
 _RESIDENT_VARIABLE_handle_list:
 _RESIDENT_VARIABLE_unallocated_page_count:  ; free pages is handle 0 free pages
    dw MAX_PAGE_COUNT  ; num pages for handle. -1 means unallocated.
+_RESIDENT_VARIABLE_unallocated_page_head:
    dw OFFSET _RESIDENT_VARIABLE_page_list ; ptr to first page. Can be -1 if the above is 0 for ems 4.0 driver
 
 
