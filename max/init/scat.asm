@@ -119,7 +119,7 @@ SELFMODIFY_SCAT_set_page_select_register_1:
 
 SELFMODIFY_SCAT_set_page_set_register_1:
   mov  dx, SCAT_PAGE_SET_REGISTER 
-  mov  ax, 08040h  ; 080h flag to enable ems. 40h to map to page at 1 MB (64 * 16384)
+  mov  ax, 08040h  ; 080h flag to enable ems. 40h to map to page at 1 MB (64 * 16384)   ; todo proper offset not 40h!
   out  dx, ax ; map page 0 to 1MB + 0*16384
   inc  ax 
   out  dx, ax ; map page 1 to 1MB + 1*16384
@@ -127,6 +127,11 @@ SELFMODIFY_SCAT_set_page_set_register_1:
   out  dx, ax ; map page 2 to 1MB + 2*16384
   inc  ax 
   out  dx, ax ; map page 3 to 1MB + 3*16384
+
+  IFDEF DEBUG_MODE
+    sub   ax, 5
+    out dx, ax
+  ENDIF
 
 
   mov   ah, "C" ; page count

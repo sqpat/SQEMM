@@ -1,7 +1,7 @@
 Open Watcom Linker Version 2.0 beta Sep  3 2024 02:05:05 (32-bit)
 Copyright (c) 2002-2024 The Open Watcom Contributors. All Rights Reserved.
 Portions Copyright (c) 1985-2002 Sybase, Inc. All Rights Reserved.
-Created on:       26/07/11 15:55:45
+Created on:       26/07/11 18:43:30
 Executable Image: sqemm.exe
 creating a DOS executable
 
@@ -13,7 +13,7 @@ creating a DOS executable
 Group                           Address              Size
 =====                           =======              ====
 
-DGROUP                          0000:0000            0000290c
+DGROUP                          0000:0000            00002eee
 
 
 
@@ -24,8 +24,8 @@ DGROUP                          0000:0000            0000290c
 Segment                Class          Group          Address         Size
 =======                =====          =====          =======         ====
 
-_TEXT                  CODE           DGROUP         0000:0000       0000290b
-_DATA                  DATA           DGROUP         0290:000c       00000000
+_TEXT                  CODE           DGROUP         0000:0000       00002eed
+_DATA                  DATA           DGROUP         02ee:000e       00000000
 
 
                         +----------------+
@@ -39,16 +39,16 @@ Address        Symbol
 =======        ======
 
 Module: sqemm.obj(sqemm.ASM)
-0000:02f4*     EMS_FUNCTION_05AH
-0000:03d8*     _RESIDENT_VARIABLE_HANDLE_COUNT
-0000:0496*     EMS_FUNCTION_051H
-0000:0149*     EMS_FUNCTION_050H
-0000:2462*     END_OF_DRIVER_LABEL
-0000:0e76*     _RESIDENT_VARIABLE_HANDLE_LIST
-0000:03f2*     EMS_FUNCTION_047H
-0000:2262*     _RESIDENT_VARIABLE_PAGE_LIST
+0000:02d5*     EMS_FUNCTION_05AH
+0000:03b8*     _RESIDENT_VARIABLE_HANDLE_COUNT
+0000:0476*     EMS_FUNCTION_051H
+0000:013f*     EMS_FUNCTION_050H
+0000:2912*     END_OF_DRIVER_LABEL
+0000:0da6*     _RESIDENT_VARIABLE_HANDLE_LIST
+0000:03d2*     EMS_FUNCTION_047H
+0000:2192*     _RESIDENT_VARIABLE_PAGE_LIST
 0000:0014*     EMS_DRIVER_INIT
-0000:0dfe*     COMMON_DEALLOCATE_PAGES
+0000:0d2e*     COMMON_DEALLOCATE_PAGES
 Warning! W1014: stack segment not found
 Warning! W1023: no starting address found, using 0000:0000
 
@@ -58,6 +58,6 @@ Warning! W1023: no starting address found, using 0000:0000
                         +-----------------------+
 
 Stack size:  09e8 (2536.)
-Memory size:  290c (10508.)
+Memory size:  2eee (12014.)
 Entry point address: 0000:0000
-Link time: 00:00.55
+Link time: 00:00.00

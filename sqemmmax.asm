@@ -201,10 +201,16 @@ dw  OFFSET EMS_FUNCTION_05Bh
 dw  OFFSET EMS_FUNCTION_05Ch
 dw  OFFSET EMS_FUNCTION_05Dh
 
+; DEBUG_MODE = 1
 
+IFDEF DEBUG_MODE
+  _current_call_subfunction_value:
+  dw  0
+ELSE
 
-_current_call_subfunction_value:
-db  0
+   _current_call_subfunction_value:
+   db  0
+ENDIF
 ALIGN 2
 
 
@@ -374,6 +380,9 @@ EMS_FUNCTION_UNIMPLEMENTED:
 EMS_FUNCTION_040h:
 xchg       ax, bx
 ; ah is already 0 because bh was 0 from jump table lookup
+IFDEF DEBUG_MODE
+call   DEBUG_check_all_handles
+ENDIF
 iret
 
 
@@ -385,7 +394,12 @@ NOT_FUNC_44h:
 
 
 ; don't support oob function types
-mov        byte ptr cs:[_current_call_subfunction_value], al
+
+IFDEF DEBUG_MODE
+   mov        word ptr cs:[_current_call_subfunction_value], ax
+ELSE
+   mov        byte ptr cs:[_current_call_subfunction_value], al
+ENDIF
 mov        al, ah
 cmp        al, 05dh
 ja         bad_function
@@ -440,6 +454,9 @@ sub        di, 01000h
 ; ah 0 from original xchg ah
 pop        si
 pop        ds
+IFDEF DEBUG_MODE
+call   DEBUG_check_all_handles
+ENDIF
 iret
 func_58_not_5800:
 ja         func_58_invalid_subfunction
@@ -447,6 +464,9 @@ EMS_FUNCTION_05801h:
 _RESIDENT_VARIABLE_pageable_frame_count_3:
 mov        cx, 01000h
 ; ah already 0.
+IFDEF DEBUG_MODE
+call   DEBUG_check_all_handles
+ENDIF
 iret
 
 func_58_invalid_subfunction:
@@ -611,8 +631,8 @@ ja         func_43_allocated_too_many_pages_above_total
 
 
 call       COMMON_get_next_free_handle
-cmp        dx, -1
-je         func_43_no_handles_Left
+test       dx, dx
+js         func_43_no_handles_Left
 
 inc        word ptr cs:[_RESIDENT_VARIABLE_handle_count]
 mov        bx, dx
@@ -634,6 +654,9 @@ call       COMMON_allocate_pages
 xor        ax, ax ; return good
 
 
+IFDEF DEBUG_MODE
+call   DEBUG_check_all_handles
+ENDIF
 iret
 
 
@@ -693,6 +716,9 @@ call       COMMON_deallocate_pages
 dec        word ptr cs:[_RESIDENT_VARIABLE_handle_count]  ; handle freed, increment handle count
 
 xor        ax, ax
+IFDEF DEBUG_MODE
+call   DEBUG_check_all_handles
+ENDIF
 iret
 func_45_no_emm_handle_found:
 pop        bx
@@ -795,6 +821,9 @@ public EMS_FUNCTION_047h
   pop  bx
   xor  ax, ax
 
+IFDEF DEBUG_MODE
+call   DEBUG_check_all_handles
+ENDIF
 
 iret
 
@@ -868,6 +897,9 @@ EMS_FUNCTION_048h:
   pop  si
   xor  ax, ax
 
+IFDEF DEBUG_MODE
+call   DEBUG_check_all_handles
+ENDIF
 
 iret
 
@@ -985,6 +1017,9 @@ pop   bx ; numpages
 func_51_clean_up_and_return_success_no_popbx:
 pop   cx ; original cx
 
+IFDEF DEBUG_MODE
+call   DEBUG_check_all_handles
+ENDIF
 xor   ax, ax  ; ah = 0
 iret
 
@@ -2561,39 +2596,47 @@ COMMON_check_valid_handle:
  SHIFT_MACRO  shr ax 2
  stc
  ret
+
 COMMON_allocate_pages:
    ; allocate ax pages to handle dx
    push bx
-   sub  word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count], ax
+   push dx
 
    mov  bx, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_head] ; get first unallocated page
+   
    SHIFT_MACRO shl  dx 2
    xchg bx, dx
    mov  word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages], ax
    test ax, ax
    je   COMMON_allocate_zero_pages
+   sub  word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count], ax
 
    mov  word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page], dx
-   xchg bx, dx
-   SHIFT_MACRO shr  dx 2
+   mov  bx, dx
+   dec  ax ; owns the 'first page' already.
+
+ 
 
    PAGE_loop_allocate_next_page:
 
-   mov  bx, word ptr cs:[bx + PAGE_INFO.page_info_next_page]
    dec  ax
-   jns  PAGE_loop_allocate_next_page
-
+   js   PAGE_loop_hit_last_page
+   mov  bx, word ptr cs:[bx + PAGE_INFO.page_info_next_page]
+   jmp  PAGE_loop_allocate_next_page
+   PAGE_loop_hit_last_page:
    ; ax is -1
    xchg ax, word ptr cs:[bx + PAGE_INFO.page_info_next_page] ; mark end -1
-   lock mov  word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_head], ax 
+   mov  word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_head], ax
 
 
+   pop  dx
    pop  bx
    ret
+
 COMMON_allocate_zero_pages:
    mov  word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page], ax
-   xchg bx, dx
-   SHIFT_MACRO shr  dx 2
+
+   pop  dx
    pop  bx
    ret
 
@@ -2677,6 +2720,181 @@ COMMON_get_next_free_handle:
    SHIFT_MACRO shr dx 2
    pop   bx
    ret
+
+
+
+IFDEF DEBUG_MODE
+
+_current_error_pointer:
+dw 0
+
+
+
+DEBUG_check_all_handles:
+push  ax
+PUSHA_MACRO
+push ds
+push es
+
+push cs
+pop  ds
+
+
+
+mov  si, OFFSET _RESIDENT_VARIABLE_handle_list - (SIZE HANDLE_INFO)
+mov  ax, 0EC00h
+mov  es, ax
+mov  di, word ptr ds:[_current_error_pointer]
+xor  ax, ax ; handle
+cwd   ; dx = handle
+ 
+ mov  bp, -1
+ mov  dx, -1
+ loop_next_handle_check:
+   test dx, dx
+   jz   skip_conventional
+   mov  cx, word ptr ds:[si + HANDLE_INFO.handle_num_pages]
+   mov  bx, word ptr ds:[si + HANDLE_INFO.handle_first_page]
+   cmp  cx, bp
+   je   skip_unused_handle
+   inc  ax
+   jcxz handle_num_pages_was_zero  ; todo error check?
+      loop_next_page_check:
+        cmp bx, bp
+        je  error_bad_handle_found
+        mov  bx, word ptr ds:[bx + PAGE_INFO.page_info_next_page]
+        inc  ax
+        loop loop_next_page_check
+
+   cmp bx, bp
+   jne last_page_not_null
+
+   jmp last_page_is_good
+   
+   handle_num_pages_was_zero:
+   skip_conventional:   
+   skip_unused_handle:
+   iterate_to_next_handle:
+
+   inc  dx
+   add  si, (SIZE HANDLE_INFO)
+   cmp  si, (OFFSET _RESIDENT_VARIABLE_handle_list + (MAX_HANDLE_COUNT * (SIZE HANDLE_INFO)))
+   jb   loop_next_handle_check
+
+   xchg ax, dx
+   mov    ax, word ptr ds:[_current_call_subfunction_value]
+   stosw
+   mov    ax, 07Fh ; call done
+   stosw
+   xchg ax, dx
+   stosw
+   add    di, 0Fh
+   and    di, 03FF0h
+   mov  word ptr ds:[_current_error_pointer], di
+
+
+pop  es
+pop  ds
+POPA_MACRO
+pop  ax
+skip_it_all:
+ret
+
+error_bad_handle_found:
+push   ax
+mov    ax, word ptr ds:[_current_call_subfunction_value]
+stosw
+mov    ax, 1 ; error 1
+stosw
+mov  ax, cx
+stosw
+mov  ax, word ptr ds:[si + HANDLE_INFO.handle_num_pages]
+stosw
+mov  ax, word ptr ds:[si + HANDLE_INFO.handle_first_page]
+stosw
+mov    ax, dx
+stosw
+
+add    di, 0Fh
+and    di, 03FF0h
+pop    ax
+jmp    iterate_to_next_handle
+
+last_page_not_null:
+push   ax
+mov    ax, word ptr ds:[_current_call_subfunction_value]
+stosw
+mov    ax, 2 ; error 2
+stosw
+xor  ax, ax
+
+      inner_loop_next_page_check:
+        cmp bx, bp
+        je   inner_found_end
+        mov  bx, word ptr ds:[bx + PAGE_INFO.page_info_next_page]
+        inc  ax
+        ;cmp  ax, 03000h
+        ;jae  error_infinite
+
+        jmp  inner_loop_next_page_check
+      inner_found_end:
+
+
+stosw
+mov  ax, word ptr ds:[si + HANDLE_INFO.handle_num_pages]
+stosw
+mov  ax, word ptr ds:[si + HANDLE_INFO.handle_first_page]
+stosw
+mov    ax, dx
+stosw
+
+
+add    di, 0Fh
+and    di, 03FF0h
+pop    ax
+jmp    iterate_to_next_handle
+
+
+last_page_is_good:
+push   ax
+mov    ax, word ptr ds:[_current_call_subfunction_value]
+stosw
+mov    ax, 010h ; page good
+stosw
+
+mov  ax, word ptr ds:[si + HANDLE_INFO.handle_num_pages]
+stosw
+mov  ax, word ptr ds:[si + HANDLE_INFO.handle_first_page]
+stosw
+mov    ax, dx
+stosw
+
+
+add    di, 0Fh
+and    di, 03FF0h
+pop    ax
+jmp    iterate_to_next_handle
+
+
+error_infinite:
+mov    ax, 0FFFFh ; infinite
+stosw
+
+mov  ax, word ptr ds:[si + HANDLE_INFO.handle_num_pages]
+stosw
+mov  ax, word ptr ds:[si + HANDLE_INFO.handle_first_page]
+stosw
+mov    ax, dx
+stosw
+
+
+add    di, 0Fh
+and    di, 03FF0h
+xor    ax, ax
+pop    ax
+jmp    iterate_to_next_handle
+ENDIF
+
 
 ALIGN 2
 
@@ -2995,6 +3213,11 @@ mov        ax, 02567h
 int        021h
 
 DRIVER_INSTALLED:
+
+IFDEF DEBUG_MODE
+call   DEBUG_check_all_handles
+ENDIF
+
 
 mov        dx, OFFSET string_driver_successfully_installed
 mov        ah, 9  ; PRINT_STRING
