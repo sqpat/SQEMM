@@ -306,13 +306,15 @@ _RESIDENT_VARIABLE_pageable_frame_count_1:
   jae        func_05_page_too_high
 
 ; get actual page bx for handle dx
-
 push  cx
 mov   cx, bx
 mov   bx, dx
 SHIFT_MACRO shl bx 2  ;  SIZE HANDLE_INFO
 cmp   word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page], -1
 je    func_05_handle_not_found
+inc   cx
+jz    skip_page_lookup
+dec   cx
 cmp   cx, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages]
 ja    func_05_logical_page_too_high
 mov   bx, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page]
@@ -326,6 +328,9 @@ func_05_done_looping:
 sub   bx, OFFSET _RESIDENT_VARIABLE_page_list
 shr   bx, 1  ; board physical page
 ; note: this number should be OFFSET BY THE CONVENTIONAL ETC offset!!
+
+skip_page_lookup:
+
 pop   cx
 
 
@@ -355,10 +360,12 @@ ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
    INCLUDE max/func05\standard.asm
 ENDIF
 func_05_handle_not_found:
+pop        cx
 mov        ah, 083h  ; The memory manager couldn't find the EMM handle your program specified.
 iret
 
 func_05_page_too_high:
+pop        cx
 mov        ah, 08Bh
 iret
 func_05_logical_page_too_high:
@@ -415,10 +422,9 @@ xchg       ax, bx
 shl        bx, 1          
 jmp        word ptr cs:[bx + offset _EMS_FUNCTION_POINTERTABLE] ; NOTE: ax has bx value! must be restored.
 
-; The function code passed to the memory manager is not defined.
+
 bad_function:
-; The function code passed to the memory manager is not defined.
-mov        ah, 084h
+mov        ah, 084h ; The function code passed to the memory manager is not defined.
 iret
 
 ; MAIN EMS FUNCTIONS BELOW
@@ -759,9 +765,7 @@ iret
 
 EMS_FUNCTION_04Ch:
 
-test       dx, dx
-je         func_4C_no_emm_handle_found ; zero handle illegal
-
+; ax has bx...
 mov        bx, dx ; handle
 SHIFT_MACRO shl bx 2
 mov        bx, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages]
@@ -2039,7 +2043,7 @@ func_15_pop_and_return:
   pop   bx ; restore from ax 
   iret  
 func_15_bad_subfunction:
-  mov        ah, 084h
+  mov   ah, 08Fh
   jmp   func_15_pop_and_return
 
 func_15_sub_01:

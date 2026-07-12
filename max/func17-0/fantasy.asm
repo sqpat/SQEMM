@@ -7,8 +7,8 @@ PUSHA_MACRO_NO_AX
   mov   bp, dx
   SHIFT_MACRO shl bp 2  ;  SIZE HANDLE_INFO
   mov   di, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bp + HANDLE_INFO.handle_num_pages]
-  cmp   di, -1
-  je    func_1700_handle_not_found
+  test  di, di
+  js    func_1700_handle_not_found
   mov   bp, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bp + HANDLE_INFO.handle_first_page]
 
 ; bp has first page ptr.
@@ -19,17 +19,17 @@ func_1700_loop_next_page:
 
   lodsw   ; load logical page
   mov        bx, ax  ; in case its unmap, bx goes forward as -1
-  cmp        ax, -1
-  je         func_1700_skip_logical_check
-  cmp        ax, di
+  inc        ax
+  jz         func_1700_skip_logical_check
+  cmp        bx, di
   ja         func_1700_logical_page_too_high
 
   ; get actual page bx for handle dx
 
-  
+  ; ax is plus one
 
   mov   bx, bp  ; first page
-  test  ax, ax  
+  dec   ax
 
   jz  func_1700_done_looping
 
@@ -49,8 +49,8 @@ func_1700_skip_logical_check:
 
   lodsw   ; grab physical page
 
-    cmp        al, PAGE_FRAME_COUNT
-    jae        func_1700_physical_page_too_high
+  cmp   al, PAGE_FRAME_COUNT
+  jae   func_1700_physical_page_too_high
 
   ; bx has logical page and ax has page register index now
 
@@ -62,10 +62,10 @@ func_1700_skip_logical_check:
 
   out FANTASY_PAGE_SELECT_REGISTER, al   ; select EMS page
  
-  cmp   bx, 0FFFFh   ; -1 check
-  je    func_1700_handle_default_page
+  inc   bx    ; -1 check
+  jz    func_1700_handle_default_page
   ; default is not the -1 case
-  lea   ax, [bx + FANTASY_PAGE_OFFSET_AMT]   ; offset by default starting page
+  lea   ax, [bx + FANTASY_PAGE_OFFSET_AMT - 1]   ; offset by default starting page
   out   FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
 
 
@@ -121,9 +121,9 @@ func_1700_0_pageframe_register:
 SELFMODIFY_FANTASY_add_page_frame_offset_1:  
   add   al, 4 ; need to add 4 for d000 case for FANTASY...  c000, e000  not supported
   out   FANTASY_PAGE_SELECT_REGISTER, al   ; select EMS page
-  cmp   bx, 0FFFFh   ; -1 check
-  je    func_1700_handle_default_page
-  lea   ax, [bx + FANTASY_PAGE_OFFSET_AMT]   ; offset by default starting page
+  inc   bx    ; -1 check
+  jz    func_1700_handle_default_page
+  lea   ax, [bx + FANTASY_PAGE_OFFSET_AMT - 1]   ; offset by default starting page
   out   FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
 
   loop       func_1700_loop_next_page

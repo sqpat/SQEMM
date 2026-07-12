@@ -26,6 +26,9 @@ SELFMODIFY_FANTASY_add_page_frame_offset_2:
 
   ; write ems port... select chipset register
   out   FANTASY_PAGE_SELECT_REGISTER, al   ; select EMS page
+  cmp   bx, 0FFFFh   ; -1 check
+  je    handle_default_page_44h
+
   lea   ax, [bx + FANTASY_PAGE_OFFSET_AMT]   ; offset by default starting page
   out   FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
 
@@ -39,9 +42,10 @@ SELFMODIFY_FANTASY_add_page_frame_offset_2:
   handle_default_page_44h:
   ; mapping to page -1
   ; add four to get the default page value for the page 
+  mov   ax, bx
   out   FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
 
-  xor   ax, ax
+  inc   ax ; ah = 0
   iret
 
 

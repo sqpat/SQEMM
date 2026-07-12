@@ -5,8 +5,8 @@ PUSHA_MACRO
   mov   bp, dx
   SHIFT_MACRO shl bp 2  ;  SIZE HANDLE_INFO
   mov   di, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bp + HANDLE_INFO.handle_num_pages]
-  cmp   di, -1
-  je    func_1701_handle_not_found
+  test  di, di
+  js    func_1701_handle_not_found
   mov   bp, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bp + HANDLE_INFO.handle_first_page]
 
 ; bp has first page ptr.
@@ -18,15 +18,17 @@ func_1701_loop_next_page:
 
 
   mov        bx, ax  ; in case its unmap, bx goes forward as -1
-  cmp        ax, -1
-  je         func_1701_skip_logical_check
-  cmp        ax, di
+  inc        ax
+  js         func_1701_skip_logical_check
+  cmp        bx, di   ; bx is the same 
   ja         func_1701_logical_page_too_high
 
   ; get actual page bx for handle dx
 
+  ; ax is plus one.
+
   mov   bx, bp  ; first page
-  test  ax, ax  
+  dec   ax
 
   jz  func_1701_done_looping
 
@@ -59,10 +61,10 @@ SELFMODIFY_SCAT_set_page_select_register_8:
   out   dx, al   ; select EMS page
 SELFMODIFY_SCAT_set_page_set_register_4:
   mov   dx, SCAT_PAGE_SET_REGISTER
-  cmp   bx, 0FFFFh   ; -1 check
-  je    func_1701_handle_default_page
-  SELFMODIFY_SCAT_add_page_offset_and_enable_3:
-  lea   ax, [BX + SCAT_PAGE_OFFSET_AMT]   ; offset by default starting page
+  inc   bx   ; -1 check
+  jz    func_1701_handle_default_page
+  SELFMODIFY_SCAT_add_page_offset_and_enable_3_minus_1:
+  lea   ax, [BX + SCAT_PAGE_OFFSET_AMT - 1]   ; offset by default starting page
 
   out   dx, ax   ; write 16 bit page num. 
 
