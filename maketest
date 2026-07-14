@@ -1,0 +1,19 @@
+CCOPTS = -zp1 -oaxet -oi -zq -j -mm -0 -s -zdp -d__COMPILER_WATCOM
+
+GLOBOBJS = &
+ sqtest.obj
+
+sqtest.exe : $(GLOBOBJS)
+ wlink @sqtest.lnk
+ wstrip sqtest.exe
+ 
+.c.obj :
+ wcc $(CCOPTS) $[*
+
+.asm.obj :
+ tasm /m6 $[*
+
+clean : .SYMBOLIC
+ del *.obj
+ del *.err
+ del sqtest.exe
