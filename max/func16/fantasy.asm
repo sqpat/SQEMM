@@ -57,6 +57,8 @@ func_16_pop_and_return:
 
   pop   bx ; restore from ax
 
+  pop        ax
+  xor        ah, ah
 
 iret
 
@@ -72,12 +74,13 @@ func_16_sub_02:
   pop   cx
   pop   bx ; restore from ax
 
-xor  ax, ax
-mov  al, bl ; num pages
+  pop        ax
+  xor        ah, ah
+  mov  al, bl ; num pages
 
-SHIFT_MACRO shl  al 2 ; two words per entry.
-add  al, 2  ; count
-iret
+  SHIFT_MACRO shl  al 2 ; two words per entry.
+  add  al, 2  ; count
+  iret
 
 ; fall thru
 
@@ -101,7 +104,14 @@ jmp func_16_sub_01_done_recording_registers
 
 
 func_16_bad_subfunction:
-mov        ah, 084h
-jmp   func_16_pop_and_return
+  pop   si
+  pop   di
+  pop   cx
+
+  pop   bx ; restore from ax
+
+  pop   ax
+  mov   ah, 084h
+  iret 
 
 

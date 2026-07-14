@@ -203,14 +203,10 @@ dw  OFFSET EMS_FUNCTION_05Dh
 
 ; DEBUG_MODE = 1
 
-IFDEF DEBUG_MODE
-  _current_call_subfunction_value:
-  dw  0
-ELSE
-
-   _current_call_subfunction_value:
-   db  0
-ENDIF
+_current_call_subfunction_value:
+dw  0
+_temp_byte:
+db 0
 ALIGN 2
 
 
@@ -387,6 +383,8 @@ EMS_FUNCTION_UNIMPLEMENTED:
 EMS_FUNCTION_040h:
 xchg       ax, bx
 ; ah is already 0 because bh was 0 from jump table lookup
+pop        ax
+xor        ah, ah
 IFDEF DEBUG_MODE
 call   DEBUG_check_all_handles
 ENDIF
@@ -401,7 +399,7 @@ NOT_FUNC_44h:
 
 
 ; don't support oob function types
-
+push       ax   ; gross, need to store al.
 IFDEF DEBUG_MODE
    mov        word ptr cs:[_current_call_subfunction_value], ax
 ELSE
@@ -424,6 +422,7 @@ jmp        word ptr cs:[bx + offset _EMS_FUNCTION_POINTERTABLE] ; NOTE: ax has b
 
 
 bad_function:
+pop        ax
 mov        ah, 084h ; The function code passed to the memory manager is not defined.
 iret
 
@@ -463,6 +462,8 @@ pop        ds
 IFDEF DEBUG_MODE
 call   DEBUG_check_all_handles
 ENDIF
+pop        ax
+xor        ah, ah
 iret
 func_58_not_5800:
 ja         func_58_invalid_subfunction
@@ -473,9 +474,12 @@ mov        cx, 01000h
 IFDEF DEBUG_MODE
 call   DEBUG_check_all_handles
 ENDIF
+pop        ax
+xor        ah, ah
 iret
 
 func_58_invalid_subfunction:
+pop        ax
 mov        ah, 08fh
 iret
 
@@ -512,11 +516,15 @@ jne   func_3000_bad_access
 cmp   al, 2
 je    do_func_5D02
 mov   byte ptr cs:[_RESIDENT_VARIABLE_access_blocked], al ; 0 or 1 based on subfunction
+pop        ax
+xor        ah, ah
 
 iret
 
 do_func_5D02:
 mov   byte ptr cs:[_RESIDENT_VARIABLE_access_reenabled], 1
+pop        ax
+xor        ah, ah
 
 iret
 
@@ -529,20 +537,24 @@ mov   bx, word ptr cs:[_RESIDENT_VARIABLE_access_key+0]
 mov   cx, word ptr cs:[_RESIDENT_VARIABLE_access_key+2]
 mov   byte ptr cs:[_RESIDENT_VARIABLE_access_reenabled], ah
 mov   byte ptr cs:[_RESIDENT_VARIABLE_access_blocked], al ; 0 or 1 based on subfunction
+pop        ax
+xor        ah, ah
 iret
 
 func_3000_bad_access:
 func_3001_bad_access:
 func_3002_bad_access:
 func_26_access_denied:
+pop        ax
 mov   ah, 0A4h
 iret
 
 func_27_bad_subfunction:
 xchg  ax, bx
-func_52_bad_subfunction:
 func_26_bad_subfunction:
 func_30_bad_subfunction:
+pop        ax
+func_52_bad_subfunction:
 mov        ah, 08fh
 iret
 
@@ -554,7 +566,9 @@ iret
 
 EMS_FUNCTION_052h:
 xchg       ax, bx
-cmp        byte ptr cs:[_current_call_subfunction_value], 2
+pop        ax
+
+cmp        al, 2
 jb         func_52_unsupported
 ja         func_52_bad_subfunction
 xor        ax, ax
@@ -580,6 +594,8 @@ _RESIDENT_VARIABLE_page_frame_segment:
 mov        ax, 0D000h  ; return in bx
 xchg       ax, bx
 ; ah is already 0 because bh was 0 from jump table lookup
+pop        ax
+xor        ah, ah
 iret
 
 ;          3  Get Unallocated Page Count                     42h       
@@ -592,6 +608,8 @@ mov        bx, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count]
 _RESIDENT_VARIABLE_total_EMS_page_count:
 mov        dx, 01000h  ; return in dx
 ; ah is already 0 because bh was 0 from jump table lookup
+pop        ax
+xor        ah, ah
 iret
 
 ;         26 Get Hardware Configuration Array               5900h     101
@@ -612,6 +630,8 @@ mov      word ptr es:[di+2], ax    ; 0 alternate mapping sets
 mov      word ptr es:[di+4], LENGTH_OF_STACK    ; 0 alternate mapping sets
 mov      word ptr es:[di+6], ax    ; 0 dma mapping sets
 mov      word ptr es:[di+8], ax    ; 0 dma set behaivor
+pop        ax
+xor        ah, ah
 iret
 
  
@@ -657,12 +677,14 @@ mov        bx, ax  ; restore bx
 
 call       COMMON_allocate_pages
 
-xor        ax, ax ; return good
+
 
 
 IFDEF DEBUG_MODE
 call   DEBUG_check_all_handles
 ENDIF
+pop        ax
+xor        ah, ah
 iret
 
 
@@ -671,21 +693,25 @@ func_43_no_handles_Left:
 
 xchg       ax, bx
 cwd        ; dx = 0
+pop        ax
 mov        ah, 085h  ; All EMM handles are being used.
 iret
 func_43_allocated_too_many_pages_above_total:
 xchg       ax, bx
 cwd        ; dx = 0
+pop        ax
 mov        ah, 087h  ; There aren't enough expanded memory pages present in the system to satisfy your program's request.
 iret
 func_43_alloc_pages_0_error:
 xchg       ax, bx
 cwd        ; dx = 0
+pop        ax
 mov        ah, 089h  ; Your program attempted to allocate zero pages.
 iret
 func_43_allocated_too_many_pages:
 xchg       ax, bx
 cwd        ; dx = 0
+pop        ax
 mov        ah, 087h  ; There aren't enough expanded memory pages present in the system to satisfy your program's request.
 iret
 
@@ -721,19 +747,22 @@ call       COMMON_deallocate_pages
 
 dec        word ptr cs:[_RESIDENT_VARIABLE_handle_count]  ; handle freed, increment handle count
 
-xor        ax, ax
 IFDEF DEBUG_MODE
 call   DEBUG_check_all_handles
 ENDIF
+pop        ax
+xor        ah, ah
 iret
 func_45_no_emm_handle_found:
 pop        bx
+pop        ax
 mov        ah, 083h  ; The memory manager couldn't find the EMM handle your program specified.
 iret
 
 func_4C_no_emm_handle_found:
 xchg       ax, bx  ; restore bx
 
+pop        ax
 mov        ah, 083h  ; The memory manager couldn't find the EMM handle your program specified.
 iret
 
@@ -742,7 +771,8 @@ iret
 EMS_FUNCTION_046h:
 ; Get Version, return 4.0
 xchg       ax, bx
-mov        al, 040h ; ah already 0
+pop        ax
+mov        ax, 040h ; ah already 0
 iret 
 
 
@@ -755,6 +785,8 @@ xchg       ax, bx ; ah 0
 db  0BBh
 _RESIDENT_VARIABLE_handle_count:
 db  1, 0  ; mov        bx, 00001
+pop        ax
+xor        ah, ah
 iret
 
 
@@ -771,7 +803,8 @@ SHIFT_MACRO shl bx 2
 mov        bx, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages]
 cmp        bx, -1
 je         func_4C_no_emm_handle_found
-xor        ax, ax ; return 0
+pop        ax
+xor        ah, ah
 
 iret
 
@@ -823,26 +856,31 @@ public EMS_FUNCTION_047h
   mov  word ptr cs:[bx+6], ax
 
   pop  bx
-  xor  ax, ax
+
 
 IFDEF DEBUG_MODE
 call   DEBUG_check_all_handles
 ENDIF
 
+pop        ax
+xor        ah, ah
 iret
 
 func_08_already_exists:
 pop   bx
+pop        ax
 mov   ah,  08Dh ; The save area already contains the page mapping register state for the EMM handle your program specified.
 iret 
 
 func_08_bad_handle:
 func_09_bad_handle:
+pop        ax
 mov   ah, 083h
 iret
 
 func_09_doesnt_exist:
 pop   si
+pop        ax
 mov   ah,  08Eh ;  There is no page mapping register state in the save area for the specified EMM handle. 
 iret
 
@@ -899,11 +937,12 @@ EMS_FUNCTION_048h:
 
   pop  dx
   pop  si
-  xor  ax, ax
 
 IFDEF DEBUG_MODE
 call   DEBUG_check_all_handles
 ENDIF
+pop        ax
+xor        ah, ah
 
 iret
 
@@ -913,6 +952,7 @@ func_51_no_emm_handle_found_popbx:
 mov     bx, cx
 pop     cx
 func_51_no_emm_handle_found:
+pop        ax
 mov     ah, 083h  ; The memory manager couldn't find the EMM handle your program specified.
 iret
 
@@ -1024,7 +1064,8 @@ pop   cx ; original cx
 IFDEF DEBUG_MODE
 call   DEBUG_check_all_handles
 ENDIF
-xor   ax, ax  ; ah = 0
+pop        ax
+xor        ah, ah
 iret
 
 func_51_allocated_too_many_pages_above_total:
@@ -1032,10 +1073,13 @@ mov        ah, 087h  ; There aren't enough expanded memory pages present in the 
 func_51_done_reallocating_equal_pages:
 mov        bx, cx
 pop        cx
+pop        ax
+xor        ah, ah
 iret
 func_51_allocated_too_many_pages_above_available:
 mov        bx, cx
 pop        cx
+pop        ax
 mov        ah, 088h  ; The number of unallocated pages is insufficient for the new allocation request. 
 iret
 
@@ -1079,22 +1123,24 @@ iret
 func_23_error_bad_page:
 POPA_MACRO
 pop   ds
+pop   ax
 mov   ah, 08Ah
 iret
 
 func_23_bad_subfunction:
-mov        ah, 08Fh  ;  The subfunction parameter is invalid.
+mov   ah, 08Fh  ;  The subfunction parameter is invalid.
 iret
 
 ALIGN 2
 
 do_func_5602:
 mov   bx, 020h   ; probably less ok... we use 18-20 bytes (decimal) at worst?
+xor   ah, ah
 iret
 
 EMS_FUNCTION_056h:
 xchg  ax, bx ; restore bx
-mov   al, byte ptr cs:[_current_call_subfunction_value]
+pop   ax  ; get subfunction back.
 ; if ah = 0, then func 22. if ah = 1, then func 23.
 cmp   al, 2 
 ja    func_23_bad_subfunction
@@ -1186,7 +1232,8 @@ pop   bp
 pop   si
 pop   ds
 
-xor   ax, ax
+mov   al, byte ptr cs:[_current_call_subfunction_value] ; restore..s
+xor   ah, ah
 iret 
 
 
@@ -1200,8 +1247,8 @@ EMS_FUNCTION_055h:
 
 xchg  ax, bx
 
-mov   al, byte ptr cs:[_current_call_subfunction_value]
-; if ah = 0, then func 22. if ah = 1, then func 23.
+pop   ax
+; if al = 0, then func 22. if al = 1, then func 23.
 cmp   al, 1
 ja    func_22_bad_subfunction
 
@@ -1214,11 +1261,12 @@ mov   cl, byte ptr ds:[si + 4]
 lds   si, dword ptr ds:[si + 5]
 mov   ah, 050h
 int   067h
-POPA_MACRO
+POPA_MACRO ; ax restored.
 pop   ds
 pop   ax
 pop   ax
-xor   ax, ax
+
+xor   ah, ah
 popf  ; restore flags, sp reset.
 
 jmp   dword ptr ds:[si]  ; far return will iret.
@@ -1258,15 +1306,17 @@ _RESIDENT_VARIABLE_FUNC_24_overlap_detected_do_backwards:
 db 0
 
 ; The function code passed to the memory manager is not defined.
-func_22_bad_subfunction:
 func_24_bad_subfunction:
+func_22_bad_subfunction:
 mov        ah, 08Fh  ;  The subfunction parameter is invalid.
 iret
 func_24_bad_handle:
+
 mov        ah, 083h   ; The manager couldn't find either the source or destination EMM handles.
 jmp        func_24_error
 func_24_unowned_memory:
 ; TODO catch
+
 mov        ah, 08Ah   ; One or more of the logical pages is out of the range of logical pages allocated to the source/destination handle.
 jmp        func_24_error
 
@@ -1289,11 +1339,15 @@ POPA_MACRO
 mov        ax, es ; param
 pop        ds
 pop        es
+; gross
+
+mov        al, byte ptr cs:[_current_call_subfunction_value]
 iret
 
 EMS_FUNCTION_057h:
 xchg       ax, bx
-cmp        byte ptr cs:[_current_call_subfunction_value], 1
+pop        ax
+cmp        al, 1
 ja         func_24_bad_subfunction
 push       es
 push       ds
@@ -1405,7 +1459,7 @@ func_24_done:
 
 call   func_24_clean_up_segments ; restore pagination if necessary
 
-POPA_MACRO
+POPA_MACRO ; ax restored
 pop    ds
 pop    es
 
@@ -2013,6 +2067,8 @@ pop  di  ; restore original di
 mov  bx, word ptr cs:[_RESIDENT_VARIABLE_handle_count]
 
 
+pop        ax
+xor        ah, ah
 
 iret
 
@@ -2041,6 +2097,8 @@ func_15_pop_and_return:
   pop   di
   pop   cx
   pop   bx ; restore from ax 
+  pop   ax
+  xor   ah, ah
   iret  
 func_15_bad_subfunction:
   mov   ah, 08Fh
@@ -2200,6 +2258,8 @@ EMS_FUNCTION_05Ch:
 
 
 xchg ax, bx
+pop        ax
+xor        ah, ah
 iret
 
 check_func_58:
@@ -2247,6 +2307,8 @@ pop   bx
 pop   cx
 pop   di
 ; ah should be 0
+pop        ax
+xor        ah, ah
 iret
 
 do_func_5b01:
@@ -2290,6 +2352,8 @@ pop   di
 skip_pointer_record:
 
 ; ah should be 0
+pop        ax
+xor        ah, ah
 iret
 
 
@@ -2301,11 +2365,19 @@ jz    func_28_return_ok ; value 0 is fine.
 func_5b00_nonzero_register_set:
 func_5b01_nonzero_register_set:
 func_28_return_not_supported:
+
+pop        ax
 mov   ah, 09Ch ; Alternate DMA register sets are not supported, and the DMA register set specified is not zero.
+iret
+
 func_28_return_ok:
+pop        ax
+xor        ah, ah
 iret
 do_func_5b05:
 xor   bx, bx ; no dma register sets.
+pop        ax
+xor        ah, ah
 iret
 
 do_func_5b04:
@@ -2313,12 +2385,18 @@ do_func_5b04:
 test  bl, bl
 jnz   func_28_return_not_supported 
 
+pop        ax
+xor        ah, ah
 iret
 do_func_5b03:
 xor   bx, bx ; no alternate register sets supported (for now)
+pop        ax
+xor        ah, ah
 iret
 do_func_5b02:
 mov   dx, LENGTH_OF_STACK
+pop        ax
+xor        ah, ah
 iret
 
 
@@ -2342,9 +2420,11 @@ je    do_func_5b08
 jmp   check_func_58
 
 func_28_access_denied:
+pop        ax
 mov   ah, 0A4h
 iret
 func_28_bad_subfunction:
+pop        ax
 mov        ah, 08fh
 iret
 
@@ -2354,11 +2434,13 @@ EMS_FUNCTION_053h:
 ;          20 Get Handle Name                                5300h     68
 ;             Set Handle Name                                5301h     70
 xchg  ax, bx
-cmp   byte ptr cs:[_current_call_subfunction_value], 1
+pop   ax
+cmp   al, 1
 ja    func_20_bad_subfunction
 ; 5301 same shared start
 func_5300:
 
+push  ax 
 push  si
 mov   si, dx ; handle
 SHIFT_MACRO shl si 2
@@ -2378,7 +2460,8 @@ movs  word ptr es:[di], cs:[si]
 
 pop   di
 pop   si
-xor   ax, ax
+pop   ax
+xor   ah, ah
 iret
 
 
@@ -2413,7 +2496,8 @@ func_20_loop_check_for_dupe_name:
    jne func_20_not_match
    func_20_duplicate_name:
    POPA_MACRO
-   mov        ah, 0A1h
+   pop  ax
+   mov  ah, 0A1h
    iret
 
 func_20_bad_subfunction:
@@ -2431,17 +2515,20 @@ mov   word ptr cs:[di+2], bp
 mov   word ptr cs:[di+4], bx
 mov   word ptr cs:[di+6], ax
 POPA_MACRO
-xor   ax, ax 
+pop        ax
+xor        ah, ah
 iret
 
 func_20_bad_handle:
 pop   si
+pop        ax
 mov   ah, 083h   ; The manager couldn't find either the source or destination EMM handles.
 iret
 
 func_21_null_name:
 POPA_MACRO
 pop   es
+
 mov   ah, 0A1h  ; A handle found had no name (all ASCII nulls).
 iret
 
@@ -2454,10 +2541,12 @@ EMS_FUNCTION_054h:
 
 xchg ax, bx
 
-cmp  byte ptr cs:[_current_call_subfunction_value], 1
+pop  ax  ; take advantage of later pusha
+xor  ah, ah
+cmp  al, 1
 jb   do_func_5400
 je   do_func_5401
-cmp  byte ptr cs:[_current_call_subfunction_value], 2
+cmp  al, 2
 jne  func_21_bad_subfunction
 mov  bx, MAX_HANDLE_COUNT
 iret
@@ -2495,21 +2584,24 @@ func_21_loop_check_for_dupe_name:
    jne func_21_not_match
    func_21_found_name:
    mov es, cx
-   POPA_MACRO
+   POPA_MACRO ; ax restored
    mov dx, es
    neg dx
    add dx, MAX_HANDLE_COUNT
    pop es
 
+
    ; ah is 0
+
    iret
 
    func_21_not_match:
    add  si, 8   ; handle_name length
    loop func_21_loop_check_for_dupe_name
 
-POPA_MACRO
+POPA_MACRO ; ax restored
 pop   es
+
 
 mov   ah, 0A0h ; No corresponding handle could be found for the handle name specified.
 
@@ -2550,7 +2642,8 @@ func_21_loop_next_handle:
 
 pop   ds
 
-POPA_MACRO
+
+POPA_MACRO ; ax restored.
 ; ah 0
 
 iret

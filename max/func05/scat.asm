@@ -9,6 +9,7 @@
   
   ; al and bx are still the args
 
+  push       ax   ; gross, need to store al.
   push dx  
  
 SELFMODIFY_SCAT_set_page_select_register_2:
@@ -31,7 +32,8 @@ SELFMODIFY_SCAT_set_page_set_register_2:
   sti
   
   pop   dx
-  xor   ax, ax
+  pop   ax
+  xor   ah, ah
 
   iret
 
@@ -43,6 +45,7 @@ SELFMODIFY_SCAT_set_page_set_register_2:
   sti
   
   pop   dx
-  xor   ax, ax
+  pop   ax
+  xor   ah, ah
   iret
 

@@ -1,6 +1,7 @@
 
-
-PUSHA_MACRO_NO_AX
+xchg   ax, bx
+pop    ax
+PUSHA_MACRO
 
 
   ; physical page number mode
@@ -79,12 +80,14 @@ func_1701_skip_logical_check:
   ; exits if we fall thru loop with no error
   func_1701_exit:
 IF COMPISA GE COMPILE_186
-  POPA_MACRO_NO_AX
-  xor        ax, ax   
+  POPA_MACRO
+  xor        ah, ah  ; al will be popped after all
 ELSE
-  xor        ax, ax   
+  xor        ah, ah
   func_1701_pop_and_exit:
-  POPA_MACRO_NO_AX
+  mov        byte ptr cs:[_temp_byte], ah
+  POPA_MACRO
+  mov        ah, byte ptr cs:[_temp_byte]
 ENDIF
   iret
 
@@ -92,18 +95,18 @@ IF COMPISA GE COMPILE_186
 
 
 func_1701_logical_page_too_high:
-  POPA_MACRO_NO_AX
+  POPA_MACRO
   mov   ah, 08Ah  ; One or more of the mapped logical pages is out of the range of logical pages allocated to the EMM handle.
   iret
 
 
 func_1701_handle_not_found:
-  POPA_MACRO_NO_AX
+  POPA_MACRO
   mov   ah, 083h  ; The memory manager couldn't find the EMM handle your program specified.
   iret
 
 func_1701_physical_page_too_high:
-  POPA_MACRO_NO_AX
+  POPA_MACRO
   mov   ah, 08Bh  ; One or more of the physical pages is out of the range of mappable physical pages, or the log_to_phys_map_len exceeds the number of mappable pages in the system.
   iret
 
@@ -145,8 +148,8 @@ SELFMODIFY_FANTASY_add_page_frame_offset_5:
   ; exits if we fall thru loop with no error
 IF COMPISA GE COMPILE_186
 
-  POPA_MACRO_NO_AX
-  xor        ax, ax
+  POPA_MACRO
+  xor   ah, ah
   iret
 ELSE
   jmp func_1701_exit
@@ -161,8 +164,8 @@ func_1701_handle_default_page:
   ; fall thru if done..
 IF COMPISA GE COMPILE_186
 
-  POPA_MACRO_NO_AX
-  xor        ax, ax
+  POPA_MACRO
+  xor   ah, ah
   iret
 ELSE
   jmp func_1701_exit

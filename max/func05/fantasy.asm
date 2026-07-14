@@ -1,6 +1,6 @@
+  push       ax   ; gross, need to store al.
 
 
-  
   ; al and bx are still the args
 
   ; internally c000 - ec00 are pages 0-11 in order.
@@ -17,7 +17,9 @@ SELFMODIFY_FANTASY_add_page_frame_offset_2:
   lea   ax, [bx + FANTASY_PAGE_OFFSET_AMT]   ; offset by default starting page
   out   FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
 
-  xor   ax, ax
+  pop        ax
+  xor        ah, ah
+
   iret
 
   func_05_conventional_register:
@@ -36,7 +38,9 @@ SELFMODIFY_FANTASY_add_page_frame_offset_2:
 
   RETURN_RESULT_00:
 
-  xor   ax, ax
+  pop        ax
+  xor        ah, ah
+
   iret
   
   handle_default_page_44h:
@@ -45,7 +49,9 @@ SELFMODIFY_FANTASY_add_page_frame_offset_2:
   mov   ax, bx
   out   FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
 
-  inc   ax ; ah = 0
+  pop        ax
+  xor        ah, ah
+
   iret
 
 

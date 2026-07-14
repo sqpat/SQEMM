@@ -154,15 +154,7 @@ SELFMODIFY_SCAT_set_page_set_register_1:
   xchg  ax, cx   ; cx = bounds + page count
   call  get_SCAT_chipset_total_memory_pages
 
-  push  es
-  push  ax
-  mov   ax, 08000h
-  mov   es, ax
-  pop   ax
-  mov   es:[0000], ax ; 200 ; 200
-  mov   es:[0002], cx ; 200 ; 200
-  mov   es:[0004], dx ; 180 ; 100  should be 400 - this right...?
-  pop   es
+  
 
 
   cmp   cx, ax

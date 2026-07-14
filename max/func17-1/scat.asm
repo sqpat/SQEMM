@@ -1,4 +1,6 @@
-PUSHA_MACRO 
+  xchg   ax, bx
+  pop    ax
+  PUSHA_MACRO 
 
 
   ; physical page number mode
@@ -74,7 +76,7 @@ SELFMODIFY_SCAT_set_page_set_register_4:
 
   ; exit fall thru
   POPA_MACRO
-  xor ax, ax  ; success
+  xor ah, ah  ; success
   iret
 
 func_1701_logical_page_too_high:
@@ -101,5 +103,5 @@ func_1701_handle_not_found:
 
   ; exit fall thru
   POPA_MACRO
-  xor ax, ax  ; success
+  xor ah, ah  ; success
   iret
