@@ -172,6 +172,7 @@ TEST_RESULT_AX 0003h
 
 PRINT_RUNNING_TEST 5
 mov   ax, 04304h
+mov   bx, 1
 int   067h
 call  print_handle
 TEST_RESULT_AX 0004h
@@ -189,18 +190,182 @@ int   067h
 TEST_RESULT_DX_NO_VAL
 TEST_RESULT_AX 0005h
 
-; dx maintains index
 
 
+
 ; BASIC TESTS END
 ; BASIC TESTS END
 ; BASIC TESTS END
 ; BASIC TESTS END
 ; BASIC TESTS END
 ; BASIC TESTS END
+
+
+call prompt_for_key
+
+
+; HANDLE MAPPING STRESS TESTS START
+; HANDLE MAPPING STRESS TESTS START
+; HANDLE MAPPING STRESS TESTS START
+; HANDLE MAPPING STRESS TESTS START
+; HANDLE MAPPING STRESS TESTS START
+; HANDLE MAPPING STRESS TESTS START
+
+
+
+; TEST 7: Allocate 3 handles of 4 pages each. confirm 12 pages came out.
+
+PRINT_RUNNING_TEST 7
+mov   cx, 4
+mov   ax, 04307h
+mov   bx, cx
+int   067h
+call  print_handle
+TEST_RESULT_AX 0007h
+mov   word ptr ds:[VARIABLE_saved_handle_1], dx
+
+mov   ax, 04308h
+mov   bx, cx
+int   067h
+call  print_handle
+TEST_RESULT_AX 0008h
+mov   word ptr ds:[VARIABLE_saved_handle_2], dx
+
+mov   ax, 04309h
+mov   bx, cx
+int   067h
+call  print_handle
+TEST_RESULT_AX 0009h
+mov   word ptr ds:[VARIABLE_saved_handle_3], dx
+
+mov   ax, 0420Ah
+int   067h
+TEST_RESULT_AX 000Ah
+mov   ax, word ptr ds:[VARIABLE_unallocated_page_count]
+sub   ax, 12
+mov   word ptr ds:[expected_value], ax
+mov   dx, bx
+TEST_RESULT_DX_NO_VAL
+
+; TEST 8: Reallocate pages back and forth. confirm page count remains correct.
+PRINT_RUNNING_TEST 8
+
+;     FUNCTION 18   REALLOCATE PAGES
+mov   cx, 3
+mov   dx, word ptr ds:[VARIABLE_saved_handle_1]
+mov   ax, 0510Bh
+mov   bx, cx
+int   067h
+TEST_RESULT_AX 000Bh
+mov   dx, word ptr ds:[VARIABLE_saved_handle_2]
+mov   ax, 0510Ch
+mov   bx, cx
+int   067h
+TEST_RESULT_AX 000Ch
+mov   dx, word ptr ds:[VARIABLE_saved_handle_3]
+mov   ax, 0510Dh
+mov   bx, cx
+int   067h
+TEST_RESULT_AX 000Dh
+
+mov   ax, 0420Ah
+int   067h
+TEST_RESULT_AX 000Ah
+mov   ax, word ptr ds:[VARIABLE_unallocated_page_count]
+sub   ax, 9
+mov   word ptr ds:[expected_value], ax
+mov   dx, bx
+TEST_RESULT_DX_NO_VAL
+
+mov   cx, 0
+mov   dx, word ptr ds:[VARIABLE_saved_handle_1]
+mov   ax, 0510Bh
+mov   bx, cx
+int   067h
+TEST_RESULT_AX 000Bh
+mov   dx, word ptr ds:[VARIABLE_saved_handle_2]
+mov   ax, 0510Ch
+mov   bx, cx
+int   067h
+TEST_RESULT_AX 000Ch
+mov   dx, word ptr ds:[VARIABLE_saved_handle_3]
+mov   ax, 0510Dh
+mov   bx, cx
+int   067h
+TEST_RESULT_AX 000Dh
+
+mov   ax, 0420Ah
+int   067h
+TEST_RESULT_AX 000Ah
+mov   ax, word ptr ds:[VARIABLE_unallocated_page_count]
+mov   word ptr ds:[expected_value], ax
+mov   dx, bx
+TEST_RESULT_DX_NO_VAL
+
+
+mov   cx, 12
+mov   dx, word ptr ds:[VARIABLE_saved_handle_1]
+mov   ax, 0510Bh
+mov   bx, cx
+int   067h
+TEST_RESULT_AX 000Bh
+mov   dx, word ptr ds:[VARIABLE_saved_handle_2]
+mov   ax, 0510Ch
+mov   bx, cx
+int   067h
+TEST_RESULT_AX 000Ch
+mov   dx, word ptr ds:[VARIABLE_saved_handle_3]
+mov   ax, 0510Dh
+mov   bx, cx
+int   067h
+TEST_RESULT_AX 000Dh
+
+mov   ax, 0420Ah
+int   067h
+TEST_RESULT_AX 000Ah
+mov   ax, word ptr ds:[VARIABLE_unallocated_page_count]
+sub   ax, 36
+mov   word ptr ds:[expected_value], ax
+mov   dx, bx
+TEST_RESULT_DX_NO_VAL
+
+
+
+
+
+; deallocate
+
+mov   dx, word ptr ds:[VARIABLE_saved_handle_1]
+mov   ax, 0450Eh
+int   067h
+TEST_RESULT_AX 000Eh
+mov   dx, word ptr ds:[VARIABLE_saved_handle_2]
+mov   ax, 0450Eh
+int   067h
+TEST_RESULT_AX 000Eh
+mov   dx, word ptr ds:[VARIABLE_saved_handle_3]
+mov   ax, 0450Eh
+int   067h
+TEST_RESULT_AX 000Eh
+
+
+
+call prompt_for_key
 
 
 ;     FUNCTION 5    MAP/UNMAP HANDLE PAGES
+
+
+
+
+
+
+; HANDLE MAPPING STRESS TESTS END
+; HANDLE MAPPING STRESS TESTS END
+; HANDLE MAPPING STRESS TESTS END
+; HANDLE MAPPING STRESS TESTS END
+; HANDLE MAPPING STRESS TESTS END
+; HANDLE MAPPING STRESS TESTS END
 
 
 
@@ -446,6 +611,8 @@ string_expected_value_offset:
 db "0000$"
 
 
+
+
 print_hex_register:
     PUSHA_MACRO
     
@@ -463,6 +630,22 @@ print_hex_register:
     POPA_MACRO
 
     ret
+
+string_paused:
+db 0Dh, 0Ah
+db "Currently paused - press a key to continue. $"
+
+
+
+prompt_for_key:
+
+PRINT_STRING string_paused
+
+xor  ax, ax
+int  016h
+ret
+
+
 
 
 ;; ACCESSORY FUNCTIONS END
@@ -488,6 +671,16 @@ dw 0, 0, 0, 0  ; four segments
 VARIABLE_unallocated_page_count:
 dw 0
 VARIABLE_unallocated_total_page_count:
+dw 0
+VARIABLE_saved_handle_1:
+dw 0
+VARIABLE_saved_handle_2:
+dw 0
+VARIABLE_saved_handle_3:
+dw 0
+VARIABLE_saved_handle_4:
+dw 0
+VARIABLE_saved_handle_5:
 dw 0
 
 
