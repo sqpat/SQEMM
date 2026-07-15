@@ -76,6 +76,34 @@ TEST_RESULT_BX MACRO testbx
 
 ENDM
 
+TEST_EMS_REGISTER_CALL_ALL MACRO testax
+    mov  word ptr ds:[VARIABLE_expected_register_ax], testax
+    call do_ems_call_and_register_test
+ENDM
+
+TEST_EMS_REGISTER_CALL_NO_BX MACRO testax
+    mov  word ptr ds:[VARIABLE_expected_register_ax], testax
+    call do_ems_call_and_register_test_no_bx
+ENDM
+
+TEST_EMS_REGISTER_CALL_NO_DX MACRO testax
+    mov  word ptr ds:[VARIABLE_expected_register_ax], testax
+    call do_ems_call_and_register_test_no_dx
+ENDM
+
+TEST_EMS_REGISTER_CALL_NO_CX MACRO testax
+    mov  word ptr ds:[VARIABLE_expected_register_ax], testax
+    call do_ems_call_and_register_test_no_cx
+ENDM
+
+TEST_EMS_REGISTER_CALL_NO_BX_DX MACRO testax
+    mov  word ptr ds:[VARIABLE_expected_register_ax], testax
+    call do_ems_call_and_register_test_no_bx_dx
+ENDM
+
+
+
+
 PRINT_RUNNING_TEST MACRO testimmediate
     mov   word ptr ds:[_test_num], &testimmediate
     call  show_running_test
@@ -128,15 +156,19 @@ mov  word ptr ds:[VARIABLE_exit_sp], sp
 
 PRINT_RUNNING_TEST 1
 mov   ax, 04001h
-int   067h
-TEST_RESULT_AX 0001h
+
+TEST_EMS_REGISTER_CALL_ALL 0001h
+
+
 
 
 ;     FUNCTION 2    GET PAGE FRAME ADDRESS
 
 PRINT_RUNNING_TEST 2
 mov   ax, 04102h
-int   067h
+
+TEST_EMS_REGISTER_CALL_NO_BX 0002h
+
 PRINT_HEX_VALUE_BX string_hex_page_frame_address string_hex_page_frame_address_offset
 mov   word ptr ds:[VARIABLE_page_frame+2], bx
 add   bh, 04h
@@ -151,21 +183,21 @@ TEST_RESULT_AX 0002h
 ;     FUNCTION 7    GET VERSION
 PRINT_RUNNING_TEST 3
 mov   ax, 04607h
-int   067h
-TEST_RESULT_AX 0040h
+
+TEST_EMS_REGISTER_CALL_ALL 0040h
 
 
 ;     FUNCTION 3    GET UNALLOCATED PAGE COUNT
 
 PRINT_RUNNING_TEST 4
 mov   ax, 04203h
-int   067h
+TEST_EMS_REGISTER_CALL_NO_BX_DX 0003h
 
 mov   word ptr ds:[VARIABLE_unallocated_page_count], bx
 mov   word ptr ds:[VARIABLE_unallocated_total_page_count], dx
 
 call  print_page_count
-TEST_RESULT_AX 0003h
+
 
 ;     FUNCTION 4    ALLOCATE PAGES
 
@@ -173,9 +205,9 @@ TEST_RESULT_AX 0003h
 PRINT_RUNNING_TEST 5
 mov   ax, 04304h
 mov   bx, 1
-int   067h
+
+TEST_EMS_REGISTER_CALL_NO_DX 0004h
 call  print_handle
-TEST_RESULT_AX 0004h
 
 ; dx maintains index
 
@@ -184,11 +216,8 @@ TEST_RESULT_AX 0004h
 
 
 PRINT_RUNNING_TEST 6
-mov   word ptr ds:[expected_value], dx
 mov   ax, 04505h
-int   067h
-TEST_RESULT_DX_NO_VAL
-TEST_RESULT_AX 0005h
+TEST_EMS_REGISTER_CALL_ALL 0005h
 
 
 
@@ -219,28 +248,27 @@ PRINT_RUNNING_TEST 7
 mov   cx, 4
 mov   ax, 04307h
 mov   bx, cx
-int   067h
+
+TEST_EMS_REGISTER_CALL_NO_DX 0007h
 call  print_handle
-TEST_RESULT_AX 0007h
 mov   word ptr ds:[VARIABLE_saved_handle_1], dx
 
 mov   ax, 04308h
 mov   bx, cx
-int   067h
+
+TEST_EMS_REGISTER_CALL_NO_DX 0008h
 call  print_handle
-TEST_RESULT_AX 0008h
 mov   word ptr ds:[VARIABLE_saved_handle_2], dx
 
 mov   ax, 04309h
 mov   bx, cx
-int   067h
+TEST_EMS_REGISTER_CALL_NO_DX 0009h
 call  print_handle
-TEST_RESULT_AX 0009h
 mov   word ptr ds:[VARIABLE_saved_handle_3], dx
 
 mov   ax, 0420Ah
-int   067h
-TEST_RESULT_AX 000Ah
+
+TEST_EMS_REGISTER_CALL_NO_BX_DX 000Ah
 mov   ax, word ptr ds:[VARIABLE_unallocated_page_count]
 sub   ax, 12
 mov   word ptr ds:[expected_value], ax
@@ -255,22 +283,21 @@ mov   cx, 3
 mov   dx, word ptr ds:[VARIABLE_saved_handle_1]
 mov   ax, 0510Bh
 mov   bx, cx
-int   067h
-TEST_RESULT_AX 000Bh
+TEST_EMS_REGISTER_CALL_NO_BX 000Bh
 mov   dx, word ptr ds:[VARIABLE_saved_handle_2]
 mov   ax, 0510Ch
 mov   bx, cx
-int   067h
-TEST_RESULT_AX 000Ch
+
+TEST_EMS_REGISTER_CALL_NO_BX 000Ch
 mov   dx, word ptr ds:[VARIABLE_saved_handle_3]
 mov   ax, 0510Dh
 mov   bx, cx
-int   067h
-TEST_RESULT_AX 000Dh
+
+TEST_EMS_REGISTER_CALL_NO_BX 000Dh
 
 mov   ax, 0420Ah
-int   067h
-TEST_RESULT_AX 000Ah
+
+TEST_EMS_REGISTER_CALL_NO_BX_DX 000Ah
 mov   ax, word ptr ds:[VARIABLE_unallocated_page_count]
 sub   ax, 9
 mov   word ptr ds:[expected_value], ax
@@ -281,22 +308,22 @@ mov   cx, 0
 mov   dx, word ptr ds:[VARIABLE_saved_handle_1]
 mov   ax, 0510Bh
 mov   bx, cx
-int   067h
-TEST_RESULT_AX 000Bh
+
+TEST_EMS_REGISTER_CALL_NO_BX 000Bh
 mov   dx, word ptr ds:[VARIABLE_saved_handle_2]
 mov   ax, 0510Ch
 mov   bx, cx
-int   067h
-TEST_RESULT_AX 000Ch
+
+TEST_EMS_REGISTER_CALL_NO_BX 000Ch
 mov   dx, word ptr ds:[VARIABLE_saved_handle_3]
 mov   ax, 0510Dh
 mov   bx, cx
-int   067h
-TEST_RESULT_AX 000Dh
+
+TEST_EMS_REGISTER_CALL_NO_BX 000Dh
 
 mov   ax, 0420Ah
-int   067h
-TEST_RESULT_AX 000Ah
+
+TEST_EMS_REGISTER_CALL_NO_BX_DX 000Ah
 mov   ax, word ptr ds:[VARIABLE_unallocated_page_count]
 mov   word ptr ds:[expected_value], ax
 mov   dx, bx
@@ -307,22 +334,22 @@ mov   cx, 12
 mov   dx, word ptr ds:[VARIABLE_saved_handle_1]
 mov   ax, 0510Bh
 mov   bx, cx
-int   067h
-TEST_RESULT_AX 000Bh
+
+TEST_EMS_REGISTER_CALL_NO_BX 000Bh
 mov   dx, word ptr ds:[VARIABLE_saved_handle_2]
 mov   ax, 0510Ch
 mov   bx, cx
-int   067h
-TEST_RESULT_AX 000Ch
+
+TEST_EMS_REGISTER_CALL_NO_BX 000Ch
 mov   dx, word ptr ds:[VARIABLE_saved_handle_3]
 mov   ax, 0510Dh
 mov   bx, cx
-int   067h
-TEST_RESULT_AX 000Dh
+
+TEST_EMS_REGISTER_CALL_NO_BX 000Dh
 
 mov   ax, 0420Ah
-int   067h
-TEST_RESULT_AX 000Ah
+
+TEST_EMS_REGISTER_CALL_NO_BX_DX 000Ah
 mov   ax, word ptr ds:[VARIABLE_unallocated_page_count]
 sub   ax, 36
 mov   word ptr ds:[expected_value], ax
@@ -336,23 +363,18 @@ TEST_RESULT_DX_NO_VAL
 ; deallocate
 
 mov   dx, word ptr ds:[VARIABLE_saved_handle_1]
-mov   word ptr ds:[expected_value], dx
 mov   ax, 0450Eh
-int   067h
-TEST_RESULT_DX_NO_VAL
-TEST_RESULT_AX 000Eh
+TEST_EMS_REGISTER_CALL_ALL 000Eh
+
 mov   dx, word ptr ds:[VARIABLE_saved_handle_2]
-mov   word ptr ds:[expected_value], dx
+
 mov   ax, 0450Eh
-int   067h
-TEST_RESULT_DX_NO_VAL
-TEST_RESULT_AX 000Eh
+TEST_EMS_REGISTER_CALL_ALL 000Eh
+
 mov   dx, word ptr ds:[VARIABLE_saved_handle_3]
-mov   word ptr ds:[expected_value], dx
+
 mov   ax, 0450Eh
-int   067h
-TEST_RESULT_DX_NO_VAL
-TEST_RESULT_AX 000Eh
+TEST_EMS_REGISTER_CALL_ALL 000Eh
 
 
 
@@ -367,42 +389,38 @@ PRINT_RUNNING_TEST 9
 mov   cx, 4
 mov   ax, 04307h
 mov   bx, cx
-int   067h
+
+TEST_EMS_REGISTER_CALL_NO_DX 0007h
 call  print_handle
-TEST_RESULT_AX 0007h
 mov   word ptr ds:[VARIABLE_saved_handle_1], dx
 
 mov   ax, 04308h
 mov   bx, cx
-int   067h
+TEST_EMS_REGISTER_CALL_NO_DX 0008h
 call  print_handle
-TEST_RESULT_AX 0008h
 mov   word ptr ds:[VARIABLE_saved_handle_2], dx
 
 mov   ax, 04309h
 mov   bx, cx
-int   067h
+TEST_EMS_REGISTER_CALL_NO_DX 0009h
 call  print_handle
-TEST_RESULT_AX 0009h
 mov   word ptr ds:[VARIABLE_saved_handle_3], dx
 
 mov   ax, 04309h
 mov   bx, cx
-int   067h
+TEST_EMS_REGISTER_CALL_NO_DX 0009h
 call  print_handle
-TEST_RESULT_AX 0009h
 mov   word ptr ds:[VARIABLE_saved_handle_4], dx
 
 mov   ax, 04309h
 mov   bx, 64
-int   067h
+TEST_EMS_REGISTER_CALL_NO_DX 0009h
 call  print_handle
-TEST_RESULT_AX 0009h
 mov   word ptr ds:[VARIABLE_saved_handle_5], dx
 
 mov   ax, 0420Ah
-int   067h
-TEST_RESULT_AX 000Ah
+
+TEST_EMS_REGISTER_CALL_NO_BX_DX 000Ah
 mov   ax, word ptr ds:[VARIABLE_unallocated_page_count]
 sub   ax, 64 + 16
 mov   word ptr ds:[expected_value], ax
@@ -453,15 +471,13 @@ call  test_64_pages_in_reverse
 
 mov   ax, 04311h
 mov   bx, 1
-int   067h
+TEST_EMS_REGISTER_CALL_NO_DX 0011h
+
 call  print_handle
-TEST_RESULT_AX 0011h
 mov   word ptr ds:[VARIABLE_dead_handle], dx  ; dx handle should be unallocated and bad as long as we dont allocate any more after this.
-mov   word ptr ds:[expected_value], dx
+
 mov   ax, 04511h
-int   067h
-TEST_RESULT_DX_NO_VAL
-TEST_RESULT_AX 0011h
+TEST_EMS_REGISTER_CALL_ALL 0011h
 
 ; TODO various bad handle tests
 
@@ -481,29 +497,24 @@ call  test_four_pages
 
 mov   dx, word ptr ds:[VARIABLE_dead_handle]
 mov   ax, 04712h
-int   067h
-TEST_RESULT_AX 08312h  ; bad handle
+TEST_EMS_REGISTER_CALL_ALL 08312h  ; bad handle
 
 mov   ax, 04822h
-int   067h
-TEST_RESULT_AX 08322h  ; bad handle
+TEST_EMS_REGISTER_CALL_ALL 08322h  ; bad handle
 
 ; should be page 20 21 22 23
 
 mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
 
 mov   ax, 04823h
-int   067h
-TEST_RESULT_AX 08E23h  ; no context
+TEST_EMS_REGISTER_CALL_ALL 08E23h  ; no context
 
 
 mov   ax, 04713h
-int   067h
-TEST_RESULT_AX 00013h ; good
+TEST_EMS_REGISTER_CALL_ALL 00013h ; good
 
 mov   ax, 04714h
-int   067h
-TEST_RESULT_AX 08D14h  ; already have a state.
+TEST_EMS_REGISTER_CALL_ALL 08D14h  ; already have a state.
 
 
 mov   ax, 10
@@ -511,8 +522,7 @@ call  page_in_four_pages_starting_at_ax
 call  test_four_pages
 
 mov   ax, 04824h
-int   067h
-TEST_RESULT_AX 00024h  ; good context
+TEST_EMS_REGISTER_CALL_ALL 00024h  ; good context
 
 mov   ax, 20
 call  test_four_pages
@@ -520,13 +530,11 @@ call  test_four_pages
 ; now lets do 3 handles on stack
 
 mov   ax, 04713h
-int   067h
-TEST_RESULT_AX 00013h ; good
+TEST_EMS_REGISTER_CALL_ALL 00013h ; good
 
 mov   dx, word ptr ds:[VARIABLE_saved_handle_4]
 mov   ax, 04713h
-int   067h
-TEST_RESULT_AX 00013h ; good
+TEST_EMS_REGISTER_CALL_ALL 00013h ; good
 
 xor   ax, ax
 call  page_in_four_pages_starting_at_ax
@@ -535,8 +543,7 @@ call  test_four_pages
 
 mov   dx, word ptr ds:[VARIABLE_saved_handle_3]
 mov   ax, 04713h
-int   067h
-TEST_RESULT_AX 00013h ; good
+TEST_EMS_REGISTER_CALL_ALL 00013h ; good
 
 xor   ax, ax
 call  page_in_four_pages_starting_at_ax
@@ -545,8 +552,7 @@ call  test_four_pages
 
 mov   dx, word ptr ds:[VARIABLE_saved_handle_2]
 mov   ax, 04713h
-int   067h
-TEST_RESULT_AX 00013h ; good
+TEST_EMS_REGISTER_CALL_ALL 00013h ; good
 
 xor   ax, ax
 call  page_in_four_pages_starting_at_ax
@@ -556,8 +562,7 @@ call  test_four_pages
 
 mov   dx, word ptr ds:[VARIABLE_saved_handle_1]
 mov   ax, 04713h
-int   067h
-TEST_RESULT_AX 00013h ; good
+TEST_EMS_REGISTER_CALL_ALL 00013h ; good
 
 xor   ax, ax
 call  page_in_four_pages_starting_at_ax
@@ -565,30 +570,26 @@ mov   ax, 76
 call  test_four_pages
 
 mov   ax, 04824h
-int   067h
-TEST_RESULT_AX 00024h  ; good context
+TEST_EMS_REGISTER_CALL_ALL 00024h  ; good context
 
 mov   dx, word ptr ds:[VARIABLE_saved_handle_2]
 mov   ax, 72
 call  test_four_pages
 mov   ax, 04824h
-int   067h
-TEST_RESULT_AX 00024h ; good
+TEST_EMS_REGISTER_CALL_ALL 00024h ; good
 
 mov   dx, word ptr ds:[VARIABLE_saved_handle_3]
 mov   ax, 68
 call  test_four_pages
 mov   ax, 04824h
-int   067h
-TEST_RESULT_AX 00024h ; good
+TEST_EMS_REGISTER_CALL_ALL 00024h ; good
 
 
 mov   dx, word ptr ds:[VARIABLE_saved_handle_4]
 mov   ax, 64
 call  test_four_pages
 mov   ax, 04824h
-int   067h
-TEST_RESULT_AX 00024h ; good
+TEST_EMS_REGISTER_CALL_ALL 00024h ; good
 
 
 mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
@@ -627,8 +628,7 @@ PRINT_RUNNING_TEST 12
 ; set up conventional. skip conventional tests if the
 
 mov   ax, 05801h
-int   067h
-TEST_RESULT_AX 00001h
+TEST_EMS_REGISTER_CALL_NO_CX 00001h
 cmp   cx, 28
 jae   continue_conventional
 
@@ -641,8 +641,8 @@ continue_conventional:
 mov   dx, cx
 mov   ax, 05800h
 mov   di, OFFSET map_1700_page_list_full ; offset by 2 
-int   067h
-TEST_RESULT_AX 00000h
+
+TEST_EMS_REGISTER_CALL_NO_CX 00000h
 
 
 cmp   cx, 28
@@ -700,24 +700,20 @@ skip_conventional:
 
 mov   dx, word ptr ds:[VARIABLE_saved_handle_1]
 mov   ax, 04510h
-int   067h
-TEST_RESULT_AX 0010h
+
+TEST_EMS_REGISTER_CALL_ALL 0010h
 mov   dx, word ptr ds:[VARIABLE_saved_handle_2]
 mov   ax, 04510h
-int   067h
-TEST_RESULT_AX 0010h
+TEST_EMS_REGISTER_CALL_ALL 0010h
 mov   dx, word ptr ds:[VARIABLE_saved_handle_3]
 mov   ax, 04510h
-int   067h
-TEST_RESULT_AX 0010h
+TEST_EMS_REGISTER_CALL_ALL 0010h
 mov   dx, word ptr ds:[VARIABLE_saved_handle_4]
 mov   ax, 04510h
-int   067h
-TEST_RESULT_AX 0010h
+TEST_EMS_REGISTER_CALL_ALL 0010h
 mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
 mov   ax, 04510h
-int   067h
-TEST_RESULT_AX 0010h
+TEST_EMS_REGISTER_CALL_ALL 0010h
 
 
 
@@ -987,23 +983,19 @@ page_in_four_pages_starting_at_ax:
     xor   bx, bx
     mov   bl, al
     mov   ax, 04400h
-    int   067h
-    TEST_RESULT_AX 0000h
-
+    TEST_EMS_REGISTER_CALL_ALL 0000h
+    
     mov   ax, 04401h
     inc   bx
-    int   067h
-    TEST_RESULT_AX 0001h
+    TEST_EMS_REGISTER_CALL_ALL 0001h
 
     mov   ax, 04402h
     inc   bx
-    int   067h
-    TEST_RESULT_AX 0002h
+    TEST_EMS_REGISTER_CALL_ALL 0002h
 
     mov   ax, 04403h
     inc   bx
-    int   067h
-    TEST_RESULT_AX 0003h
+    TEST_EMS_REGISTER_CALL_ALL 0003h
 
     pop   ax
     ret
@@ -1131,10 +1123,10 @@ public  test_random_four_5701
 
     mov   cx, 4
     mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
+    mov   si, OFFSET map_1701_page_list_four
     mov   ax, 05001h
 
-    mov   si, OFFSET map_1701_page_list_four
-    int   067h
+    TEST_EMS_REGISTER_CALL_ALL 0001h
 
 
     push  es
@@ -1191,10 +1183,11 @@ public map_1700_page_list_four
 
     mov   cx, 4
     mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
-    mov   ax, 05000h
 
     mov   si, OFFSET map_1700_page_list_four
-    int   067h
+    mov   ax, 05000h
+    TEST_EMS_REGISTER_CALL_ALL 0000h
+
 
 
     push  es
@@ -1240,10 +1233,10 @@ public page_random_map_1700
         loop pagemap_loop_next_page_1700
 
     pop   cx  ; cx is page count again
-    mov   ax, 05000h
     mov   si, OFFSET map_1700_page_list_full
-    int   067h
-    TEST_RESULT_AX 0000h
+    mov   ax, 05000h
+    TEST_EMS_REGISTER_CALL_ALL 0000h
+
 
 
     pop   si
@@ -1276,8 +1269,8 @@ page_random_map_1701:
     pop   cx  ; cx is page count again
     mov   ax, 05001h
     mov   si, OFFSET map_1701_page_list_full
-    int   067h
-    TEST_RESULT_AX 0001h
+    TEST_EMS_REGISTER_CALL_ALL 0001h
+
 
 
 
@@ -1332,6 +1325,134 @@ test_map_1701:
     pop  es
     pop  cx
     ret
+
+
+MACRO_PRINT_BAD_REGISTER MACRO reg, expectedvalueloc
+    push  bx
+    mov   bx, word ptr ds:[ &expectedvalueloc ]
+    mov   word ptr ds:[expected_value], bx
+    mov   bx, reg
+    call  print_bad_reg_error
+    pop   bx
+ENDM
+    
+
+    bad_register_ax:
+        mov  word ptr ds:[string_register_name_offset], "XA" ; endian
+        MACRO_PRINT_BAD_REGISTER ax VARIABLE_expected_register_ax
+        jmp  continue_after_ax
+
+    bad_register_dx:
+        mov  word ptr ds:[string_register_name_offset], "XD" ; endian
+        MACRO_PRINT_BAD_REGISTER dx VARIABLE_expected_register_dx
+        jmp  continue_after_dx
+    
+    bad_register_cx:
+        mov  word ptr ds:[string_register_name_offset], "XC" ; endian
+        MACRO_PRINT_BAD_REGISTER cx VARIABLE_expected_register_cx
+        jmp  continue_after_cx
+    bad_register_bx:
+        mov  word ptr ds:[string_register_name_offset], "XB" ; endian
+        MACRO_PRINT_BAD_REGISTER bx VARIABLE_expected_register_bx
+        jmp  continue_after_bx
+
+
+do_ems_call_and_register_test:
+
+    mov  word ptr ds:[VARIABLE_expected_register_bx], bx
+    entry_after_bx:
+
+    mov  word ptr ds:[VARIABLE_expected_register_dx], dx
+    entry_after_dx:
+    mov  word ptr ds:[VARIABLE_expected_register_cx], cx
+    entry_after_cx:
+    mov  word ptr ds:[VARIABLE_expected_register_si], si
+    mov  word ptr ds:[VARIABLE_expected_register_di], di
+    mov  word ptr ds:[VARIABLE_expected_register_bp], bp
+
+    int 067h
+
+    cmp  word ptr ds:[VARIABLE_expected_register_ax], ax
+    jne  bad_register_ax
+    continue_after_ax:
+    public continue_after_ax
+    cmp  byte ptr ds:[VARIABLE_skip_dx], 0
+    jne  continue_after_dx
+    cmp  word ptr ds:[VARIABLE_expected_register_dx], dx
+    jne  bad_register_dx
+    continue_after_dx:
+    cmp  byte ptr ds:[VARIABLE_skip_cx], 0
+    jne  continue_after_cx
+    cmp  word ptr ds:[VARIABLE_expected_register_cx], cx
+    jne  bad_register_cx
+    continue_after_cx:
+    cmp  byte ptr ds:[VARIABLE_skip_bx], 0
+    jne  continue_after_bx
+    cmp  word ptr ds:[VARIABLE_expected_register_bx], bx
+    jne  bad_register_bx
+    continue_after_bx:
+    cmp  word ptr ds:[VARIABLE_expected_register_si], si
+    jne  bad_register_si
+    continue_after_si:
+    cmp  word ptr ds:[VARIABLE_expected_register_di], di
+    jne  bad_register_di
+    continue_after_di:
+    cmp  word ptr ds:[VARIABLE_expected_register_bp], bp
+    jne  bad_register_bp
+    continue_after_bp:
+
+    mov  word ptr ds:[VARIABLE_skip_bx], 0
+    ;mov  byte ptr ds:[VARIABLE_skip_dx], 0
+    mov  word ptr ds:[VARIABLE_skip_cx], 0
+
+
+    ret
+
+
+
+    
+    
+    bad_register_si:
+        mov  word ptr ds:[string_register_name_offset], "IS" ; endian
+        MACRO_PRINT_BAD_REGISTER si VARIABLE_expected_register_si
+        jmp  continue_after_si
+
+    bad_register_di:
+        mov  word ptr ds:[string_register_name_offset], "ID" ; endian
+        MACRO_PRINT_BAD_REGISTER di VARIABLE_expected_register_di
+        jmp  continue_after_di
+    
+    bad_register_bp:
+        mov  word ptr ds:[string_register_name_offset], "PB" ; endian
+        MACRO_PRINT_BAD_REGISTER bp VARIABLE_expected_register_bp
+        jmp  continue_after_bp
+
+print_bad_reg_error:
+        push bx
+        mov  word ptr ds:[expected_value], bx
+        call print_hex_register
+        call show_error
+        dont_print_error:
+        pop  bx
+        ret
+
+do_ems_call_and_register_test_no_dx:
+    mov  byte ptr ds:[VARIABLE_skip_dx], 1
+    mov  word ptr ds:[VARIABLE_expected_register_bx], bx
+    jmp entry_after_dx
+
+do_ems_call_and_register_test_no_cx:
+    mov  byte ptr ds:[VARIABLE_skip_cx], 1
+    mov  word ptr ds:[VARIABLE_expected_register_bx], bx
+    mov  word ptr ds:[VARIABLE_expected_register_dx], dx
+    jmp entry_after_cx
+
+do_ems_call_and_register_test_no_bx_dx:
+    mov  byte ptr ds:[VARIABLE_skip_dx], 1
+    ; fall thru
+do_ems_call_and_register_test_no_bx:
+    mov  byte ptr ds:[VARIABLE_skip_bx], 1
+    jmp entry_after_bx
 
 
 
@@ -1503,6 +1624,33 @@ ENDM
 
 dw 0  ; offset by 2
 
+VARIABLE_expected_register_ax:
+dw 0
+VARIABLE_expected_register_dx:
+dw 0
+VARIABLE_expected_register_cx:
+dw 0
+VARIABLE_expected_register_bx:
+dw 0
+VARIABLE_expected_register_si:
+dw 0
+VARIABLE_expected_register_di:
+dw 0
+VARIABLE_expected_register_bp:
+dw 0
+
+VARIABLE_skip_bx:
+db 0
+VARIABLE_skip_dx:
+db 0
+VARIABLE_skip_cx:
+db 0
+VARIABLE_skip_di:
+db 0
+VARIABLE_skip_si:
+db 0
+VARIABLE_skip_bp:
+db 0
 
 
 ; DATA END
