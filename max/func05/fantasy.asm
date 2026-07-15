@@ -1,3 +1,4 @@
+; note: bx on stack
   push       ax   ; gross, need to store al.
 
 
@@ -18,6 +19,7 @@ SELFMODIFY_FANTASY_add_page_frame_offset_2:
   out   FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
 
   pop        ax
+  pop        bx
   xor        ah, ah
 
   iret
@@ -39,6 +41,7 @@ SELFMODIFY_FANTASY_add_page_frame_offset_2:
   RETURN_RESULT_00:
 
   pop        ax
+  pop        bx
   xor        ah, ah
 
   iret
@@ -50,6 +53,7 @@ SELFMODIFY_FANTASY_add_page_frame_offset_2:
   out   FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
 
   pop        ax
+  pop        bx
   xor        ah, ah
 
   iret

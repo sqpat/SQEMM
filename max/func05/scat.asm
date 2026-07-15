@@ -5,12 +5,12 @@
 
 
 
+; note: bx on stack
 
   
   ; al and bx are still the args
-
-  push       ax   ; gross, need to store al.
-  push dx  
+  push  ax   ; gross, need to store al.
+  push  dx  
  
 SELFMODIFY_SCAT_set_page_select_register_2:
   mov   dx, SCAT_PAGE_SELECT_REGISTER
@@ -19,7 +19,7 @@ SELFMODIFY_SCAT_set_page_select_register_2:
   SELFMODIFY_SCAT_add_page_frame_register_offset_1:
   add   al, SCAT_PAGE_C000_REGISTER_OFFSET ; convert 0-4 to page frame. adds back subtracted 04h too
   func_05_do_conventional_map:   ; conventional page should be good.
-  cli
+
   out   dx, al   ; select EMS page
 SELFMODIFY_SCAT_set_page_set_register_2:
   mov   dx, SCAT_PAGE_SET_REGISTER
@@ -29,10 +29,11 @@ SELFMODIFY_SCAT_set_page_set_register_2:
   SELFMODIFY_SCAT_add_page_offset_and_enable_2:
   lea   ax, [BX + SCAT_PAGE_OFFSET_AMT]   ; offset by default starting page
   out   dx, ax   ; write 16 bit page num. 
-  sti
+
   
   pop   dx
   pop   ax
+  pop   bx
   xor   ah, ah
 
   iret
@@ -42,10 +43,11 @@ SELFMODIFY_SCAT_set_page_set_register_2:
   ; mapping to page -1
   mov   ax, SCAT_CHIPSET_UNMAP_VALUE ; "turn off ems for this page" value
   out   dx, ax   ; write 16 bit page num. 
-  sti
+
   
   pop   dx
   pop   ax
+  pop   bx
   xor   ah, ah
   iret
 

@@ -302,6 +302,7 @@ _RESIDENT_VARIABLE_pageable_frame_count_1:
   jae        func_05_page_too_high
 
 ; get actual page bx for handle dx
+push  bx
 push  cx
 mov   cx, bx
 mov   bx, dx
@@ -357,15 +358,16 @@ ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
 ENDIF
 func_05_handle_not_found:
 pop        cx
+pop        bx
 mov        ah, 083h  ; The memory manager couldn't find the EMM handle your program specified.
 iret
 
 func_05_page_too_high:
-pop        cx
 mov        ah, 08Bh
 iret
 func_05_logical_page_too_high:
 pop        cx
+pop        bx
 mov        ah, 08Bh
 iret
 
