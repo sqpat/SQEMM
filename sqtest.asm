@@ -36,7 +36,7 @@ TEST_RESULT_AX MACRO testax
     call print_hex_register
     cmp  ax, word ptr ds:[expected_value]
     je   $+5
-    call show_error
+    call prompt_for_key
     pop  bx
 ENDM
 
@@ -48,7 +48,7 @@ TEST_RESULT_DX MACRO testdx
     call print_hex_register
     cmp  dx, word ptr ds:[expected_value]
     je   $+5
-    call show_error
+    call prompt_for_key
     pop  bx
 ENDM
 
@@ -59,7 +59,7 @@ TEST_RESULT_DX_NO_VAL MACRO testdx
     call print_hex_register
     cmp  dx, word ptr ds:[expected_value]
     je   $+5
-    call show_error
+    call prompt_for_key
     pop  bx
 ENDM
 
@@ -72,7 +72,8 @@ TEST_RESULT_BX MACRO testbx
     call print_hex_register
     cmp  bx, word ptr ds:[expected_value]
     je   $+5
-    call show_error
+    call prompt_for_key
+
 
 ENDM
 
@@ -80,6 +81,13 @@ TEST_EMS_REGISTER_CALL_ALL MACRO testax
     mov  word ptr ds:[VARIABLE_expected_register_ax], testax
     call do_ems_call_and_register_test
 ENDM
+
+TEST_EMS_REGISTER_CALL_AH MACRO testah
+    mov  byte ptr ds:[VARIABLE_expected_register_ax+1], testah
+    mov  byte ptr ds:[VARIABLE_expected_register_ax+0], al
+    call do_ems_call_and_register_test
+ENDM
+
 
 TEST_EMS_REGISTER_CALL_NO_BX MACRO testax
     mov  word ptr ds:[VARIABLE_expected_register_ax], testax
@@ -513,6 +521,11 @@ TEST_EMS_REGISTER_CALL_ALL 08E23h  ; no context
 mov   ax, 04713h
 TEST_EMS_REGISTER_CALL_ALL 00013h ; good
 
+mov   ax, 04510h
+TEST_EMS_REGISTER_CALL_ALL 08610h  ; cant delete handle with stack context..
+
+
+
 mov   ax, 04714h
 TEST_EMS_REGISTER_CALL_ALL 08D14h  ; already have a state.
 
@@ -660,7 +673,12 @@ rep   movsw
 ; TEST 13: test pages in conventional region via function 5 page one
 PRINT_RUNNING_TEST 13
 
-; TODO page one conventional
+mov   dx, word ptr cs:[VARIABLE_saved_handle_5]
+mov   cx, 8
+mov   si, OFFSET map_1700_page_list_full
+loop_random_conventional_pages_4400:
+    call  page_random_map_4400
+    loop loop_random_conventional_pages_4400
 
 ; TEST 14: test random pages in conventional region via function 17 map/unmap multiple
 PRINT_RUNNING_TEST 14
@@ -712,6 +730,13 @@ mov   dx, word ptr ds:[VARIABLE_saved_handle_4]
 mov   ax, 04510h
 TEST_EMS_REGISTER_CALL_ALL 0010h
 mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
+
+mov   ax, 04510h
+TEST_EMS_REGISTER_CALL_ALL 08610h  ; cant delete handle with stack context..
+
+mov   ax, 04823h
+TEST_EMS_REGISTER_CALL_ALL 00023h  ; clean context up...
+
 mov   ax, 04510h
 TEST_EMS_REGISTER_CALL_ALL 0010h
 
@@ -724,6 +749,26 @@ TEST_EMS_REGISTER_CALL_ALL 0010h
 ; HANDLE MAPPING STRESS TESTS END
 ; HANDLE MAPPING STRESS TESTS END
 ; HANDLE MAPPING STRESS TESTS END
+
+    std
+
+    mov  di, OFFSET string_ran_tests_decimal_1+3
+    mov  cx, 10
+    mov  ax, word ptr ds:[VARIABLE_test_count]
+    cwd
+    call print_four_digits
+
+    mov  ax, word ptr ds:[VARIABLE_error_count]
+    cwd
+    mov  di, OFFSET string_ran_tests_decimal_2+3
+    cwd
+    call print_four_digits
+
+    cld
+
+
+    PRINT_STRING  string_ran_tests
+
 
 
 ; todo test all registers after each call to detect trashing.
@@ -780,18 +825,7 @@ show_running_test:
 
     ; todo show expected values?
 
-show_error:
 
-    push  ax
-    push  dx
-    PRINT_STRING string_error_found
-
-    call  prompt_for_key
-
-
-    pop   dx
-    pop   ax
-    ret
 
 show_success:
 
@@ -941,6 +975,8 @@ print_hex_register:
 
 
 prompt_for_key:
+
+inc  word ptr ds:[VARIABLE_error_count]
 
 push dx
 PRINT_STRING string_paused
@@ -1211,6 +1247,45 @@ public map_1700_page_list_four
     ret
 
 
+page_random_map_4400:
+public page_random_map_4400
+    push  es
+    PUSHA_MACRO
+    mov   cx, word ptr ds:[VARIABLE_page_count]
+
+    mov   di, OFFSET  map_1701_page_list_full - map_1700_page_list_full - 2
+    mov   si, OFFSET  map_1700_page_list_full + 2
+
+
+    pagemap_loop_next_page_4400:
+        ; page in random page map, then test them all
+        call   get_random_in_ax
+        ; modulo 64... 
+        add    ax, cx
+        and    ax, 63
+        xchg   ax, bx  ; logical page
+
+        lodsw          ; physical page
+        push  ax
+        add   si, di
+        lodsw          ; segment
+        mov   es, ax
+        sub   si, di
+        pop   ax
+        mov    ah, 044h
+
+        TEST_EMS_REGISTER_CALL_AH 00
+
+        mov    ax, bx
+        call   test_page_with_ax  ; test as we go.
+
+        loop pagemap_loop_next_page_4400
+
+
+    POPA_MACRO
+    pop   es
+    ret
+
 page_random_map_1700:
 public page_random_map_1700
     push  cx
@@ -1369,6 +1444,7 @@ do_ems_call_and_register_test:
     mov  word ptr ds:[VARIABLE_expected_register_si], si
     mov  word ptr ds:[VARIABLE_expected_register_di], di
     mov  word ptr ds:[VARIABLE_expected_register_bp], bp
+    inc  word ptr ds:[VARIABLE_test_count]
 
     int 067h
 
@@ -1429,9 +1505,9 @@ do_ems_call_and_register_test:
 
 print_bad_reg_error:
         push bx
-        mov  word ptr ds:[expected_value], bx
+
         call print_hex_register
-        call show_error
+        call prompt_for_key
         dont_print_error:
         pop  bx
         ret
@@ -1479,13 +1555,6 @@ db '000'
 db  "...   ", '$'
 
 
-
-string_error_found:
-db "Error: "
-error_num:
-db '00'
-db  0Dh, 0Ah,'$'
-
 string_success:
 db "Test Passed!", 0Dh, 0Ah,'$'
 
@@ -1508,6 +1577,15 @@ string_page_count_decimal_unallocated:
 db "0000"
 db "    Total Pages: "
 string_page_count_decimal_total:
+db "0000", '$'
+
+string_ran_tests:
+db 0Dh, 0Ah
+db "    Total EMS Interrupts run: "
+string_ran_tests_decimal_1:
+db "0000"
+db "    Errors: "
+string_ran_tests_decimal_2:
 db "0000", '$'
 
 
@@ -1652,6 +1730,11 @@ db 0
 VARIABLE_skip_bp:
 db 0
 
+VARIABLE_test_count:
+dw 0
+
+VARIABLE_error_count:
+dw 0
 
 ; DATA END
 ; DATA END
