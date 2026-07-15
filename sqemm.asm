@@ -81,6 +81,7 @@ PUSHA_MACRO MACRO
     push  bx
     push  si
     push  di
+    push  bp
   ENDIF
 ENDM
 
@@ -90,39 +91,13 @@ POPA_MACRO MACRO
   IF COMPISA GE COMPILE_186
     popa
   ELSE
+    pop   bp
     pop   di
     pop   si
     pop   bx
     pop   dx
     pop   cx
     pop   ax	
-  ENDIF
-ENDM
-
-PUSHA_MACRO_NO_AX MACRO
-
-  IF COMPISA GE COMPILE_186
-    pusha
-  ELSE
-    push  cx
-    push  dx
-    push  bx
-    push  si
-    push  di
-  ENDIF
-ENDM
-
-
-POPA_MACRO_NO_AX MACRO
-
-  IF COMPISA GE COMPILE_186
-    popa
-  ELSE
-    pop   di
-    pop   si
-    pop   bx
-    pop   dx
-    pop   cx
   ENDIF
 ENDM
 

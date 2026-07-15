@@ -1,7 +1,7 @@
 Open Watcom Linker Version 2.0 beta Sep  3 2024 02:05:05 (32-bit)
 Copyright (c) 2002-2024 The Open Watcom Contributors. All Rights Reserved.
 Portions Copyright (c) 1985-2002 Sybase, Inc. All Rights Reserved.
-Created on:       26/07/14 13:10:35
+Created on:       26/07/15 09:47:14
 Executable Image: sqemm.exe
 creating a DOS executable
 
@@ -13,7 +13,7 @@ creating a DOS executable
 Group                           Address              Size
 =====                           =======              ====
 
-DGROUP                          0000:0000            00002f38
+DGROUP                          0000:0000            00002f44
 
 
 
@@ -24,8 +24,8 @@ DGROUP                          0000:0000            00002f38
 Segment                Class          Group          Address         Size
 =======                =====          =====          =======         ====
 
-_TEXT                  CODE           DGROUP         0000:0000       00002f37
-_DATA                  DATA           DGROUP         02f3:0008       00000000
+_TEXT                  CODE           DGROUP         0000:0000       00002f43
+_DATA                  DATA           DGROUP         02f4:0004       00000000
 
 
                         +----------------+
@@ -40,15 +40,16 @@ Address        Symbol
 
 Module: sqemm.obj(sqemm.ASM)
 0000:02ef*     EMS_FUNCTION_05AH
-0000:03e5*     _RESIDENT_VARIABLE_HANDLE_COUNT
-0000:04a9*     EMS_FUNCTION_051H
+0000:03f2*     _RESIDENT_VARIABLE_HANDLE_COUNT
+0000:04b6*     EMS_FUNCTION_051H
 0000:0141*     EMS_FUNCTION_050H
-0000:2972*     END_OF_DRIVER_LABEL
-0000:0e06*     _RESIDENT_VARIABLE_HANDLE_LIST
-0000:03ff*     EMS_FUNCTION_047H
-0000:21f2*     _RESIDENT_VARIABLE_PAGE_LIST
+0000:297e*     END_OF_DRIVER_LABEL
+0000:0e12*     _RESIDENT_VARIABLE_HANDLE_LIST
+0000:040c*     EMS_FUNCTION_047H
+0000:0463*     EMS_FUNCTION_048H
+0000:21fe*     _RESIDENT_VARIABLE_PAGE_LIST
 0000:0014*     EMS_DRIVER_INIT
-0000:0d8d*     COMMON_DEALLOCATE_PAGES
+0000:0d99*     COMMON_DEALLOCATE_PAGES
 Warning! W1014: stack segment not found
 Warning! W1023: no starting address found, using 0000:0000
 
@@ -58,6 +59,6 @@ Warning! W1023: no starting address found, using 0000:0000
                         +-----------------------+
 
 Stack size:  09e8 (2536.)
-Memory size:  2f38 (12088.)
+Memory size:  2f44 (12100.)
 Entry point address: 0000:0000
 Link time: 00:00.55

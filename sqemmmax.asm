@@ -736,6 +736,8 @@ cmp        word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle
 
 je         func_45_no_emm_handle_found
 shl        bx, 1
+cmp        word ptr cs:[_RESIDENT_VARIABLE_handle_page_stack + bx], -1
+jne        func_45_stack_exists
 add        bx, OFFSET _RESIDENT_VARIABLE_handlename_list
 xor        ax, ax
 mov        word ptr cs:[bx], ax   ; zero handle name
@@ -755,6 +757,13 @@ ENDIF
 pop        ax
 xor        ah, ah
 iret
+
+func_45_stack_exists:
+pop        bx
+pop        ax
+mov        ah, 086h  ; The memory manager detected a save or restore  page mapping context error (Function 8 or 9).
+iret
+
 func_45_no_emm_handle_found:
 pop        bx
 pop        ax
@@ -891,6 +900,7 @@ iret
 ;          9  Restore Page Map                               48h       
 
 EMS_FUNCTION_048h:
+public EMS_FUNCTION_048h
 
 ; consider a small fixed size to save these..
 
