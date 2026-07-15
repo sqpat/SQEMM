@@ -356,8 +356,6 @@ TEST_RESULT_AX 000Eh
 
 
 
-here:
-public here
 
 
 
@@ -615,18 +613,84 @@ public loop_test_random_four
 
 
 
-; TEST 12: test pages in conventional region via function 5 page one
+;; CONVENTIONAL TESTS. SKIP IF NOT SUPPORTED?
+;; CONVENTIONAL TESTS. SKIP IF NOT SUPPORTED?
+;; CONVENTIONAL TESTS. SKIP IF NOT SUPPORTED?
+;; CONVENTIONAL TESTS. SKIP IF NOT SUPPORTED?
+
+
+; TEST 12: check conventional pagination capabilities
 PRINT_RUNNING_TEST 12
 
 
-; TEST 13: test random pages in conventional region via function 17 map/unmap multiple
+;     FUNCTION 25   GET MAPPABLE PHYSICAL ADDRESS ARRAY
+; set up conventional. skip conventional tests if the
+
+mov   ax, 05801h
+int   067h
+TEST_RESULT_AX 00001h
+cmp   cx, 28
+jae   continue_conventional
+
+
+go_skip_conventional:
+PRINT_STRING str_no_conventional_tests
+jmp   skip_conventional
+
+continue_conventional:
+mov   dx, cx
+mov   ax, 05800h
+mov   di, OFFSET map_1700_page_list_full ; offset by 2 
+int   067h
+TEST_RESULT_AX 00000h
+
+
+cmp   cx, 28
+jb    go_skip_conventional
+cmp   cx, dx
+jne   go_skip_conventional  ; todo better error string
+mov   word ptr ds:[VARIABLE_page_count], cx  
+
+mov   si, OFFSET map_1700_page_list_full ; offset by 2 
+mov   di, OFFSET map_1701_page_list_full + 2
+shl   cx, 1  ; we also write the logical entries, which are garbage for now.
+rep   movsw
+
+
+; TEST 13: test pages in conventional region via function 5 page one
 PRINT_RUNNING_TEST 13
 
-; TEST 14: test pages in conventional region via function 15 get/set page map
+; TODO page one conventional
+
+; TEST 14: test random pages in conventional region via function 17 map/unmap multiple
 PRINT_RUNNING_TEST 14
 
-; TEST 15: test pages in conventional region via function 16 get/set partial page map
+
+
+; tables creates.
+
+mov   dx, word ptr cs:[VARIABLE_saved_handle_5]
+mov   cx, 8
+loop_random_conventional_pages:
+    call  page_random_map_1700
+    call  test_map_1700
+    call  page_random_map_1701
+    call  test_map_1701
+    loop  loop_random_conventional_pages
+
+
+
+
+
+; TEST 15: test pages in conventional region via function 15 get/set page map
 PRINT_RUNNING_TEST 15
+
+; TEST 16: test pages in conventional region via function 16 get/set partial page map
+PRINT_RUNNING_TEST 16
+
+
+skip_conventional:
+
 
 
 ; deallocate
@@ -697,27 +761,8 @@ int   021h
 
 
 
-ALIGN 2
-_test_num:
-dw 0
-
-string_running_test:
-db  0Dh, 0Ah
-db "Running Test: "
-test_num_offset:
-db '000'
-db  "...   ", '$'
 
 
-
-string_error_found:
-db "Error: "
-error_num:
-db '00'
-db  0Dh, 0Ah,'$'
-
-string_success:
-db "Test Passed!", 0Dh, 0Ah,'$'
 
 show_running_test:
     PUSHA_MACRO
@@ -762,26 +807,6 @@ show_success:
     pop   ax
     ret
 
-string_hex_handle:
-db 0Dh, 0Ah
-db "    Handle Recieved: "
-string_hex_handle_offset:
-db "00", '$'
-
-string_hex_page_frame_address:
-db 0Dh, 0Ah
-db "    Page Frame Address: "
-string_hex_page_frame_address_offset:
-db "0000", '$'
-
-string_page_count_decimal:
-db 0Dh, 0Ah
-db "    Unallocated Pages: "
-string_page_count_decimal_unallocated:
-db "0000"
-db "    Total Pages: "
-string_page_count_decimal_total:
-db "0000", '$'
 
 
 
@@ -895,22 +920,6 @@ print_page_count:
     POPA_MACRO
     ret    
 
-expected_value:
-dw 0
-
-string_register_name:
-db 0Dh, 0Ah
-db "    Testing "
-string_register_name_offset:
-db "AX"
-string_register_value:
-db " ... Value: "
-string_register_value_offset:
-db "0000"
-string_expected_value:
-db "  vs Expected:  "
-string_expected_value_offset:
-db "0000$"
 
 
 
@@ -932,10 +941,6 @@ print_hex_register:
     POPA_MACRO
 
     ret
-
-string_paused:
-db 0Dh, 0Ah
-db "Currently paused - press a key to continue. $"
 
 
 
@@ -1022,25 +1027,6 @@ fill_in_64_pages:
     ret
 
 
-scan_test_error:
-db 0Dh, 0Ah
-db "    Page "
-scan_test_error_offset:
-db "0000"
-db " failed scan test in segment "
-scan_test_error_segment:
-db "0000"
-db " $"
-
-scan_test_success:
-db 0Dh, 0Ah
-db "    Page "
-scan_test_success_offset:
-db "0000"
-db " passed scan test in segment "
-scan_test_success_segment:
-db "0000"
-db " $"
 
 
 test_page_with_ax:
@@ -1117,37 +1103,10 @@ public test_64_pages_in_reverse
 
 
 
-; TODO for 5000h style.
-; for 5001h style 
-ALIGN 2
-
-VARIABLE_page_frame:  ; page frame separated by 4 each
-map_1701_page_list_four:
-dw  0, 0  ; four pages
-dw  0, 0
-dw  0, 0
-dw  0, 0
-map_1701_page_list_full:
-; include conventional
-CONVENTIONALPAGEADDER = 04000h
-REPT 24
-    dw 0, CONVENTIONALPAGEADDER
-    CONVENTIONALPAGEADDER = CONVENTIONALPAGEADDER + 0400h
-ENDM
 
 
-map_1700_page_list_four:
-dw  0, 0  ; four pages
-dw  0, 1
-dw  0, 2
-dw  0, 3
-map_1700_page_list_full:
-; include conventional
-CONVENTIONALPAGEADDER = 04000h
-REPT 24
-    dw 0, CONVENTIONALPAGEADDER
-    CONVENTIONALPAGEADDER = CONVENTIONALPAGEADDER + 0400h
-ENDM
+
+
 
 test_random_four_5701:
 public  test_random_four_5701
@@ -1259,12 +1218,225 @@ public map_1700_page_list_four
     ret
 
 
+page_random_map_1700:
+public page_random_map_1700
+    push  cx
+    push  di
+    push  si
+    mov   cx, word ptr ds:[VARIABLE_page_count]
+    mov   di, OFFSET map_1700_page_list_full
+    push   cx
+    ; generate random page map
+    pagemap_loop_next_page_1700:
+        ; page in random page map, then test them all
+        call   get_random_in_ax
+        ; modulo 64... 
+        add    ax, cx
+        and    ax, 63
+        stosw
+        inc    di
+        inc    di
+
+        loop pagemap_loop_next_page_1700
+
+    pop   cx  ; cx is page count again
+    mov   ax, 05000h
+    mov   si, OFFSET map_1700_page_list_full
+    int   067h
+    TEST_RESULT_AX 0000h
+
+
+    pop   si
+    pop   di
+    pop   cx
+    ret
+
+
+
+page_random_map_1701:
+    push  cx
+    push  di
+    push  si
+    mov   cx, word ptr ds:[VARIABLE_page_count]
+    mov   di, OFFSET map_1701_page_list_full
+    push   cx
+    ; generate random page map
+    pagemap_loop_next_page_1701:
+        ; page in random page map, then test them all
+        call   get_random_in_ax
+        ; modulo 64... 
+        add    ax, cx
+        and    ax, 63
+        stosw
+        inc    di
+        inc    di
+
+        loop pagemap_loop_next_page_1701
+
+    pop   cx  ; cx is page count again
+    mov   ax, 05001h
+    mov   si, OFFSET map_1701_page_list_full
+    int   067h
+    TEST_RESULT_AX 0001h
+
+
+
+    pop   si
+    pop   di
+    pop   cx
+    ret
+
+test_map_1700:
+public test_map_1700
+    push  cx
+    push  es
+    push  si
+    push  di
+    mov   di, OFFSET  map_1701_page_list_full - map_1700_page_list_full
+    mov   si, OFFSET  map_1700_page_list_full
+    do_1701_tests:
+    mov   cx, word ptr ds:[VARIABLE_page_count]
+    loop_test_next_page_1700:
+        lodsw 
+        push  ax
+        add   si, di
+        lodsw 
+        mov   es, ax
+        sub   si, di
+        pop   ax
+        call  test_page_with_ax
+        loop  loop_test_next_page_1700
+
+    pop  di
+    pop  si
+    pop  es
+    pop  cx
+    ret
+
+test_map_1701:
+    push  cx
+    push  es
+    push  si
+    mov   si, OFFSET  map_1701_page_list_full
+    mov   cx, word ptr ds:[VARIABLE_page_count]
+    loop_test_next_page_1701:
+        lodsw 
+        push ax
+        lodsw 
+        mov   es, ax
+        pop  ax
+        call  test_page_with_ax
+        loop  loop_test_next_page_1701
+
+    pop  si
+    pop  es
+    pop  cx
+    ret
+
+
+
+
 ;; ACCESSORY FUNCTIONS END
 ;; ACCESSORY FUNCTIONS END
 ;; ACCESSORY FUNCTIONS END
 ;; ACCESSORY FUNCTIONS END
 ;; ACCESSORY FUNCTIONS END
 ;; ACCESSORY FUNCTIONS END
+
+
+; STRINGS START
+; STRINGS START
+; STRINGS START
+; STRINGS START
+; STRINGS START
+
+string_running_test:
+db  0Dh, 0Ah
+db "Running Test: "
+test_num_offset:
+db '000'
+db  "...   ", '$'
+
+
+
+string_error_found:
+db "Error: "
+error_num:
+db '00'
+db  0Dh, 0Ah,'$'
+
+string_success:
+db "Test Passed!", 0Dh, 0Ah,'$'
+
+string_hex_handle:
+db 0Dh, 0Ah
+db "    Handle Recieved: "
+string_hex_handle_offset:
+db "00", '$'
+
+string_hex_page_frame_address:
+db 0Dh, 0Ah
+db "    Page Frame Address: "
+string_hex_page_frame_address_offset:
+db "0000", '$'
+
+string_page_count_decimal:
+db 0Dh, 0Ah
+db "    Unallocated Pages: "
+string_page_count_decimal_unallocated:
+db "0000"
+db "    Total Pages: "
+string_page_count_decimal_total:
+db "0000", '$'
+
+
+string_register_name:
+db 0Dh, 0Ah
+db "    Testing "
+string_register_name_offset:
+db "AX"
+string_register_value:
+db " ... Value: "
+string_register_value_offset:
+db "0000"
+string_expected_value:
+db "  vs Expected:  "
+string_expected_value_offset:
+db "0000$"
+
+str_no_conventional_tests:
+db 0Dh, 0Ah, "NO CONVENTIONAL MEMORY PAGES DETECTED?  skipping.... $"
+
+string_paused:
+db 0Dh, 0Ah
+db "Currently paused - press a key to continue. $"
+
+scan_test_error:
+db 0Dh, 0Ah
+db "    Page "
+scan_test_error_offset:
+db "0000"
+db " failed scan test in segment "
+scan_test_error_segment:
+db "0000"
+db " $"
+
+scan_test_success:
+db 0Dh, 0Ah
+db "    Page "
+scan_test_success_offset:
+db "0000"
+db " passed scan test in segment "
+scan_test_success_segment:
+db "0000"
+db " $"
+
+
+; STRINGS END
+; STRINGS END
+; STRINGS END
+; STRINGS END
+; STRINGS END
 
 
 
@@ -1274,6 +1446,13 @@ public map_1700_page_list_four
 ; DATA START
 ; DATA START
 ; DATA START
+
+ALIGN 2
+expected_value:
+dw 0
+_test_num:
+dw 0
+
 
 VARIABLE_exit_sp:
 dw 0
@@ -1293,6 +1472,37 @@ VARIABLE_saved_handle_5:
 dw 0
 VARIABLE_dead_handle:
 dw 0
+VARIABLE_page_count:
+dw 0
+
+
+VARIABLE_page_frame:  ; page frame separated by 4 each
+map_1701_page_list_four:
+dw  0, 0  ; four pages
+dw  0, 0
+dw  0, 0
+dw  0, 0
+
+
+map_1700_page_list_four:
+dw  0, 0  ; four pages
+dw  0, 1
+dw  0, 2
+dw  0, 3
+
+
+map_1700_page_list_full:
+REPT 64
+dw 0, 0
+ENDM
+
+map_1701_page_list_full:
+REPT 64
+dw 0, 0
+ENDM
+
+dw 0  ; offset by 2
+
 
 
 ; DATA END
