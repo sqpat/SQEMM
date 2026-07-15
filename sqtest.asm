@@ -138,13 +138,13 @@ PRINT_RUNNING_TEST 2
 mov   ax, 04102h
 int   067h
 PRINT_HEX_VALUE_BX string_hex_page_frame_address string_hex_page_frame_address_offset
-mov   word ptr ds:[VARIABLE_page_frame+0], bx
-add   bh, 04h
 mov   word ptr ds:[VARIABLE_page_frame+2], bx
 add   bh, 04h
-mov   word ptr ds:[VARIABLE_page_frame+4], bx
-add   bh, 04h
 mov   word ptr ds:[VARIABLE_page_frame+6], bx
+add   bh, 04h
+mov   word ptr ds:[VARIABLE_page_frame+10], bx
+add   bh, 04h
+mov   word ptr ds:[VARIABLE_page_frame+14], bx
 TEST_RESULT_AX 0002h
 
 
@@ -201,7 +201,7 @@ TEST_RESULT_AX 0005h
 ; BASIC TESTS END
 
 
-call prompt_for_key
+
 
 
 ; HANDLE MAPPING STRESS TESTS START
@@ -336,21 +336,29 @@ TEST_RESULT_DX_NO_VAL
 ; deallocate
 
 mov   dx, word ptr ds:[VARIABLE_saved_handle_1]
+mov   word ptr ds:[expected_value], dx
 mov   ax, 0450Eh
 int   067h
+TEST_RESULT_DX_NO_VAL
 TEST_RESULT_AX 000Eh
 mov   dx, word ptr ds:[VARIABLE_saved_handle_2]
+mov   word ptr ds:[expected_value], dx
 mov   ax, 0450Eh
 int   067h
+TEST_RESULT_DX_NO_VAL
 TEST_RESULT_AX 000Eh
 mov   dx, word ptr ds:[VARIABLE_saved_handle_3]
+mov   word ptr ds:[expected_value], dx
 mov   ax, 0450Eh
 int   067h
+TEST_RESULT_DX_NO_VAL
 TEST_RESULT_AX 000Eh
 
 
 
-call prompt_for_key
+here:
+public here
+
 
 
 ; TEST 9: allocate pages and put stuff in them. then page around and confirm their contents are ok
@@ -429,42 +437,91 @@ xor   ax, ax
 call  page_in_four_pages_starting_at_ax
 call  fill_in_four_pages_increment_ax
 
-call prompt_for_key
+
 
 mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
 call  test_64_pages_in_reverse
 
 ;;;; done testing pages one by one. now random!
 
-; TEST 10: test random pages in page frame via function 17 map/unmap multiple
+
+; TEST 10: test pages in page frame via function 8/9 stack
 PRINT_RUNNING_TEST 10
 
+; TODO
+
+
+; create a dead handle
+
+mov   ax, 04311h
+mov   bx, 1
+int   067h
+call  print_handle
+TEST_RESULT_AX 0011h
+mov   word ptr ds:[VARIABLE_dead_handle], dx  ; dx handle should be unallocated and bad as long as we dont allocate any more after this.
+mov   word ptr ds:[expected_value], dx
+mov   ax, 04511h
+int   067h
+TEST_RESULT_DX_NO_VAL
+TEST_RESULT_AX 0011h
 
 
 
-; TEST 11: test pages in page frame via function 8/9 stack
+
+
+; TEST 11: test random pages in page frame via function 17 map/unmap multiple
 PRINT_RUNNING_TEST 11
 
+mov   cx, 8
+loop_test_random_four:
+public loop_test_random_four
+    call test_random_four_5701
+    call test_random_four_5700
+    loop loop_test_random_four
 
-; TEST 12: test pages in page frame via function 15 get/set page map
+
+
+
+; TEST 12: test pages in conventional region via function 5 page one
 PRINT_RUNNING_TEST 12
 
-; TEST 13: test pages in page frame via function 16 get/set partial page map
+
+; TEST 13: test random pages in conventional region via function 17 map/unmap multiple
 PRINT_RUNNING_TEST 13
 
-
-; TEST 14: test pages in conventional region via function 5 page one
+; TEST 14: test pages in conventional region via function 15 get/set page map
 PRINT_RUNNING_TEST 14
 
-
-; TEST 15: test pages in conventional region via function 17 map/unmap multiple
+; TEST 15: test pages in conventional region via function 16 get/set partial page map
 PRINT_RUNNING_TEST 15
 
-; TEST 16: test pages in conventional region via function 15 get/set page map
-PRINT_RUNNING_TEST 16
 
-; TEST 17: test pages in conventional region via function 16 get/set partial page map
-PRINT_RUNNING_TEST 17
+; deallocate
+
+
+; deallocate
+
+mov   dx, word ptr ds:[VARIABLE_saved_handle_1]
+mov   ax, 04510h
+int   067h
+TEST_RESULT_AX 0010h
+mov   dx, word ptr ds:[VARIABLE_saved_handle_2]
+mov   ax, 04510h
+int   067h
+TEST_RESULT_AX 0010h
+mov   dx, word ptr ds:[VARIABLE_saved_handle_3]
+mov   ax, 04510h
+int   067h
+TEST_RESULT_AX 0010h
+mov   dx, word ptr ds:[VARIABLE_saved_handle_4]
+mov   ax, 04510h
+int   067h
+TEST_RESULT_AX 0010h
+mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
+mov   ax, 04510h
+int   067h
+TEST_RESULT_AX 0010h
+
 
 
 
@@ -476,7 +533,7 @@ PRINT_RUNNING_TEST 17
 ; HANDLE MAPPING STRESS TESTS END
 
 
-
+; todo test all registers after each call to detect trashing.
 
 quit_exit_program: ; todo detect stack mismatch?
 mov   sp, word ptr cs:[VARIABLE_exit_sp]
@@ -554,6 +611,10 @@ show_error:
     push  ax
     push  dx
     PRINT_STRING string_error_found
+
+    call  prompt_for_key
+
+
     pop   dx
     pop   ax
     ret
@@ -768,16 +829,16 @@ fill_in_page_with_ax:
 fill_in_four_pages_increment_ax:
 
     push  es
-    mov   es, word ptr ds:[VARIABLE_page_frame+0]
-    call  fill_in_page_with_ax
-    inc   ax
     mov   es, word ptr ds:[VARIABLE_page_frame+2]
     call  fill_in_page_with_ax
     inc   ax
-    mov   es, word ptr ds:[VARIABLE_page_frame+4]
+    mov   es, word ptr ds:[VARIABLE_page_frame+6]
     call  fill_in_page_with_ax
     inc   ax
-    mov   es, word ptr ds:[VARIABLE_page_frame+6]
+    mov   es, word ptr ds:[VARIABLE_page_frame+10]
+    call  fill_in_page_with_ax
+    inc   ax
+    mov   es, word ptr ds:[VARIABLE_page_frame+14]
     call  fill_in_page_with_ax
     inc   ax
     pop   es
@@ -820,71 +881,80 @@ fill_in_64_pages:
     call  page_in_four_pages_starting_at_ax
 
     call  fill_in_four_pages_increment_ax
-    cmp   ax, 20
-    je    do_pause
-    cmp   ax, 40
-    je    do_pause
-    cmp   ax, 60
-    je    do_pause
-    done_pausing_back_to_looping:
+
     loop  loop_fill_in_next_four
 
     pop   ax
     pop   cx
     ret
 
-do_pause:
-    push ax
-    call prompt_for_key
-    pop  ax
-    jmp  done_pausing_back_to_looping
 
 scan_test_error:
 db 0Dh, 0Ah
 db "    Page "
 scan_test_error_offset:
 db "0000"
-db " failed scan test $"
+db " failed scan test in segment "
+scan_test_error_segment:
+db "0000"
+db " $"
+
+scan_test_success:
+db 0Dh, 0Ah
+db "    Page "
+scan_test_success_offset:
+db "0000"
+db " passed scan test in segment "
+scan_test_success_segment:
+db "0000"
+db " $"
 
 
 test_page_with_ax:
+public  test_page_with_ax
 
-    push  di
-    push  cx
+    PUSHA_MACRO
     xor   di, di
     mov   cx, 16384 / 2
     repe  scasw
     jne   print_test_error
-    pop   cx
-    pop   di
+    mov   si, OFFSET scan_test_success_offset
+    call  print_hex_word_bx 
+    mov   si, OFFSET scan_test_success_segment
+    mov   bx, es
+    call  print_hex_word_bx 
+    PRINT_STRING scan_test_success
+    return_test_page:
+    POPA_MACRO
     ret
 
     print_test_error:
-    push  si
 
     mov  si, OFFSET scan_test_error_offset
     call  print_hex_word_bx 
+    mov   si, OFFSET scan_test_error_segment
+    mov   bx, es
+    call  print_hex_word_bx 
 
     PRINT_STRING scan_test_error
-    pop   si
-    pop   cx
-    pop   di
-    ret
 
+    call  prompt_for_key
+
+    jmp   return_test_page
 
 test_four_pages:
 
     push  es
-    mov   es, word ptr ds:[VARIABLE_page_frame+0]
-    call  test_page_with_ax
-    inc   ax
     mov   es, word ptr ds:[VARIABLE_page_frame+2]
     call  test_page_with_ax
     inc   ax
-    mov   es, word ptr ds:[VARIABLE_page_frame+4]
+    mov   es, word ptr ds:[VARIABLE_page_frame+6]
     call  test_page_with_ax
     inc   ax
-    mov   es, word ptr ds:[VARIABLE_page_frame+6]
+    mov   es, word ptr ds:[VARIABLE_page_frame+10]
+    call  test_page_with_ax
+    inc   ax
+    mov   es, word ptr ds:[VARIABLE_page_frame+14]
     call  test_page_with_ax
     inc   ax
     pop   es
@@ -904,24 +974,164 @@ public test_64_pages_in_reverse
 
     call  test_four_pages
     sub   ax, 8
-    cmp   ax, 4
-    je    do_pause_scan
-    cmp   ax, 24
-    je    do_pause_scan
-    cmp   ax, 44
-    je    do_pause_scan
-    done_pausing_back_to_looping_scan:
+
     loop  loop_scan_next_four
 
     pop   ax
     pop   cx
     ret
 
-do_pause_scan:
-    push ax
-    call prompt_for_key
-    pop  ax
-    jmp  done_pausing_back_to_looping_scan
+
+
+; TODO for 5000h style.
+; for 5001h style 
+ALIGN 2
+
+VARIABLE_page_frame:  ; page frame separated by 4 each
+map_1701_page_list_four:
+dw  0, 0  ; four pages
+dw  0, 0
+dw  0, 0
+dw  0, 0
+map_1701_page_list_full:
+; include conventional
+CONVENTIONALPAGEADDER = 04000h
+REPT 24
+    dw 0, CONVENTIONALPAGEADDER
+    CONVENTIONALPAGEADDER = CONVENTIONALPAGEADDER + 0400h
+ENDM
+
+
+map_1700_page_list_four:
+dw  0, 0  ; four pages
+dw  0, 1
+dw  0, 2
+dw  0, 3
+map_1700_page_list_full:
+; include conventional
+CONVENTIONALPAGEADDER = 04000h
+REPT 24
+    dw 0, CONVENTIONALPAGEADDER
+    CONVENTIONALPAGEADDER = CONVENTIONALPAGEADDER + 0400h
+ENDM
+
+test_random_four_5701:
+public  test_random_four_5701
+
+    push   cx
+    push   di
+    mov    di, offset  map_1701_page_list_four
+    mov    cx, 4
+
+    loop_set_random_page:
+        call   get_random_in_ax
+        ; modulo 64... 
+        add    ax, cx
+        and    ax, 63
+        stosw
+        inc    di
+        inc    di
+        loop loop_set_random_page
+
+    pop    di
+    push   si
+
+    mov   cx, 4
+    mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
+    mov   ax, 05001h
+
+    mov   si, OFFSET map_1701_page_list_four
+    int   067h
+
+
+    push  es
+    les   ax, dword ptr ds:[map_1701_page_list_four+0] ; es gets eg, ax gets value...
+    mov   bx, ax
+    call  test_page_with_ax
+    les   ax, dword ptr ds:[map_1701_page_list_four+4]
+    mov   bx, ax
+    call  test_page_with_ax
+    les   ax, dword ptr ds:[map_1701_page_list_four+8]
+    mov   bx, ax
+    call  test_page_with_ax
+    les   ax, dword ptr ds:[map_1701_page_list_four+12]
+    mov   bx, ax
+    call  test_page_with_ax
+    pop   es
+
+
+    pop   si
+    pop   cx
+    ret
+
+
+get_random_in_ax:
+     push  cx
+     push  dx
+     xor   ax, ax
+     int   01Ah  ; read system clock counter
+         
+     mov   ax, 30817 ; big prime
+     mul   dx
+     add   ax, 11177
+     pop   dx
+     pop   cx
+     ret
+
+test_random_four_5700:
+public  test_random_four_5700
+
+    push   cx
+    push   di
+    mov    di, offset  map_1700_page_list_four
+
+    mov    cx, 4
+public map_1700_page_list_four
+    loop_set_random_page_5700:
+        call   get_random_in_ax
+        ; modulo 64... 
+        add    ax, cx
+        and    ax, 63
+        stosw
+        inc    di
+        inc    di
+        loop loop_set_random_page_5700
+
+    pop    di
+    push   si
+
+    mov   cx, 4
+    mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
+    mov   ax, 05000h
+
+    mov   si, OFFSET map_1700_page_list_four
+    int   067h
+
+
+    push  es
+    mov   ax, word ptr ds:[map_1700_page_list_four+0]
+    mov   bx, ax
+    mov   es, word ptr ds:[VARIABLE_page_frame+2]
+    call  test_page_with_ax
+    mov   ax, word ptr ds:[map_1700_page_list_four+4]
+    mov   bx, ax
+    mov   es, word ptr ds:[VARIABLE_page_frame+6]
+    mov   bx, ax
+    call  test_page_with_ax
+    mov   ax, word ptr ds:[map_1700_page_list_four+8]
+    mov   bx, ax
+    mov   es, word ptr ds:[VARIABLE_page_frame+10]
+    call  test_page_with_ax
+    mov   ax, word ptr ds:[map_1700_page_list_four+12]
+    mov   bx, ax
+    mov   es, word ptr ds:[VARIABLE_page_frame+14]
+    call  test_page_with_ax
+    pop   es
+
+
+    pop   si
+    pop   cx
+    ret
 
 
 ;; ACCESSORY FUNCTIONS END
@@ -942,8 +1152,6 @@ do_pause_scan:
 
 VARIABLE_exit_sp:
 dw 0
-VARIABLE_page_frame:
-dw 0, 0, 0, 0  ; four segments
 VARIABLE_unallocated_page_count:
 dw 0
 VARIABLE_unallocated_total_page_count:
@@ -957,6 +1165,8 @@ dw 0
 VARIABLE_saved_handle_4:
 dw 0
 VARIABLE_saved_handle_5:
+dw 0
+VARIABLE_dead_handle:
 dw 0
 
 
