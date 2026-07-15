@@ -418,23 +418,27 @@ call fill_in_64_pages
 mov   dx, word ptr ds:[VARIABLE_saved_handle_4]
 xor   ax, ax
 call  page_in_four_pages_starting_at_ax
+mov   ax, 64
 call  fill_in_four_pages_increment_ax
 
 mov   dx, word ptr ds:[VARIABLE_saved_handle_3]
 xor   ax, ax
 call  page_in_four_pages_starting_at_ax
+mov   ax, 68
 call  fill_in_four_pages_increment_ax
 
 
 mov   dx, word ptr ds:[VARIABLE_saved_handle_2]
 xor   ax, ax
 call  page_in_four_pages_starting_at_ax
+mov   ax, 72
 call  fill_in_four_pages_increment_ax
 
 
 mov   dx, word ptr ds:[VARIABLE_saved_handle_1]
 xor   ax, ax
 call  page_in_four_pages_starting_at_ax
+mov   ax, 76
 call  fill_in_four_pages_increment_ax
 
 
@@ -442,13 +446,9 @@ call  fill_in_four_pages_increment_ax
 mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
 call  test_64_pages_in_reverse
 
-;;;; done testing pages one by one. now random!
+;;;; done testing pages one by one. 
 
 
-; TEST 10: test pages in page frame via function 8/9 stack
-PRINT_RUNNING_TEST 10
-
-; TODO
 
 
 ; create a dead handle
@@ -464,6 +464,139 @@ mov   ax, 04511h
 int   067h
 TEST_RESULT_DX_NO_VAL
 TEST_RESULT_AX 0011h
+
+; TODO various bad handle tests
+
+
+
+
+
+; TEST 10: test pages in page frame via function 8/9 stack
+PRINT_RUNNING_TEST 10
+
+
+mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
+mov   ax, 20
+call  page_in_four_pages_starting_at_ax
+call  test_four_pages
+
+
+mov   dx, word ptr ds:[VARIABLE_dead_handle]
+mov   ax, 04712h
+int   067h
+TEST_RESULT_AX 08312h  ; bad handle
+
+mov   ax, 04822h
+int   067h
+TEST_RESULT_AX 08322h  ; bad handle
+
+; should be page 20 21 22 23
+
+mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
+
+mov   ax, 04823h
+int   067h
+TEST_RESULT_AX 08E23h  ; no context
+
+
+mov   ax, 04713h
+int   067h
+TEST_RESULT_AX 00013h ; good
+
+mov   ax, 04714h
+int   067h
+TEST_RESULT_AX 08D14h  ; already have a state.
+
+
+mov   ax, 10
+call  page_in_four_pages_starting_at_ax
+call  test_four_pages
+
+mov   ax, 04824h
+int   067h
+TEST_RESULT_AX 00024h  ; good context
+
+mov   ax, 20
+call  test_four_pages
+
+; now lets do 3 handles on stack
+
+mov   ax, 04713h
+int   067h
+TEST_RESULT_AX 00013h ; good
+
+mov   dx, word ptr ds:[VARIABLE_saved_handle_4]
+mov   ax, 04713h
+int   067h
+TEST_RESULT_AX 00013h ; good
+
+xor   ax, ax
+call  page_in_four_pages_starting_at_ax
+mov   ax, 64
+call  test_four_pages
+
+mov   dx, word ptr ds:[VARIABLE_saved_handle_3]
+mov   ax, 04713h
+int   067h
+TEST_RESULT_AX 00013h ; good
+
+xor   ax, ax
+call  page_in_four_pages_starting_at_ax
+mov   ax, 68
+call  test_four_pages
+
+mov   dx, word ptr ds:[VARIABLE_saved_handle_2]
+mov   ax, 04713h
+int   067h
+TEST_RESULT_AX 00013h ; good
+
+xor   ax, ax
+call  page_in_four_pages_starting_at_ax
+mov   ax, 72
+call  test_four_pages
+
+
+mov   dx, word ptr ds:[VARIABLE_saved_handle_1]
+mov   ax, 04713h
+int   067h
+TEST_RESULT_AX 00013h ; good
+
+xor   ax, ax
+call  page_in_four_pages_starting_at_ax
+mov   ax, 76
+call  test_four_pages
+
+mov   ax, 04824h
+int   067h
+TEST_RESULT_AX 00024h  ; good context
+
+mov   dx, word ptr ds:[VARIABLE_saved_handle_2]
+mov   ax, 72
+call  test_four_pages
+mov   ax, 04824h
+int   067h
+TEST_RESULT_AX 00024h ; good
+
+mov   dx, word ptr ds:[VARIABLE_saved_handle_3]
+mov   ax, 68
+call  test_four_pages
+mov   ax, 04824h
+int   067h
+TEST_RESULT_AX 00024h ; good
+
+
+mov   dx, word ptr ds:[VARIABLE_saved_handle_4]
+mov   ax, 64
+call  test_four_pages
+mov   ax, 04824h
+int   067h
+TEST_RESULT_AX 00024h ; good
+
+
+mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
+mov   ax, 20
+call  test_four_pages
+
 
 
 
@@ -919,6 +1052,7 @@ public  test_page_with_ax
     repe  scasw
     jne   print_test_error
     mov   si, OFFSET scan_test_success_offset
+    mov   bx, ax
     call  print_hex_word_bx 
     mov   si, OFFSET scan_test_success_segment
     mov   bx, es
@@ -1046,16 +1180,12 @@ public  test_random_four_5701
 
     push  es
     les   ax, dword ptr ds:[map_1701_page_list_four+0] ; es gets eg, ax gets value...
-    mov   bx, ax
     call  test_page_with_ax
     les   ax, dword ptr ds:[map_1701_page_list_four+4]
-    mov   bx, ax
     call  test_page_with_ax
     les   ax, dword ptr ds:[map_1701_page_list_four+8]
-    mov   bx, ax
     call  test_page_with_ax
     les   ax, dword ptr ds:[map_1701_page_list_four+12]
-    mov   bx, ax
     call  test_page_with_ax
     pop   es
 
@@ -1110,20 +1240,15 @@ public map_1700_page_list_four
 
     push  es
     mov   ax, word ptr ds:[map_1700_page_list_four+0]
-    mov   bx, ax
     mov   es, word ptr ds:[VARIABLE_page_frame+2]
     call  test_page_with_ax
     mov   ax, word ptr ds:[map_1700_page_list_four+4]
-    mov   bx, ax
     mov   es, word ptr ds:[VARIABLE_page_frame+6]
-    mov   bx, ax
     call  test_page_with_ax
     mov   ax, word ptr ds:[map_1700_page_list_four+8]
-    mov   bx, ax
     mov   es, word ptr ds:[VARIABLE_page_frame+10]
     call  test_page_with_ax
     mov   ax, word ptr ds:[map_1700_page_list_four+12]
-    mov   bx, ax
     mov   es, word ptr ds:[VARIABLE_page_frame+14]
     call  test_page_with_ax
     pop   es
