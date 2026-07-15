@@ -139,11 +139,11 @@ mov   ax, 04102h
 int   067h
 PRINT_HEX_VALUE_BX string_hex_page_frame_address string_hex_page_frame_address_offset
 mov   word ptr ds:[VARIABLE_page_frame+0], bx
-add   bh, 040h
+add   bh, 04h
 mov   word ptr ds:[VARIABLE_page_frame+2], bx
-add   bh, 040h
+add   bh, 04h
 mov   word ptr ds:[VARIABLE_page_frame+4], bx
-add   bh, 040h
+add   bh, 04h
 mov   word ptr ds:[VARIABLE_page_frame+6], bx
 TEST_RESULT_AX 0002h
 
@@ -353,10 +353,118 @@ TEST_RESULT_AX 000Eh
 call prompt_for_key
 
 
+; TEST 9: allocate pages and put stuff in them. then page around and confirm their contents are ok
+PRINT_RUNNING_TEST 9
+
+
 ;     FUNCTION 5    MAP/UNMAP HANDLE PAGES
+mov   cx, 4
+mov   ax, 04307h
+mov   bx, cx
+int   067h
+call  print_handle
+TEST_RESULT_AX 0007h
+mov   word ptr ds:[VARIABLE_saved_handle_1], dx
+
+mov   ax, 04308h
+mov   bx, cx
+int   067h
+call  print_handle
+TEST_RESULT_AX 0008h
+mov   word ptr ds:[VARIABLE_saved_handle_2], dx
+
+mov   ax, 04309h
+mov   bx, cx
+int   067h
+call  print_handle
+TEST_RESULT_AX 0009h
+mov   word ptr ds:[VARIABLE_saved_handle_3], dx
+
+mov   ax, 04309h
+mov   bx, cx
+int   067h
+call  print_handle
+TEST_RESULT_AX 0009h
+mov   word ptr ds:[VARIABLE_saved_handle_4], dx
+
+mov   ax, 04309h
+mov   bx, 64
+int   067h
+call  print_handle
+TEST_RESULT_AX 0009h
+mov   word ptr ds:[VARIABLE_saved_handle_5], dx
+
+mov   ax, 0420Ah
+int   067h
+TEST_RESULT_AX 000Ah
+mov   ax, word ptr ds:[VARIABLE_unallocated_page_count]
+sub   ax, 64 + 16
+mov   word ptr ds:[expected_value], ax
+mov   dx, bx
+TEST_RESULT_DX_NO_VAL
+
+mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
+
+call fill_in_64_pages
+
+mov   dx, word ptr ds:[VARIABLE_saved_handle_4]
+xor   ax, ax
+call  page_in_four_pages_starting_at_ax
+call  fill_in_four_pages_increment_ax
+
+mov   dx, word ptr ds:[VARIABLE_saved_handle_3]
+xor   ax, ax
+call  page_in_four_pages_starting_at_ax
+call  fill_in_four_pages_increment_ax
+
+
+mov   dx, word ptr ds:[VARIABLE_saved_handle_2]
+xor   ax, ax
+call  page_in_four_pages_starting_at_ax
+call  fill_in_four_pages_increment_ax
+
+
+mov   dx, word ptr ds:[VARIABLE_saved_handle_1]
+xor   ax, ax
+call  page_in_four_pages_starting_at_ax
+call  fill_in_four_pages_increment_ax
+
+call prompt_for_key
+
+mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
+call  test_64_pages_in_reverse
+
+;;;; done testing pages one by one. now random!
+
+; TEST 10: test random pages in page frame via function 17 map/unmap multiple
+PRINT_RUNNING_TEST 10
 
 
 
+
+; TEST 11: test pages in page frame via function 8/9 stack
+PRINT_RUNNING_TEST 11
+
+
+; TEST 12: test pages in page frame via function 15 get/set page map
+PRINT_RUNNING_TEST 12
+
+; TEST 13: test pages in page frame via function 16 get/set partial page map
+PRINT_RUNNING_TEST 13
+
+
+; TEST 14: test pages in conventional region via function 5 page one
+PRINT_RUNNING_TEST 14
+
+
+; TEST 15: test pages in conventional region via function 17 map/unmap multiple
+PRINT_RUNNING_TEST 15
+
+; TEST 16: test pages in conventional region via function 15 get/set page map
+PRINT_RUNNING_TEST 16
+
+; TEST 17: test pages in conventional region via function 16 get/set partial page map
+PRINT_RUNNING_TEST 17
 
 
 
@@ -639,13 +747,181 @@ db "Currently paused - press a key to continue. $"
 
 prompt_for_key:
 
+push dx
 PRINT_STRING string_paused
-
+pop  dx
 xor  ax, ax
 int  016h
 ret
 
+fill_in_page_with_ax:
 
+    push  di
+    push  cx
+    xor   di, di
+    mov   cx, 16384 / 2
+    rep   stosw
+    pop   cx
+    pop   di
+    ret
+
+fill_in_four_pages_increment_ax:
+
+    push  es
+    mov   es, word ptr ds:[VARIABLE_page_frame+0]
+    call  fill_in_page_with_ax
+    inc   ax
+    mov   es, word ptr ds:[VARIABLE_page_frame+2]
+    call  fill_in_page_with_ax
+    inc   ax
+    mov   es, word ptr ds:[VARIABLE_page_frame+4]
+    call  fill_in_page_with_ax
+    inc   ax
+    mov   es, word ptr ds:[VARIABLE_page_frame+6]
+    call  fill_in_page_with_ax
+    inc   ax
+    pop   es
+    ret
+
+page_in_four_pages_starting_at_ax:
+    push  ax
+    xor   bx, bx
+    mov   bl, al
+    mov   ax, 04400h
+    int   067h
+    TEST_RESULT_AX 0000h
+
+    mov   ax, 04401h
+    inc   bx
+    int   067h
+    TEST_RESULT_AX 0001h
+
+    mov   ax, 04402h
+    inc   bx
+    int   067h
+    TEST_RESULT_AX 0002h
+
+    mov   ax, 04403h
+    inc   bx
+    int   067h
+    TEST_RESULT_AX 0003h
+
+    pop   ax
+    ret
+
+fill_in_64_pages:
+
+    push  cx
+    push  ax
+    xor   ax, ax
+    mov   cx, 16
+
+    loop_fill_in_next_four:
+    call  page_in_four_pages_starting_at_ax
+
+    call  fill_in_four_pages_increment_ax
+    cmp   ax, 20
+    je    do_pause
+    cmp   ax, 40
+    je    do_pause
+    cmp   ax, 60
+    je    do_pause
+    done_pausing_back_to_looping:
+    loop  loop_fill_in_next_four
+
+    pop   ax
+    pop   cx
+    ret
+
+do_pause:
+    push ax
+    call prompt_for_key
+    pop  ax
+    jmp  done_pausing_back_to_looping
+
+scan_test_error:
+db 0Dh, 0Ah
+db "    Page "
+scan_test_error_offset:
+db "0000"
+db " failed scan test $"
+
+
+test_page_with_ax:
+
+    push  di
+    push  cx
+    xor   di, di
+    mov   cx, 16384 / 2
+    repe  scasw
+    jne   print_test_error
+    pop   cx
+    pop   di
+    ret
+
+    print_test_error:
+    push  si
+
+    mov  si, OFFSET scan_test_error_offset
+    call  print_hex_word_bx 
+
+    PRINT_STRING scan_test_error
+    pop   si
+    pop   cx
+    pop   di
+    ret
+
+
+test_four_pages:
+
+    push  es
+    mov   es, word ptr ds:[VARIABLE_page_frame+0]
+    call  test_page_with_ax
+    inc   ax
+    mov   es, word ptr ds:[VARIABLE_page_frame+2]
+    call  test_page_with_ax
+    inc   ax
+    mov   es, word ptr ds:[VARIABLE_page_frame+4]
+    call  test_page_with_ax
+    inc   ax
+    mov   es, word ptr ds:[VARIABLE_page_frame+6]
+    call  test_page_with_ax
+    inc   ax
+    pop   es
+    ret
+
+
+test_64_pages_in_reverse:
+public test_64_pages_in_reverse
+
+    push  cx
+    push  ax
+    mov   ax, 60
+    mov   cx, 16
+
+    loop_scan_next_four:
+    call  page_in_four_pages_starting_at_ax
+
+    call  test_four_pages
+    sub   ax, 8
+    cmp   ax, 4
+    je    do_pause_scan
+    cmp   ax, 24
+    je    do_pause_scan
+    cmp   ax, 44
+    je    do_pause_scan
+    done_pausing_back_to_looping_scan:
+    loop  loop_scan_next_four
+
+    pop   ax
+    pop   cx
+    ret
+
+do_pause_scan:
+    push ax
+    call prompt_for_key
+    pop  ax
+    jmp  done_pausing_back_to_looping_scan
 
 
 ;; ACCESSORY FUNCTIONS END
