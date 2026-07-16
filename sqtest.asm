@@ -115,6 +115,11 @@ TEST_EMS_REGISTER_CALL_NO_BX_DX MACRO testax
     call do_ems_call_and_register_test_no_bx_dx
 ENDM
 
+TEST_EMS_REGISTER_CALL_NO_BX_CX MACRO testax
+    mov  word ptr ds:[VARIABLE_expected_register_ax], testax
+    call do_ems_call_and_register_test_no_bx_cx
+ENDM
+
 PRINT_HANDLE MACRO
     ; call  print_handle
 ENDM
@@ -555,7 +560,7 @@ TEST_RESULT_BX  AX  ; handle count shout be increased by 6
 mov   ax, 04511h
 TEST_EMS_REGISTER_CALL_ALL 0011h
 
-; TODO various bad handle tests
+; TODO more bad handle tests and bad subfunction
 
 
 ; NOTE: this assumes handles currently allocated 1-5 which is... iffy.  but true for sqemm
@@ -1071,14 +1076,157 @@ add   di, 10
 mov   si, offset HANDLE_NAME_4
 call  compare_handle_name
 
+; TEST 19: test OS features
+
+PRINT_RUNNING_TEST 19
+;     FUNCTION 30   ENABLE/DISABLE OS/E FUNCTION SET FUNCTIONS
+
+mov   ax, 05D03h
+TEST_EMS_REGISTER_CALL_ALL 08F03h ; bad subfunction
+
+mov   ax, 05D02h
+TEST_EMS_REGISTER_CALL_ALL 0A402h
 
 
+mov   ax, 05D00h
+TEST_EMS_REGISTER_CALL_NO_BX_CX 0000h
+
+mov   word ptr ds:[VARIABLE_OS_key+0], BX
+mov   word ptr ds:[VARIABLE_OS_key+2], CX
+
+mov   ax, 05D00h
+TEST_EMS_REGISTER_CALL_ALL 0000h
+mov   ax, 05D01h
+TEST_EMS_REGISTER_CALL_ALL 0001h
+
+;     FUNCTION 26   GET EXPANDED MEMORY HARDWARE INFORMATION
+
+
+;      FUNCTION 28   ALTERNATE MAP REGISTER SET
+
+
+here:
+public here
+
+mov   di, offset func_26_hardware_info
+mov   ax, 05900h
+TEST_EMS_REGISTER_CALL_ALL 0A400h  ; access denied
+mov   ax, 05B02h
+TEST_EMS_REGISTER_CALL_ALL 0A402h
+
+mov   ax, 05D00h            ; enable access!
+TEST_EMS_REGISTER_CALL_ALL 0000h
+
+push  bx
+
+mov   ax, 05900h
+TEST_EMS_REGISTER_CALL_ALL 00000h  ; access enabled
+; test anything in es:di? seems unimportant.
+
+mov   ax, 05B02h
+TEST_EMS_REGISTER_CALL_NO_DX 00002h
+
+mov   ax, 05B03h
+TEST_EMS_REGISTER_CALL_NO_BX 00003h
+mov   ax, 05B04h
+TEST_EMS_REGISTER_CALL_ALL 00004h
+mov   bx, 1
+mov   ax, 05B04h
+TEST_EMS_REGISTER_CALL_ALL 09C04h
+
+mov   ax, 05B05h
+TEST_EMS_REGISTER_CALL_NO_BX 00005h
+mov   ax, 05B06h
+TEST_EMS_REGISTER_CALL_ALL 00006h
+mov   bx, 1
+mov   ax, 05B07h
+TEST_EMS_REGISTER_CALL_ALL 09C07h
+
+; done with func 28 stuff
+
+pop   bx
+
+inc   bx
+mov   ax, 05D00h
+TEST_EMS_REGISTER_CALL_ALL 0A400h
+mov   ax, 05D01h
+TEST_EMS_REGISTER_CALL_ALL 0A401h
+mov   ax, 05D02h
+TEST_EMS_REGISTER_CALL_ALL 0A402h
+
+dec   bx
+inc   cx
+mov   ax, 05D00h
+TEST_EMS_REGISTER_CALL_ALL 0A400h
+mov   ax, 05D01h
+TEST_EMS_REGISTER_CALL_ALL 0A401h
+mov   ax, 05D02h
+TEST_EMS_REGISTER_CALL_ALL 0A402h
+
+dec   cx ; key good again
+
+
+mov   ax, 05D00h
+TEST_EMS_REGISTER_CALL_ALL 0000h
+mov   ax, 05D01h
+TEST_EMS_REGISTER_CALL_ALL 0001h
+mov   ax, 05900h
+TEST_EMS_REGISTER_CALL_ALL 0A400h
+mov   ax, 05B02h
+TEST_EMS_REGISTER_CALL_ALL 0A402h
+
+
+
+mov   ax, 05D02h
+TEST_EMS_REGISTER_CALL_ALL 0002h
+
+mov   ax, 05D01h
+TEST_EMS_REGISTER_CALL_NO_BX_CX 0001h ; get new key
+
+mov   ax, 05D00h
+TEST_EMS_REGISTER_CALL_ALL 0000h  ; enable access.
+
+
+
+
+mov   ax, 05D02h
+TEST_EMS_REGISTER_CALL_ALL 0002h ; release key again
+
+
+;     FUNCTION 29   PREPARE EXPANDED MEMORY HARDWARE FOR WARM BOOT
+
+
+mov   ax, 05C23h
+TEST_EMS_REGISTER_CALL_ALL 023h  ; warm boot
+
+
+
+; TEST 20: test map 28 pagination
+PRINT_RUNNING_TEST 20
+
+
+; TEST 21: test -1 paging/unpaging
+PRINT_RUNNING_TEST 21
+
+; TEST 22: test function 22 alter and jump
+PRINT_RUNNING_TEST 22
+
+; TEST 23: test function 23 alter and call
+PRINT_RUNNING_TEST 23
+
+; TEST 24: test function 24 move
+PRINT_RUNNING_TEST 24
 
 
 ; todo: test -1 paging/unpaging
+; todo test OS stuff?
 
 
 ; deallocate
+
+
+; TEST 30: Deallocation
+PRINT_RUNNING_TEST 30
 
 mov   dx, word ptr ds:[VARIABLE_saved_handle_1]
 mov   ax, 04510h
@@ -1140,9 +1288,9 @@ TEST_EMS_REGISTER_CALL_ALL 0010h
 
 
 
-; todo test all registers after each call to detect trashing.
 
-quit_exit_program: ; todo detect stack mismatch?
+
+quit_exit_program: ;  detect stack mismatch? probably fine if we made it here
 mov   sp, word ptr cs:[VARIABLE_exit_sp]
 
 
@@ -1979,6 +2127,12 @@ do_ems_call_and_register_test_no_al:
     mov  byte ptr ds:[VARIABLE_skip_al], 1
     jmp  do_ems_call_and_register_test
 
+do_ems_call_and_register_test_no_bx_cx:
+    mov  byte ptr ds:[VARIABLE_skip_bx], 1
+    mov  byte ptr ds:[VARIABLE_skip_cx], 1
+    mov  word ptr ds:[VARIABLE_expected_register_dx], dx
+    jmp entry_after_cx
+
 
 compare_handle_name:
 
@@ -2154,6 +2308,9 @@ VARIABLE_total_handle_count:
 dw 0
 VARIABLE_handle_directory_count:
 dw 0
+VARIABLE_OS_key:
+dw 0
+dw 0
 
 
 HANDLE_NAME_0:
@@ -2205,6 +2362,7 @@ dw 0, 0
 ENDM
 
 func_21_handle_directory: ; reuse this region
+func_26_hardware_info: ; reuse this region
 pagemap_1_func_15:
 partial_pagemap_1_func_16_save_area:
 REPT 64
