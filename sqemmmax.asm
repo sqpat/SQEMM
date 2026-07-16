@@ -2621,8 +2621,9 @@ iret
 
 do_func_5400:  
 
-PUSHA_MACRO
 push  ds
+PUSHA_MACRO
+push  di
 push  cs
 pop   ds
 
@@ -2652,10 +2653,19 @@ func_21_loop_next_handle:
   add  si, bp
   loop func_21_loop_next_handle
 
-pop   ds
+xchg ax, di
+pop  di       ; original di pointer.
+sub  ax, di   ; array data length
+mov  di, 10   ; 10 bytes per entry...
+inc  dx  ; zero 
+div  di
 
+mov  ds, ax ; ugh store result here.
 
 POPA_MACRO ; ax restored.
+mov ax, ds
+pop   ds
+
 ; ah 0
 
 iret
