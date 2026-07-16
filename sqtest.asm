@@ -224,6 +224,15 @@ TEST_EMS_REGISTER_CALL_NO_BX 0040h
 
 mov   word ptr ds:[VARIABLE_total_handle_count], bx
 
+; just look this variable up for now
+
+mov   ax, 05400h
+mov   di, OFFSET func_21_handle_directory 
+TEST_EMS_REGISTER_CALL_NO_AL 000h  
+mov   word ptr ds:[VARIABLE_handle_directory_count], ax
+
+
+
 
 ;     FUNCTION 4    ALLOCATE PAGES
 
@@ -248,6 +257,14 @@ TEST_EMS_REGISTER_CALL_NO_BX 0040h
 mov   ax, word ptr ds:[VARIABLE_total_handle_count]
 inc   ax
 TEST_RESULT_BX  AX  ; handle count shout be decreased by 1
+
+mov   ax, 05400h
+mov   di, OFFSET func_21_handle_directory 
+TEST_EMS_REGISTER_CALL_NO_AL 000h  
+mov   bx, word ptr ds:[VARIABLE_handle_directory_count]
+inc   bx
+TEST_RESULT_BX  AX  ; should be increased by 1
+
 
 
 ; dx maintains index
@@ -880,6 +897,9 @@ call  test_partial_pagemap
 
 skip_conventional:
 
+; TEST 17: test handle attribute
+PRINT_RUNNING_TEST 17
+
 ;     FUNCTION 19   GET/SET HANDLE ATTRIBUTE (CONTINUED)
 mov   ax, 05202h  ; get capability
 TEST_EMS_REGISTER_CALL_ALL 0000h
@@ -908,6 +928,151 @@ TEST_EMS_REGISTER_CALL_ALL 09101h  ; unsupported
 mov   bl, 1   ; bad attribute type
 mov   ax, 05200h  
 TEST_EMS_REGISTER_CALL_ALL 09100h  ; unsupported
+
+
+
+; TEST 18: test handle name stuff
+PRINT_RUNNING_TEST 18
+mov   dx, word ptr cs:[VARIABLE_saved_handle_1]
+mov   si, offset HANDLE_NAME_BLANK
+mov   ax, 05301h
+mov   di, OFFSET EMPTY_HANDLE_LOCATION
+TEST_EMS_REGISTER_CALL_ALL 0A101h  ; ehh not sure. null name?
+
+mov   si, offset HANDLE_NAME_0
+mov   ax, 05301h
+TEST_EMS_REGISTER_CALL_ALL 00001h  ; good
+
+mov   dx, word ptr cs:[VARIABLE_dead_handle]
+mov   ax, 05300h
+TEST_EMS_REGISTER_CALL_ALL 08300h  ; bad handle
+mov   ax, 05301h
+TEST_EMS_REGISTER_CALL_ALL 08301h  ; bad handle
+
+mov   dx, word ptr cs:[VARIABLE_saved_handle_2]
+mov   ax, 05301h
+TEST_EMS_REGISTER_CALL_ALL 0A101h  ; bad handle
+mov   si, offset HANDLE_NAME_1
+mov   ax, 05301h
+TEST_EMS_REGISTER_CALL_ALL 00001h  ; good
+
+mov   dx, word ptr cs:[VARIABLE_saved_handle_3]
+mov   si, offset HANDLE_NAME_2
+mov   ax, 05301h
+TEST_EMS_REGISTER_CALL_ALL 00001h  ; good
+
+mov   dx, word ptr cs:[VARIABLE_saved_handle_4]
+mov   si, offset HANDLE_NAME_3
+mov   ax, 05301h
+TEST_EMS_REGISTER_CALL_ALL 00001h  ; good
+
+
+mov   dx, word ptr cs:[VARIABLE_saved_handle_5]
+mov   si, offset HANDLE_NAME_4
+mov   ax, 05301h
+TEST_EMS_REGISTER_CALL_ALL 00001h  ; good
+
+
+mov   dx, word ptr cs:[VARIABLE_saved_handle_1]
+mov   ax, 05300h
+TEST_EMS_REGISTER_CALL_ALL 00000h  ; good
+mov   si, offset HANDLE_NAME_0
+call  compare_handle_name
+
+mov   dx, word ptr cs:[VARIABLE_saved_handle_2]
+mov   ax, 05300h
+TEST_EMS_REGISTER_CALL_ALL 00000h  ; good
+mov   si, offset HANDLE_NAME_1
+call  compare_handle_name
+
+mov   dx, word ptr cs:[VARIABLE_saved_handle_3]
+mov   ax, 05300h
+TEST_EMS_REGISTER_CALL_ALL 00000h  ; good
+mov   si, offset HANDLE_NAME_2
+call  compare_handle_name
+
+mov   dx, word ptr cs:[VARIABLE_saved_handle_4]
+mov   ax, 05300h
+TEST_EMS_REGISTER_CALL_ALL 00000h  ; good
+mov   si, offset HANDLE_NAME_3
+call  compare_handle_name
+
+mov   dx, word ptr cs:[VARIABLE_saved_handle_5]
+mov   ax, 05300h
+TEST_EMS_REGISTER_CALL_ALL 00000h  ; good
+mov   si, offset HANDLE_NAME_4
+call  compare_handle_name
+
+
+;     FUNCTION 21   GET HANDLE DIRECTORY
+
+
+mov   si, offset HANDLE_NAME_4
+mov   ax, 05401h
+TEST_EMS_REGISTER_CALL_NO_DX 0001h  ; good
+mov   ax, word ptr cs:[VARIABLE_saved_handle_5]
+TEST_RESULT_DX  AX  ; handle should equal
+
+mov   si, offset HANDLE_NAME_3
+mov   ax, 05401h
+TEST_EMS_REGISTER_CALL_NO_DX 0001h  ; good
+mov   ax, word ptr cs:[VARIABLE_saved_handle_4]
+TEST_RESULT_DX  AX  ; handle should equal
+
+
+mov   si, offset HANDLE_NAME_2
+mov   ax, 05401h
+TEST_EMS_REGISTER_CALL_NO_DX 0001h  ; good
+mov   ax, word ptr cs:[VARIABLE_saved_handle_3]
+TEST_RESULT_DX  AX  ; handle should equal
+
+mov   si, offset HANDLE_NAME_1
+mov   ax, 05401h
+TEST_EMS_REGISTER_CALL_NO_DX 0001h  ; good
+mov   ax, word ptr cs:[VARIABLE_saved_handle_2]
+TEST_RESULT_DX  AX  ; handle should equal
+
+
+mov   si, offset HANDLE_NAME_0
+mov   ax, 05401h
+TEST_EMS_REGISTER_CALL_NO_DX 0001h  ; good
+mov   ax, word ptr cs:[VARIABLE_saved_handle_1]
+TEST_RESULT_DX  AX  ; handle should equal
+
+mov   ax, 05403h
+TEST_EMS_REGISTER_CALL_ALL 08F03h  ; bad subfunc
+
+mov   ax, 05402h
+TEST_EMS_REGISTER_CALL_NO_BX 00002h  ; good
+
+mov   ax, 05400h
+mov   di, OFFSET func_21_handle_directory 
+TEST_EMS_REGISTER_CALL_NO_AL 000h  
+
+mov   bx, word ptr ds:[VARIABLE_handle_directory_count]
+add   bx, 5
+TEST_RESULT_BX  AX  ; should be the same
+
+; NOTE: kind of hacky, assumed ordering. correct for sqemm though.
+
+add   di, 12 ; skip OS
+mov   si, offset HANDLE_NAME_0
+call  compare_handle_name
+add   di, 10
+mov   si, offset HANDLE_NAME_1
+call  compare_handle_name
+add   di, 10
+mov   si, offset HANDLE_NAME_2
+call  compare_handle_name
+add   di, 10
+mov   si, offset HANDLE_NAME_3
+call  compare_handle_name
+add   di, 10
+mov   si, offset HANDLE_NAME_4
+call  compare_handle_name
+
+
+
 
 
 ; todo: test -1 paging/unpaging
@@ -1815,6 +1980,33 @@ do_ems_call_and_register_test_no_al:
     jmp  do_ems_call_and_register_test
 
 
+compare_handle_name:
+
+    push  si
+    push  di
+    cmpsw
+    jne   error_non_match
+    cmpsw
+    jne   error_non_match
+    cmpsw
+    jne   error_non_match
+    cmpsw
+    jne   error_non_match
+
+    pop   di
+    pop   si
+    ret
+
+error_non_match:
+    pop   di
+    pop   si
+    push  ax
+    push  dx
+
+    PRINT_STRING  handle_test_error
+    pop   dx
+    pop   ax
+    ret
 
 ;; ACCESSORY FUNCTIONS END
 ;; ACCESSORY FUNCTIONS END
@@ -1960,6 +2152,30 @@ VARIABLE_page_count:
 dw 0
 VARIABLE_total_handle_count:
 dw 0
+VARIABLE_handle_directory_count:
+dw 0
+
+
+HANDLE_NAME_0:
+db "SEARCHME"
+HANDLE_NAME_1:
+db "SQUIRTLE"
+HANDLE_NAME_2:
+db "AAAAAAAA"
+HANDLE_NAME_3:
+db "AAAA", 0, 0, 0, 0
+HANDLE_NAME_4:
+db "A"
+HANDLE_NAME_BLANK:
+db 0, 0, 0, 0, 0, 0, 0, 0
+
+
+handle_test_error:
+db 0Dh, 0Ah
+db "Handle name error: "
+
+EMPTY_HANDLE_LOCATION:
+db  0, 0, 0, 0, 0, 0, 0, 0, "$"
 
 
 VARIABLE_page_frame:  ; page frame separated by 4 each
@@ -1988,6 +2204,7 @@ REPT 64
 dw 0, 0
 ENDM
 
+func_21_handle_directory: ; reuse this region
 pagemap_1_func_15:
 partial_pagemap_1_func_16_save_area:
 REPT 64
