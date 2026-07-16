@@ -498,10 +498,6 @@ cmp   al, 2
 ja    func_30_bad_subfunction
 je    func_30_check_key
 
-cmp   byte ptr cs:[_RESIDENT_VARIABLE_access_reenabled], ah  ; 0
-jne   func_30_return_key
-
-je    func_30_check_key
 
 cmp   word ptr cs:[_RESIDENT_VARIABLE_access_key+0], DEFAULT_ACCESS_KEY_LOW
 jne   func_30_check_key
@@ -519,10 +515,17 @@ cmp   word ptr cs:[_RESIDENT_VARIABLE_access_key+0], bx
 jne   func_3000_bad_access
 cmp   word ptr cs:[_RESIDENT_VARIABLE_access_key+2], cx
 jne   func_3000_bad_access
-
+cmp   al, 2
+je    do_func_5D02
 mov   byte ptr cs:[_RESIDENT_VARIABLE_access_blocked], al ; 0 or 1 (or 2) based on subfunction.
 
 
+
+iret
+do_func_5D02:
+
+mov   word ptr cs:[_RESIDENT_VARIABLE_access_key+0], DEFAULT_ACCESS_KEY_LOW
+mov   word ptr cs:[_RESIDENT_VARIABLE_access_key+2], DEFAULT_ACCESS_KEY_HIGH
 
 iret
 
@@ -530,11 +533,11 @@ iret
 
 func_30_return_key:
 ; return key if subfunction 0 or 1. (and also do whatever function 0/1 needed to be done)
-je    func_30_check_key
+
 mov   bx, word ptr cs:[_RESIDENT_VARIABLE_access_key+0]
 mov   cx, word ptr cs:[_RESIDENT_VARIABLE_access_key+2]
-mov   byte ptr cs:[_RESIDENT_VARIABLE_access_reenabled], ah   known zero
-; unsure if this is porper behavior...
+
+; unsure if this is proper behavior...
 mov   byte ptr cs:[_RESIDENT_VARIABLE_access_blocked], al ; 0 or 1 based on subfunction
 
 iret
@@ -2281,6 +2284,7 @@ je    do_func_5b04
 cmp   al, 2
 ja    do_func_5b03
 je    do_func_5b02
+push  ax  
 cmp   al, ah ; 0
 ja    do_func_5b01
 do_func_5b00:
@@ -2316,7 +2320,7 @@ pop   cx
 pop   di
 ; ah should be 0
 pop        ax
-xor        ah, ah
+
 iret
 
 do_func_5b01:
@@ -2361,7 +2365,7 @@ skip_pointer_record:
 
 ; ah should be 0
 pop        ax
-xor        ah, ah
+
 iret
 
 
@@ -2373,19 +2377,12 @@ jz    func_28_return_ok ; value 0 is fine.
 func_5b00_nonzero_register_set:
 func_5b01_nonzero_register_set:
 func_28_return_not_supported:
-
-pop        ax
 mov   ah, 09Ch ; Alternate DMA register sets are not supported, and the DMA register set specified is not zero.
+func_28_return_ok:
 iret
 
-func_28_return_ok:
-pop        ax
-xor        ah, ah
-iret
 do_func_5b05:
 xor   bx, bx ; no dma register sets.
-pop        ax
-xor        ah, ah
 iret
 
 do_func_5b04:
@@ -2393,18 +2390,12 @@ do_func_5b04:
 test  bl, bl
 jnz   func_28_return_not_supported 
 
-pop        ax
-xor        ah, ah
 iret
 do_func_5b03:
 xor   bx, bx ; no alternate register sets supported (for now)
-pop        ax
-xor        ah, ah
 iret
 do_func_5b02:
 mov   dx, LENGTH_OF_STACK
-pop        ax
-xor        ah, ah
 iret
 
 
@@ -2419,20 +2410,21 @@ iret
 ;             Deallocate DMA Register Set                    5B08h     132
 EMS_FUNCTION_05Bh:
 xchg  ax, bx
+pop   ax     ; restore subfunction
+mov   ah, 0  ; default success
 cmp   byte ptr cs:[_RESIDENT_VARIABLE_access_blocked], ah  ; 0 
 jne   func_28_access_denied
-mov   al, byte ptr cs:[_current_call_subfunction_value]
+
 cmp   al, 8
-ja    func_28_bad_subfunction  
+ja    func_28_bad_subfunction
 je    do_func_5b08
 jmp   check_func_58
 
 func_28_access_denied:
-pop        ax
 mov   ah, 0A4h
 iret
 func_28_bad_subfunction:
-pop        ax
+
 mov        ah, 08fh
 iret
 
@@ -3043,8 +3035,6 @@ _RESIDENT_VARIABLE_access_key:
 dw DEFAULT_ACCESS_KEY_LOW, DEFAULT_ACCESS_KEY_HIGH
 
 _RESIDENT_VARIABLE_access_blocked:
-db 0
-_RESIDENT_VARIABLE_access_reenabled:
 db 0
 
 
