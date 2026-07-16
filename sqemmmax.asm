@@ -2685,6 +2685,31 @@ COMMON_util_get_register_for_segment:
    ret
 
    
+COMMON_util_get_physical_register_for_segment:
+   push  si
+   push  cx
+   mov   si, OFFSET chipset_page_lookup
+   mov   cx, CHIPSET_PAGE_FRAME_COUNT
+   ; todo scasd?
+   check_next_segment_in_physical_list:
+      lods  byte ptr cs:[si]
+      cmp   ah, al
+      je    found_page_in_physical_list
+      loop  check_next_segment_in_physical_list
+
+   ; fail... undefined behavior? or just store FFFF in there?
+   dec   cx     ; cx = -1
+   xchg  ax, cx ; ax = -1
+   jmp   return_bad_register
+   found_page_in_physical_list:
+   xchg  ax, si
+   sub   ax,  (OFFSET chipset_page_lookup) + 1
+
+   pop   cx
+   pop   si
+   ret
+
+   
 
 
 

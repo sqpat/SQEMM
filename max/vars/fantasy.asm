@@ -1,3 +1,15 @@
+chipset_page_lookup:
+
+  db 0C0h, 0C4h, 0C8h, 0CCh
+  db 0D0h, 0D4h, 0D8h, 0DCh
+  db 0E0h, 0E4h, 0E8h, 0ECh
+  db 040h, 044h, 048h, 04Ch
+  db 050h, 054h, 058h, 05Ch
+  db 060h, 064h, 068h, 06Ch
+  db 070h, 074h, 078h, 07Ch
+  db 080h, 084h, 088h, 08Ch
+  db 090h, 094h, 098h, 09Ch
+
 ; Two-word pairs. first word is page frame (04000h, 04400h... etc) up to f000.  
 ;                 second word its physical ems index port
 ; 144 bytes long 
