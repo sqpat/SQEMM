@@ -491,12 +491,16 @@ iret
 
 EMS_FUNCTION_05Dh:
 xchg  ax, bx  ; ah 0
-cmp   byte ptr cs:[_RESIDENT_VARIABLE_access_reenabled], ah  ; 0
-mov   al, byte ptr cs:[_current_call_subfunction_value]
-jne   func_30_return_key
+pop   ax  ; get subfunction in al
+mov   ah, 0 ; default success
 
 cmp   al, 2
 ja    func_30_bad_subfunction
+je    func_30_check_key
+
+cmp   byte ptr cs:[_RESIDENT_VARIABLE_access_reenabled], ah  ; 0
+jne   func_30_return_key
+
 je    func_30_check_key
 
 cmp   word ptr cs:[_RESIDENT_VARIABLE_access_key+0], DEFAULT_ACCESS_KEY_LOW
@@ -515,47 +519,39 @@ cmp   word ptr cs:[_RESIDENT_VARIABLE_access_key+0], bx
 jne   func_3000_bad_access
 cmp   word ptr cs:[_RESIDENT_VARIABLE_access_key+2], cx
 jne   func_3000_bad_access
-cmp   al, 2
-je    do_func_5D02
-mov   byte ptr cs:[_RESIDENT_VARIABLE_access_blocked], al ; 0 or 1 based on subfunction
-pop        ax
-xor        ah, ah
+
+mov   byte ptr cs:[_RESIDENT_VARIABLE_access_blocked], al ; 0 or 1 (or 2) based on subfunction.
+
+
 
 iret
 
-do_func_5D02:
-mov   byte ptr cs:[_RESIDENT_VARIABLE_access_reenabled], 1
-pop        ax
-xor        ah, ah
 
-iret
 
 func_30_return_key:
 ; return key if subfunction 0 or 1. (and also do whatever function 0/1 needed to be done)
-cmp   al, 2
-ja    func_30_bad_subfunction
 je    func_30_check_key
 mov   bx, word ptr cs:[_RESIDENT_VARIABLE_access_key+0]
 mov   cx, word ptr cs:[_RESIDENT_VARIABLE_access_key+2]
-mov   byte ptr cs:[_RESIDENT_VARIABLE_access_reenabled], ah
+mov   byte ptr cs:[_RESIDENT_VARIABLE_access_reenabled], ah   known zero
+; unsure if this is porper behavior...
 mov   byte ptr cs:[_RESIDENT_VARIABLE_access_blocked], al ; 0 or 1 based on subfunction
-pop        ax
-xor        ah, ah
+
 iret
 
+func_26_access_denied:
+pop        ax
 func_3000_bad_access:
 func_3001_bad_access:
 func_3002_bad_access:
-func_26_access_denied:
-pop        ax
 mov   ah, 0A4h
 iret
 
 func_27_bad_subfunction:
 xchg  ax, bx
 func_26_bad_subfunction:
-func_30_bad_subfunction:
 pop        ax
+func_30_bad_subfunction:
 func_52_bad_subfunction:
 mov        ah, 08fh
 iret
