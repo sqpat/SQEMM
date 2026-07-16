@@ -703,6 +703,67 @@ loop_random_conventional_pages:
 ; TEST 15: test pages in conventional region via function 15 get/set page map
 PRINT_RUNNING_TEST 15
 
+;     FUNCTION 15   GET/SET PAGE MAP
+
+mov  di, OFFSET pagemap_1_func_15
+mov  si, di
+
+mov  ax, 04E03h
+TEST_EMS_REGISTER_CALL_AH 00h
+
+; use al for anything??
+
+; page in something known - 32 and up for conventional pages. afterwards we will page to 0 and test..
+mov   ax, 32
+xor   bx, bx
+call  init_page_map  
+call  test_map_1700
+
+mov  ax, 04E00h
+TEST_EMS_REGISTER_CALL_ALL 0000h
+
+; ES:DI gets the contents filled.
+call  test_map_1700 ; nothing should have changed.
+
+mov   ax, 0
+call  init_page_map   ; remap from 32 to 0 
+call  test_map_1700   ; confirm thats good
+
+mov  ax, 04E01h
+TEST_EMS_REGISTER_CALL_ALL 0001h  ; restore
+
+mov   ax, 32
+mov   bx, 1
+call  init_page_map   ; init map state without remapping
+call  test_map_1700
+
+mov   ax, 16        ; 2nd set for get/set will be 16 indexed.
+xor   bx, bx
+call  init_page_map  
+call  test_map_1700
+
+
+mov   di, OFFSET pagemap_2_func_15
+
+mov  ax, 04E02h
+TEST_EMS_REGISTER_CALL_ALL 0002h  ; restore
+
+mov   ax, 32
+mov   bx, 1
+call  init_page_map   ; init map state without remapping
+call  test_map_1700
+
+mov   si, di  ; restore to the 16 offset one
+
+mov  ax, 04E01h
+TEST_EMS_REGISTER_CALL_ALL 0001h  ; restore
+
+mov   ax, 16
+mov   bx, 1
+call  init_page_map   ; init map state without remapping
+call  test_map_1700
+
+
 ; TEST 16: test pages in conventional region via function 16 get/set partial page map
 PRINT_RUNNING_TEST 16
 
@@ -710,8 +771,7 @@ PRINT_RUNNING_TEST 16
 skip_conventional:
 
 
-
-; deallocate
+; todo: test -1 paging/unpaging
 
 
 ; deallocate
@@ -749,6 +809,11 @@ TEST_EMS_REGISTER_CALL_ALL 0010h
 ; HANDLE MAPPING STRESS TESTS END
 ; HANDLE MAPPING STRESS TESTS END
 ; HANDLE MAPPING STRESS TESTS END
+
+
+
+; print results
+; print results
 
     std
 
@@ -1065,13 +1130,13 @@ public  test_page_with_ax
     mov   cx, 16384 / 2
     repe  scasw
     jne   print_test_error
-    mov   si, OFFSET scan_test_success_offset
-    mov   bx, ax
-    call  print_hex_word_bx 
-    mov   si, OFFSET scan_test_success_segment
-    mov   bx, es
-    call  print_hex_word_bx 
-    PRINT_STRING scan_test_success
+    ;mov   si, OFFSET scan_test_success_offset
+    ;mov   bx, ax
+    ;call  print_hex_word_bx 
+    ;mov   si, OFFSET scan_test_success_segment
+    ;mov   bx, es
+    ;call  print_hex_word_bx 
+    ;PRINT_STRING scan_test_success
     return_test_page:
     POPA_MACRO
     ret
@@ -1285,6 +1350,40 @@ public page_random_map_4400
     POPA_MACRO
     pop   es
     ret
+
+; init page map with logical page starting at ax
+; bx != 0 means dont actually page
+init_page_map:
+    push  cx
+    push  di
+    push  si
+    mov   cx, word ptr ds:[VARIABLE_page_count]
+    mov   di, OFFSET map_1700_page_list_full
+    push   cx
+    ; generate random page map
+    pagemap_loop_next_page_initmap:
+        ; page in random page map, then test them all
+        stosw
+        inc    di
+        inc    di
+        inc    ax
+
+        loop pagemap_loop_next_page_initmap
+
+    pop   cx  ; cx is page count again
+    test  bx, bx   
+    jne   skip_init_page_map_pagination   ; just set the vars for testing, do not actually page
+    mov   si, OFFSET map_1700_page_list_full
+    mov   ax, 05000h
+    TEST_EMS_REGISTER_CALL_ALL 0000h
+    skip_init_page_map_pagination:
+
+    pop   si
+    pop   di
+    pop   cx
+    ret    
+
+
 
 page_random_map_1700:
 public page_random_map_1700
@@ -1698,6 +1797,16 @@ ENDM
 map_1701_page_list_full:
 REPT 64
 dw 0, 0
+ENDM
+
+pagemap_1_func_15:
+REPT 64
+dw 0
+ENDM
+; for get and set
+pagemap_2_func_15:
+REPT 64
+dw 0
 ENDM
 
 dw 0  ; offset by 2
