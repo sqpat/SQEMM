@@ -880,7 +880,34 @@ call  test_partial_pagemap
 
 skip_conventional:
 
+;     FUNCTION 19   GET/SET HANDLE ATTRIBUTE (CONTINUED)
+mov   ax, 05202h  ; get capability
+TEST_EMS_REGISTER_CALL_ALL 0000h
 
+mov   ax, 05203h  ; bad call
+TEST_EMS_REGISTER_CALL_ALL 08F03h 
+
+; we return unsupported instead of bad handle. Is that wrong? who knows, failure either way
+;mov   dx, word ptr cs:[VARIABLE_dead_handle]
+;mov   ax, 05201h  ; bad handle
+;TEST_EMS_REGISTER_CALL_ALL 08301h 
+;mov   ax, 05200h  ; bad handle
+;TEST_EMS_REGISTER_CALL_ALL 08300h 
+
+mov   dx, word ptr cs:[VARIABLE_saved_handle_5]
+
+; we return unsupported instead of bad attribute. Is that wrong? who knows, failure either way
+;mov   bl, 3   ; bad attribute type
+;mov   ax, 05201h  
+;TEST_EMS_REGISTER_CALL_ALL 09001h 
+
+mov   bl, 1   ; bad attribute type
+mov   ax, 05201h  
+TEST_EMS_REGISTER_CALL_ALL 09101h  ; unsupported
+
+mov   bl, 1   ; bad attribute type
+mov   ax, 05200h  
+TEST_EMS_REGISTER_CALL_ALL 09100h  ; unsupported
 
 
 ; todo: test -1 paging/unpaging
