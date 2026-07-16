@@ -194,7 +194,7 @@ mov   word ptr ds:[partial_pagemap_1_func_16_page_frame+2], bx
 mov   word ptr ds:[VARIABLE_page_frame+10], bx
 add   bh, 04h
 mov   word ptr ds:[VARIABLE_page_frame+14], bx
-TEST_RESULT_AX 0002h
+
 
 
 ;     FUNCTION 7    GET VERSION
@@ -216,6 +216,15 @@ mov   word ptr ds:[VARIABLE_unallocated_total_page_count], dx
 call  print_page_count
 
 
+
+;     FUNCTION 12   GET HANDLE COUNT
+
+mov   ax, 04B40h
+TEST_EMS_REGISTER_CALL_NO_BX 0040h
+
+mov   word ptr ds:[VARIABLE_total_handle_count], bx
+
+
 ;     FUNCTION 4    ALLOCATE PAGES
 
 
@@ -226,6 +235,21 @@ mov   bx, 1
 TEST_EMS_REGISTER_CALL_NO_DX 0004h
 PRINT_HANDLE
 
+;     FUNCTION 13   GET HANDLE PAGES
+
+mov   ax, 04C41h
+TEST_EMS_REGISTER_CALL_NO_BX 0041h
+
+TEST_RESULT_BX  1
+
+
+mov   ax, 04B40h
+TEST_EMS_REGISTER_CALL_NO_BX 0040h
+mov   ax, word ptr ds:[VARIABLE_total_handle_count]
+inc   ax
+TEST_RESULT_BX  AX  ; handle count shout be decreased by 1
+
+
 ; dx maintains index
 
 
@@ -235,6 +259,17 @@ PRINT_HANDLE
 PRINT_RUNNING_TEST 6
 mov   ax, 04505h
 TEST_EMS_REGISTER_CALL_ALL 0005h
+
+
+
+mov   ax, 04C10h
+TEST_EMS_REGISTER_CALL_ALL 08310h  ; dead handle
+
+mov   ax, 04B40h
+TEST_EMS_REGISTER_CALL_NO_BX 0040h
+mov   ax, word ptr ds:[VARIABLE_total_handle_count]
+TEST_RESULT_BX  AX
+
 
 
 
@@ -493,18 +528,50 @@ TEST_EMS_REGISTER_CALL_NO_DX 0011h
 PRINT_HANDLE
 mov   word ptr ds:[VARIABLE_dead_handle], dx  ; dx handle should be unallocated and bad as long as we dont allocate any more after this.
 
+mov   ax, 04B40h
+TEST_EMS_REGISTER_CALL_NO_BX 0040h
+mov   ax, word ptr ds:[VARIABLE_total_handle_count]
+add   ax, 6
+TEST_RESULT_BX  AX  ; handle count shout be increased by 6
+
+
 mov   ax, 04511h
 TEST_EMS_REGISTER_CALL_ALL 0011h
 
 ; TODO various bad handle tests
 
 
+; NOTE: this assumes handles currently allocated 1-5 which is... iffy.  but true for sqemm
+; NOTE: this assumes handles currently allocated 1-5 which is... iffy.  but true for sqemm
+; NOTE: this assumes handles currently allocated 1-5 which is... iffy.  but true for sqemm
+
+;     FUNCTION 14   GET ALL HANDLES PAGES
+
+mov   di, OFFSET func_1400_handle_page_list  ; a lot of space here
+mov   ax, 04D4Ch
+TEST_EMS_REGISTER_CALL_NO_BX 004Ch
+mov   ax, word ptr ds:[VARIABLE_total_handle_count]
+add   ax, 5
+TEST_RESULT_BX  AX  ; handle count shout be increased by 5
+
+mov   cx, ax
+mov   si, di
+
+loop_test_next_page_contents:
+    lodsw  
+    xchg  ax, bx  ; emm handle.
+    shl   bx, 1
+    lodsw ; get page count
+    cmp   ax, word ptr ds:[bx + func_14_page_counts]
+    loop loop_test_next_page_contents
 
 
 
 ; TEST 10: test pages in page frame via function 8/9 stack
 PRINT_RUNNING_TEST 10
 
+;     FUNCTION 8    SAVE PAGE MAP
+;     FUNCTION 9    RESTORE PAGE MAP
 
 mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
 mov   ax, 20
@@ -812,6 +879,8 @@ call  test_partial_pagemap
 
 
 skip_conventional:
+
+
 
 
 ; todo: test -1 paging/unpaging
@@ -1862,6 +1931,8 @@ VARIABLE_dead_handle:
 dw 0
 VARIABLE_page_count:
 dw 0
+VARIABLE_total_handle_count:
+dw 0
 
 
 VARIABLE_page_frame:  ; page frame separated by 4 each
@@ -1878,6 +1949,7 @@ dw  0, 1
 dw  0, 2
 dw  0, 3
 
+func_1400_handle_page_list: ; reuse this region...
 
 map_1700_page_list_full:
 REPT 64
@@ -1912,6 +1984,8 @@ dw 32, 36, 40
 dw 44, 48, 52
 dw 56, 58
 
+func_14_page_counts:
+dw 4, 4, 4, 4, 64
 
 dw 0  ; offset by 2
 
