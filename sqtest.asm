@@ -53,14 +53,15 @@ TEST_RESULT_DX MACRO testdx
 ENDM
 
 TEST_RESULT_DX_NO_VAL MACRO testdx
+    cmp  dx, word ptr ds:[expected_value]
+    je   $+18
     push bx
     mov  word ptr ds:[string_register_name_offset], "XD" ; endian
     mov  bx, dx
     call print_hex_register
-    cmp  dx, word ptr ds:[expected_value]
-    je   $+5
     call prompt_for_key
     pop  bx
+    ; jump here
 ENDM
 
 
@@ -88,6 +89,11 @@ TEST_EMS_REGISTER_CALL_AH MACRO testah
     call do_ems_call_and_register_test
 ENDM
 
+TEST_EMS_REGISTER_CALL_NO_AL MACRO testah
+    mov  byte ptr ds:[VARIABLE_expected_register_ax+1], testah
+    call do_ems_call_and_register_test_no_al
+ENDM
+
 
 TEST_EMS_REGISTER_CALL_NO_BX MACRO testax
     mov  word ptr ds:[VARIABLE_expected_register_ax], testax
@@ -109,8 +115,9 @@ TEST_EMS_REGISTER_CALL_NO_BX_DX MACRO testax
     call do_ems_call_and_register_test_no_bx_dx
 ENDM
 
-
-
+PRINT_HANDLE MACRO
+    ; call  print_handle
+ENDM
 
 PRINT_RUNNING_TEST MACRO testimmediate
     mov   word ptr ds:[_test_num], &testimmediate
@@ -179,9 +186,11 @@ TEST_EMS_REGISTER_CALL_NO_BX 0002h
 
 PRINT_HEX_VALUE_BX string_hex_page_frame_address string_hex_page_frame_address_offset
 mov   word ptr ds:[VARIABLE_page_frame+2], bx
+mov   word ptr ds:[partial_pagemap_1_func_16_page_frame+0], bx
 add   bh, 04h
 mov   word ptr ds:[VARIABLE_page_frame+6], bx
 add   bh, 04h
+mov   word ptr ds:[partial_pagemap_1_func_16_page_frame+2], bx
 mov   word ptr ds:[VARIABLE_page_frame+10], bx
 add   bh, 04h
 mov   word ptr ds:[VARIABLE_page_frame+14], bx
@@ -215,7 +224,7 @@ mov   ax, 04304h
 mov   bx, 1
 
 TEST_EMS_REGISTER_CALL_NO_DX 0004h
-call  print_handle
+PRINT_HANDLE
 
 ; dx maintains index
 
@@ -258,20 +267,20 @@ mov   ax, 04307h
 mov   bx, cx
 
 TEST_EMS_REGISTER_CALL_NO_DX 0007h
-call  print_handle
+PRINT_HANDLE
 mov   word ptr ds:[VARIABLE_saved_handle_1], dx
 
 mov   ax, 04308h
 mov   bx, cx
 
 TEST_EMS_REGISTER_CALL_NO_DX 0008h
-call  print_handle
+PRINT_HANDLE
 mov   word ptr ds:[VARIABLE_saved_handle_2], dx
 
 mov   ax, 04309h
 mov   bx, cx
 TEST_EMS_REGISTER_CALL_NO_DX 0009h
-call  print_handle
+PRINT_HANDLE
 mov   word ptr ds:[VARIABLE_saved_handle_3], dx
 
 mov   ax, 0420Ah
@@ -399,31 +408,31 @@ mov   ax, 04307h
 mov   bx, cx
 
 TEST_EMS_REGISTER_CALL_NO_DX 0007h
-call  print_handle
+PRINT_HANDLE
 mov   word ptr ds:[VARIABLE_saved_handle_1], dx
 
 mov   ax, 04308h
 mov   bx, cx
 TEST_EMS_REGISTER_CALL_NO_DX 0008h
-call  print_handle
+PRINT_HANDLE
 mov   word ptr ds:[VARIABLE_saved_handle_2], dx
 
 mov   ax, 04309h
 mov   bx, cx
 TEST_EMS_REGISTER_CALL_NO_DX 0009h
-call  print_handle
+PRINT_HANDLE
 mov   word ptr ds:[VARIABLE_saved_handle_3], dx
 
 mov   ax, 04309h
 mov   bx, cx
 TEST_EMS_REGISTER_CALL_NO_DX 0009h
-call  print_handle
+PRINT_HANDLE
 mov   word ptr ds:[VARIABLE_saved_handle_4], dx
 
 mov   ax, 04309h
 mov   bx, 64
 TEST_EMS_REGISTER_CALL_NO_DX 0009h
-call  print_handle
+PRINT_HANDLE
 mov   word ptr ds:[VARIABLE_saved_handle_5], dx
 
 mov   ax, 0420Ah
@@ -481,7 +490,7 @@ mov   ax, 04311h
 mov   bx, 1
 TEST_EMS_REGISTER_CALL_NO_DX 0011h
 
-call  print_handle
+PRINT_HANDLE
 mov   word ptr ds:[VARIABLE_dead_handle], dx  ; dx handle should be unallocated and bad as long as we dont allocate any more after this.
 
 mov   ax, 04511h
@@ -768,6 +777,40 @@ call  test_map_1700
 PRINT_RUNNING_TEST 16
 
 
+;     FUNCTION 16   GET/SET PARTIAL PAGE MAP
+
+mov  ax, 04F02h  ; get size
+mov  bx, 8
+TEST_EMS_REGISTER_CALL_NO_AL 00h
+
+; initialize page state, 32 and up
+mov   ax, 32
+xor   bx, bx
+call  init_page_map  
+call  test_map_1700
+
+; get partial page map.
+mov  si, OFFSET  partial_pagemap_1_func_16_pagemap
+mov  di, OFFSET  partial_pagemap_1_func_16_save_area
+mov  ax, 04F00h  ; save
+TEST_EMS_REGISTER_CALL_ALL 00h
+
+; change pagemap
+mov   ax, 0
+xor   bx, bx
+call  init_page_map  
+call  test_map_1700
+
+mov  si, di     ; save area 
+mov  ax, 04F01h   ; restore
+TEST_EMS_REGISTER_CALL_ALL 01h
+
+; test those pages.
+call  test_partial_pagemap  
+
+
+
+
 skip_conventional:
 
 
@@ -891,7 +934,7 @@ show_running_test:
     ; todo show expected values?
 
 
-
+COMMENT @
 show_success:
 
     push  ax
@@ -902,7 +945,7 @@ show_success:
     pop   ax
     ret
 
-
+@
 
 
 print_hex_word_bx:
@@ -951,7 +994,7 @@ print_hex_byte_bx:
     mov  byte ptr ds:[si+0], al
 
     ret
-
+COMMENT @
 print_handle:
     push bx
     push ax
@@ -968,6 +1011,7 @@ print_handle:
     pop  ax
     pop  bx
     ret
+    @
 
 div_digit:
     div   cx
@@ -1384,6 +1428,40 @@ init_page_map:
     ret    
 
 
+; this only tests the partial map
+test_partial_pagemap:
+public test_partial_pagemap
+
+    push  cx
+    push  es
+    push  bx
+    push  ax
+    push  si
+    push  di
+
+    xchg  ax, di  ; test base
+    mov   si, offset partial_pagemap_1_func_16_pagemap
+    mov   bx, offset partial_pagemap_1_values - partial_pagemap_1_func_16_pagemap  - 4
+    lodsw
+    xchg  ax, cx
+
+    loop_next_partialpagemap:
+        lodsw
+        mov   es, ax
+        mov   ax, word ptr ds:[bx+si]
+        call  test_page_with_ax
+
+        loop  loop_next_partialpagemap
+
+
+    pop  di
+    pop  si
+    pop  ax
+    pop  bx
+    pop  es
+    pop  cx
+    ret
+
 
 page_random_map_1700:
 public page_random_map_1700
@@ -1509,12 +1587,19 @@ MACRO_PRINT_BAD_REGISTER MACRO reg, expectedvalueloc
     call  print_bad_reg_error
     pop   bx
 ENDM
-    
+
 
     bad_register_ax:
         mov  word ptr ds:[string_register_name_offset], "XA" ; endian
+        print_ah:  ; a little weird ok.
         MACRO_PRINT_BAD_REGISTER ax VARIABLE_expected_register_ax
         jmp  continue_after_ax
+
+    do_ah_test:
+        cmp  byte ptr ds:[VARIABLE_expected_register_ax+1], ah
+        je   continue_after_ax
+        mov  word ptr ds:[string_register_name_offset], "HA" ; endian
+        jmp  print_ah
 
     bad_register_dx:
         mov  word ptr ds:[string_register_name_offset], "XD" ; endian
@@ -1525,10 +1610,6 @@ ENDM
         mov  word ptr ds:[string_register_name_offset], "XC" ; endian
         MACRO_PRINT_BAD_REGISTER cx VARIABLE_expected_register_cx
         jmp  continue_after_cx
-    bad_register_bx:
-        mov  word ptr ds:[string_register_name_offset], "XB" ; endian
-        MACRO_PRINT_BAD_REGISTER bx VARIABLE_expected_register_bx
-        jmp  continue_after_bx
 
 
 do_ems_call_and_register_test:
@@ -1546,7 +1627,8 @@ do_ems_call_and_register_test:
     inc  word ptr ds:[VARIABLE_test_count]
 
     int 067h
-
+    cmp  byte ptr ds:[VARIABLE_skip_al], 0
+    jne  do_ah_test
     cmp  word ptr ds:[VARIABLE_expected_register_ax], ax
     jne  bad_register_ax
     continue_after_ax:
@@ -1585,7 +1667,11 @@ do_ems_call_and_register_test:
 
 
 
-    
+        bad_register_bx:
+        mov  word ptr ds:[string_register_name_offset], "XB" ; endian
+        MACRO_PRINT_BAD_REGISTER bx VARIABLE_expected_register_bx
+        jmp  continue_after_bx
+
     
     bad_register_si:
         mov  word ptr ds:[string_register_name_offset], "IS" ; endian
@@ -1628,7 +1714,9 @@ do_ems_call_and_register_test_no_bx_dx:
 do_ems_call_and_register_test_no_bx:
     mov  byte ptr ds:[VARIABLE_skip_bx], 1
     jmp entry_after_bx
-
+do_ems_call_and_register_test_no_al:
+    mov  byte ptr ds:[VARIABLE_skip_al], 1
+    jmp  do_ems_call_and_register_test
 
 
 
@@ -1654,6 +1742,7 @@ db '000'
 db  "...   ", '$'
 
 
+COMMENT @
 string_success:
 db "Test Passed!", 0Dh, 0Ah,'$'
 
@@ -1662,6 +1751,7 @@ db 0Dh, 0Ah
 db "    Handle Recieved: "
 string_hex_handle_offset:
 db "00", '$'
+@
 
 string_hex_page_frame_address:
 db 0Dh, 0Ah
@@ -1800,14 +1890,28 @@ dw 0, 0
 ENDM
 
 pagemap_1_func_15:
+partial_pagemap_1_func_16_save_area:
 REPT 64
 dw 0
 ENDM
 ; for get and set
 pagemap_2_func_15:
+
 REPT 64
 dw 0
 ENDM
+partial_pagemap_1_func_16_pagemap:
+dw 8
+dw 04000h, 05000h, 06000h
+dw 07000h, 08000h, 09000h
+partial_pagemap_1_func_16_page_frame:
+dw 0D000h, 0D800h
+
+partial_pagemap_1_values:
+dw 32, 36, 40
+dw 44, 48, 52
+dw 56, 58
+
 
 dw 0  ; offset by 2
 
@@ -1832,13 +1936,16 @@ VARIABLE_skip_dx:
 db 0
 VARIABLE_skip_cx:
 db 0
+VARIABLE_skip_al:
+db 0
+COMMENT @
 VARIABLE_skip_di:
 db 0
 VARIABLE_skip_si:
 db 0
 VARIABLE_skip_bp:
 db 0
-
+@
 VARIABLE_test_count:
 dw 0
 
