@@ -207,11 +207,13 @@ _current_call_subfunction_value:
 dw  0
 _temp_byte:
 db 0
-ALIGN 2
 
 
  
-
+skip_func_5000h:
+mov   ah, 0
+iret
+ALIGN 2
 
 MAIN_EMS_INTERRUPT_VECTOR:
 
@@ -219,6 +221,7 @@ MAIN_EMS_INTERRUPT_VECTOR:
 
 cmp      ax, 05000h
 jne      NOT_FUNC_50h
+jcxz     skip_func_5000h
 
 ; CHIPSET SPECIFIC START
 
@@ -1274,9 +1277,7 @@ mov   ah, 050h
 int   067h
 POPA_MACRO ; ax restored.
 pop   ds
-pop   ax
-pop   ax
-
+add   sp, 4
 xor   ah, ah
 popf  ; restore flags, sp reset.
 
