@@ -120,6 +120,11 @@ TEST_EMS_REGISTER_CALL_NO_BX_CX MACRO testax
     call do_ems_call_and_register_test_no_bx_cx
 ENDM
 
+TEST_EMS_REGISTER_CALL_NO_DI MACRO testax
+    mov  word ptr ds:[VARIABLE_expected_register_ax], testax
+    call do_ems_call_and_register_test_no_di
+ENDM
+
 PRINT_HANDLE MACRO
     ; call  print_handle
 ENDM
@@ -898,12 +903,88 @@ TEST_EMS_REGISTER_CALL_ALL 01h
 call  test_partial_pagemap  
 
 
+; TEST 17: test map 28 pagination
+PRINT_RUNNING_TEST 17
+
+here:
+public here 
+
+; TODO: load from func 15, then use func 28
+
+; init memory...
+mov   ax, 32
+xor   bx, bx
+call  init_page_map  
+call  test_map_1700
+
+
+mov   di, offset pagemap_1_func_15
+mov   si, di
+
+mov   ax, 05B01h
+mov   bx, 1
+TEST_EMS_REGISTER_CALL_ALL 09C01h
+
+mov  ax, 04E00h
+TEST_EMS_REGISTER_CALL_ALL 0000h  ; previous state recorded in the spot
+
+mov   ax, 0
+xor   bx, bx
+call  init_page_map  
+call  test_map_1700  ; switch to 0
+
+; bx 0
+mov   ax, 05B01h
+TEST_EMS_REGISTER_CALL_ALL 00001h  ; write the values at the pointer. 
+
+; should change back to 32.
+mov   ax, 32
+mov   bx, 1
+call  init_page_map  
+call  test_map_1700
+
+mov   ax, 0
+xor   bx, bx
+call  init_page_map  
+call  test_map_1700  ; switch to 0
+
+
+mov   ax,  05B00h
+mov   bx, 1
+TEST_EMS_REGISTER_CALL_NO_BX 00000h ; does nothing.
+
+mov   ax, 0
+mov   bx, 1
+call  init_page_map  
+call  test_map_1700
+
+
+xor   bx, bx
+mov   ax, 05B00h
+TEST_EMS_REGISTER_CALL_NO_BX 00000h  ; store state
+
+mov   ax, 32
+mov   bx, 0
+call  init_page_map  
+call  test_map_1700
+
+
+mov  ax, 04E01h
+TEST_EMS_REGISTER_CALL_ALL 00001h  ; restore the func 28 state
+
+mov   ax, 0
+mov   bx, 1
+call  init_page_map  
+call  test_map_1700
+
+
+
 
 
 skip_conventional:
 
-; TEST 17: test handle attribute
-PRINT_RUNNING_TEST 17
+; TEST 18: test handle attribute
+PRINT_RUNNING_TEST 18
 
 ;     FUNCTION 19   GET/SET HANDLE ATTRIBUTE (CONTINUED)
 mov   ax, 05202h  ; get capability
@@ -936,8 +1017,11 @@ TEST_EMS_REGISTER_CALL_ALL 09100h  ; unsupported
 
 
 
-; TEST 18: test handle name stuff
-PRINT_RUNNING_TEST 18
+; TEST 19: test handle name stuff
+PRINT_RUNNING_TEST 19
+
+;     FUNCTION 20   GET/SET HANDLE NAME
+
 mov   dx, word ptr cs:[VARIABLE_saved_handle_1]
 mov   si, offset HANDLE_NAME_BLANK
 mov   ax, 05301h
@@ -1076,9 +1160,8 @@ add   di, 10
 mov   si, offset HANDLE_NAME_4
 call  compare_handle_name
 
-; TEST 19: test OS features
-
-PRINT_RUNNING_TEST 19
+; TEST 20: test OS features
+PRINT_RUNNING_TEST 20
 ;     FUNCTION 30   ENABLE/DISABLE OS/E FUNCTION SET FUNCTIONS
 
 mov   ax, 05D03h
@@ -1105,8 +1188,6 @@ TEST_EMS_REGISTER_CALL_ALL 0001h
 ;      FUNCTION 28   ALTERNATE MAP REGISTER SET
 
 
-here:
-public here
 
 mov   di, offset func_26_hardware_info
 mov   ax, 05900h
@@ -1201,8 +1282,6 @@ TEST_EMS_REGISTER_CALL_ALL 023h  ; warm boot
 
 
 
-; TEST 20: test map 28 pagination
-PRINT_RUNNING_TEST 20
 
 
 ; TEST 21: test -1 paging/unpaging
@@ -1211,15 +1290,25 @@ PRINT_RUNNING_TEST 21
 ; TEST 22: test function 22 alter and jump
 PRINT_RUNNING_TEST 22
 
+;     FUNCTION 22   ALTER PAGE MAP & JUMP
+
+
 ; TEST 23: test function 23 alter and call
 PRINT_RUNNING_TEST 23
+;     FUNCTION 23   ALTER PAGE MAP & CALL
 
 ; TEST 24: test function 24 move
 PRINT_RUNNING_TEST 24
+;     FUNCTION 24   MOVE/EXCHANGE MEMORY REGION
 
 
 ; todo: test -1 paging/unpaging
 ; todo test OS stuff?
+
+; TEST 25: Test allocate page special cases 
+PRINT_RUNNING_TEST 25
+;     FUNCTION 27   ALLOCATE STANDARD/RAW PAGES
+
 
 
 ; deallocate
@@ -2060,6 +2149,8 @@ do_ems_call_and_register_test:
     cmp  word ptr ds:[VARIABLE_expected_register_si], si
     jne  bad_register_si
     continue_after_si:
+    cmp  byte ptr ds:[VARIABLE_skip_di], 0
+    jne  continue_after_di
     cmp  word ptr ds:[VARIABLE_expected_register_di], di
     jne  bad_register_di
     continue_after_di:
@@ -2107,31 +2198,32 @@ print_bad_reg_error:
         ret
 
 do_ems_call_and_register_test_no_dx:
-    mov  byte ptr ds:[VARIABLE_skip_dx], 1
-    mov  word ptr ds:[VARIABLE_expected_register_bx], bx
-    jmp entry_after_dx
-
-do_ems_call_and_register_test_no_cx:
-    mov  byte ptr ds:[VARIABLE_skip_cx], 1
-    mov  word ptr ds:[VARIABLE_expected_register_bx], bx
-    mov  word ptr ds:[VARIABLE_expected_register_dx], dx
-    jmp entry_after_cx
-
-do_ems_call_and_register_test_no_bx_dx:
-    mov  byte ptr ds:[VARIABLE_skip_dx], 1
-    ; fall thru
-do_ems_call_and_register_test_no_bx:
-    mov  byte ptr ds:[VARIABLE_skip_bx], 1
-    jmp entry_after_bx
-do_ems_call_and_register_test_no_al:
-    mov  byte ptr ds:[VARIABLE_skip_al], 1
-    jmp  do_ems_call_and_register_test
+    mov  byte ptr ds:[VARIABLE_skip_dx], ah ; nonzero
+    jmp do_ems_call_and_register_test
 
 do_ems_call_and_register_test_no_bx_cx:
-    mov  byte ptr ds:[VARIABLE_skip_bx], 1
-    mov  byte ptr ds:[VARIABLE_skip_cx], 1
-    mov  word ptr ds:[VARIABLE_expected_register_dx], dx
-    jmp entry_after_cx
+    mov  byte ptr ds:[VARIABLE_skip_bx], ah ; nonzero
+    ; dall thru
+do_ems_call_and_register_test_no_cx:
+    mov  byte ptr ds:[VARIABLE_skip_cx], ah ; nonzero
+    jmp do_ems_call_and_register_test
+
+
+do_ems_call_and_register_test_no_bx_dx:
+    mov  byte ptr ds:[VARIABLE_skip_dx], ah ; nonzero
+    ; fall thru
+do_ems_call_and_register_test_no_bx:
+    mov  byte ptr ds:[VARIABLE_skip_bx], ah ; nonzero
+    jmp do_ems_call_and_register_test
+do_ems_call_and_register_test_no_al:
+    mov  byte ptr ds:[VARIABLE_skip_al], ah ; nonzero
+    jmp  do_ems_call_and_register_test
+
+
+do_ems_call_and_register_test_no_di:
+    mov  byte ptr ds:[VARIABLE_skip_di], ah ; nonzero
+    jmp  do_ems_call_and_register_test
+
 
 
 compare_handle_name:
@@ -2363,6 +2455,7 @@ ENDM
 
 func_21_handle_directory: ; reuse this region
 func_26_hardware_info: ; reuse this region
+
 pagemap_1_func_15:
 partial_pagemap_1_func_16_save_area:
 REPT 64
@@ -2414,9 +2507,9 @@ VARIABLE_skip_cx:
 db 0
 VARIABLE_skip_al:
 db 0
-COMMENT @
 VARIABLE_skip_di:
 db 0
+COMMENT @
 VARIABLE_skip_si:
 db 0
 VARIABLE_skip_bp:
