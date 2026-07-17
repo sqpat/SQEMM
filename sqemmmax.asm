@@ -151,7 +151,7 @@ _RESIDENT_VARIABLE_alternate_register_set_default:
  dw 0, 0
 
 _RESIDENT_VARIABLE_current_alternate_register_set:
-dw 0
+db -1
 
 ALIGN 2
 
@@ -2264,79 +2264,30 @@ ENDIF
 
 EMS_FUNCTION_05Ch:
 
+xchg  ax, bx
+pop   ax
+xor   ah, ah
+iret 
 
 
 
-
-xchg ax, bx
-pop        ax
-xor        ah, ah
-iret
-
-check_func_58:
-; todo: is this doable in fewer bytes... some parity compare case ?
-cmp   al, 6
-ja    do_func_5b07
-je    do_func_5b06
-cmp   al, 4
-ja    do_func_5b05
-je    do_func_5b04
-cmp   al, 2
-ja    do_func_5b03
-je    do_func_5b02
-push  ax  
-cmp   al, ah ; 0
-ja    do_func_5b01
-do_func_5b00:
-les   di, dword ptr cs:[_RESIDENT_VARIABLE_alternate_register_set_default]  ; return pointer.
-mov   ax, es
-or    ax, di
-jz    skip_pointer_record
-mov   bl, byte ptr cs:[_RESIDENT_VARIABLE_current_alternate_register_set]
-test  bl, bl
-jnz   func_5b00_nonzero_register_set
-
-
-func_5b00_nonzero:
-
-;  If the context save area pointer returned is not equal to
-;   zero, this subfunction copies the contents of the mapping
-;   registers on each expanded memory board in the system into
-;   the save area specified by the pointer.  The format of
-;   this save area is the same as that returned by Function 15
-;   (Get Page Map subfunction).  This is intended to simulate
-;   getting an alternate map register set.  Note that the
-;   memory manager does not allocate the space for the
-;   context: the operating system must do so.
-
-push  di
-push  cx
-push  bx
-
-call  FUNCTION_15_GET_PAGE_MAP
-
-pop   bx
-pop   cx
-pop   di
-; ah should be 0
-pop        ax
-
-iret
 
 do_func_5b01:
+
+mov   byte ptr cs:[_RESIDENT_VARIABLE_current_alternate_register_set], bl
+test  bl, bl
+jnz   func_5b01_nonzero_register_set
 
 ;    Regardless of its value, the map register context restore area
 ;    pointer is saved within the memory manager.  It will be used
 ;    during the Get Alternate Map Register Set subfunction.
+
 mov   word ptr cs:[_RESIDENT_VARIABLE_alternate_register_set_default+0], di
 mov   word ptr cs:[_RESIDENT_VARIABLE_alternate_register_set_default+2], es ; save pointer.
 mov   ax, es
 or    ax, di
-mov   byte ptr cs:[_RESIDENT_VARIABLE_current_alternate_register_set], bl
 jz    skip_pointer_record
-les   di, dword ptr cs:[_RESIDENT_VARIABLE_alternate_register_set_default]
-test  bl, bl
-jnz   func_5b01_nonzero_register_set
+
 
 func_5b01_nonzero:
 
@@ -2344,7 +2295,7 @@ func_5b01_nonzero:
 ;    pointer is not equal to zero, the contents of the restore area
 ;    pointed to by ES:DI are copied into register set zero on each
 ;    expanded memory board in the system.
-   push  di
+
 push  ds
 push  si
 push  cx
@@ -2360,42 +2311,19 @@ pop   bx
 pop   cx
 pop   si
 pop   ds
-pop   di
+
 skip_pointer_record:
 
 ; ah should be 0
+func_5b00_nonzero_register_set:
 pop        ax
 
 iret
 
 
-do_func_5b08:
-do_func_5b07:
-do_func_5b06:
-test  bl, bl
-jz    func_28_return_ok ; value 0 is fine.
-func_5b00_nonzero_register_set:
 func_5b01_nonzero_register_set:
-func_28_return_not_supported:
+pop   ax
 mov   ah, 09Ch ; Alternate DMA register sets are not supported, and the DMA register set specified is not zero.
-func_28_return_ok:
-iret
-
-do_func_5b05:
-xor   bx, bx ; no dma register sets.
-iret
-
-do_func_5b04:
-
-test  bl, bl
-jnz   func_28_return_not_supported 
-
-iret
-do_func_5b03:
-xor   bx, bx ; no alternate register sets supported (for now)
-iret
-do_func_5b02:
-mov   dx, LENGTH_OF_STACK
 iret
 
 
@@ -2418,7 +2346,72 @@ jne   func_28_access_denied
 cmp   al, 8
 ja    func_28_bad_subfunction
 je    do_func_5b08
-jmp   check_func_58
+push  ax
+dec   ax
+js    do_func_5b00
+je    do_func_5b01
+sub   al, 2
+js    do_func_5b02
+je    do_func_5b03
+sub   al, 2
+js    do_func_5b04
+je    do_func_5b05
+dec   ax
+js    do_func_5b06
+; fall thru
+do_func_5b07:
+do_func_5b08:
+do_func_5b06:
+pop   ax
+test  bl, bl
+jz    func_28_return_ok ; value 0 is fine.
+func_28_return_not_supported:
+mov   ah, 09Ch ; Alternate DMA register sets are not supported, and the DMA register set specified is not zero.
+func_28_return_ok:
+iret
+
+do_func_5b00:
+mov   bl, byte ptr cs:[_RESIDENT_VARIABLE_current_alternate_register_set]
+test  bl, bl
+jnz   func_5b00_nonzero_register_set
+
+les   di, dword ptr cs:[_RESIDENT_VARIABLE_alternate_register_set_default]  ; return pointer.
+mov   ax, es
+or    ax, di
+jz    func_28_skip_restore
+
+
+func_5b00_nonzero:
+
+;  If the context save area pointer returned is not equal to
+;   zero, this subfunction copies the contents of the mapping
+;   registers on each expanded memory board in the system into
+;   the save area specified by the pointer.  The format of
+;   this save area is the same as that returned by Function 15
+;   (Get Page Map subfunction).  This is intended to simulate
+;   getting an alternate map register set.  Note that the
+;   memory manager does not allocate the space for the
+;   context: the operating system must do so.
+
+push  di
+push  cx
+push  bx
+
+call  FUNCTION_15_GET_PAGE_MAP ; record into es:di
+
+pop   bx
+pop   cx
+pop   di
+; ah should be 0
+func_28_skip_restore:
+pop        ax
+
+iret
+do_func_5b02:
+pop   ax
+mov   dx, LENGTH_OF_STACK
+iret
+
 
 func_28_access_denied:
 mov   ah, 0A4h
@@ -2426,6 +2419,22 @@ iret
 func_28_bad_subfunction:
 
 mov        ah, 08fh
+iret
+do_func_5b05:
+pop   ax
+xor   bx, bx ; no dma register sets.
+iret
+
+do_func_5b04:
+pop   ax
+
+test  bl, bl
+jnz   func_28_return_not_supported 
+
+iret
+do_func_5b03:
+pop   ax
+xor   bx, bx ; no alternate register sets supported (for now)
 iret
 
 
