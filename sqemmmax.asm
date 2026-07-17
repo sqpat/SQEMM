@@ -1813,14 +1813,19 @@ func_24_loop_get_next_source_page:
 func_24_have_next_source_page:
 
  mov   word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_current_page], bx
- pop   bx
  ; dx still has logical page number.
  mov   ax, FUNC_24_SOURCE_PAGE_FRAME_INDEX
  call  UTIL_get_page
  mov   word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_original_page], ax
-
+ xchg  bx, dx
+ sub   dx, OFFSET _RESIDENT_VARIABLE_page_list
+ shr   dx, 1
  mov   ax, FUNC_24_SOURCE_PAGE_FRAME_INDEX
  call  UTIL_set_page
+ xchg  bx, dx
+
+ pop   bx
+
  
  mov   ds, word ptr cs:[mappable_phys_page_struct_page_frame+(4 * FUNC_24_SOURCE_PAGE_FRAME_INDEX)] ; page 3 segment
  pop   ax   ; AAAA restore ax
@@ -1844,14 +1849,20 @@ func_24_loop_get_next_dest_page:
 func_24_have_next_dest_page:
 
  mov   word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_current_page], bx
- pop   bx
  
  mov   ax, FUNC_24_DEST_PAGE_FRAME_INDEX  ; dx has logical page number
  call  UTIL_get_page
  mov   word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_original_page], ax
  
+ xchg   bx, dx
+ sub    dx, OFFSET _RESIDENT_VARIABLE_page_list
+ shr    dx, 1
+
  mov   ax, FUNC_24_DEST_PAGE_FRAME_INDEX   ; dx (still) has logical page number
  call  UTIL_set_page
+ xchg  bx, dx
+
+ pop   bx
 
  mov   es, word ptr cs:[mappable_phys_page_struct_page_frame+(4 * FUNC_24_DEST_PAGE_FRAME_INDEX)] ; page 3 segment
  ret
