@@ -1451,11 +1451,11 @@ call  test_map_1700
 mov   word ptr ds:[si+0], 0  ; length
 mov   word ptr ds:[si+2], 1  ; 65536
 mov   byte ptr ds:[si+4], 0  ; source type (conventional)
-mov   word ptr ds:[si+5], dx  ; source handle
+mov   byte ptr ds:[si+5], dl  ; source handle
 mov   word ptr ds:[si+7], 0   ; source offset
 mov   word ptr ds:[si+9], 04000h   ; source segment
 mov   word ptr ds:[si+11], 0   ; dest type (conventional)
-mov   word ptr ds:[si+12], dx  ; dest handle
+mov   byte ptr ds:[si+12], dl  ; dest handle
 mov   word ptr ds:[si+14], 0   ; dest offset
 mov   word ptr ds:[si+16], 02800h   ; dest segment
 
@@ -1474,7 +1474,7 @@ mov   word ptr ds:[si+9], 36   ; source segment
 mov   ax, 05700h ; 0 = copy
 TEST_EMS_REGISTER_CALL_ALL 00000h; test larger extended to conventional copy
 
-; first page was bad!!!
+
 
 mov   ax, 36
 mov   dx, 02800h
@@ -1494,6 +1494,114 @@ TEST_RESULT_DX AX
 
 pop   es
 
+; reallocate!
+
+
+mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
+mov   bx, 128  ; 2MB allocation
+mov   ax, 0510Dh
+TEST_EMS_REGISTER_CALL_NO_BX 000Dh
+
+
+mov   word ptr ds:[si+0], 0  ; extra length
+mov   word ptr ds:[si+2], 16  ; 1 MB copy
+mov   byte ptr ds:[si+11], 1   ; dest type (extended)
+mov   word ptr ds:[si+9], 0   ; source segment
+mov   word ptr ds:[si+16], 64   ; dest segment
+
+mov   ax, 05700h ; 0 = copy
+TEST_EMS_REGISTER_CALL_ALL 00000h; test larger extended to conventional copy
+
+
+mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
+mov   ax, 64
+xor   bx, bx
+call  init_page_map   ; init map state without remapping
+
+mov   ax, 0
+mov   dx, 04000h
+call  test_four_pages_from_segment_dx
+mov   ax, 4
+mov   dx, 05000h
+call  test_four_pages_from_segment_dx
+
+mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
+mov   ax, 96
+xor   bx, bx
+call  init_page_map   ; init map state without remapping
+
+mov   ax, 32
+mov   dx, 04000h
+call  test_four_pages_from_segment_dx
+mov   ax, 36
+mov   dx, 05000h
+call  test_four_pages_from_segment_dx
+
+mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
+mov   ax, 0
+xor   bx, bx
+call  init_page_map   ; init map state without remapping
+call  test_map_1700
+
+
+; todo: 
+
+; x test extended to extended
+;  x 1MB copy?
+; x test conventional to extended
+; test error cases
+; test overlaps
+;   force backwards.
+; test exchange in all these cases
+
+; convetional to extended
+mov   word ptr ds:[si+2], 1  ; 64kb copy
+mov   byte ptr ds:[si+4], 0  ; source type (conventional)
+mov   word ptr ds:[si+9], 02800h   ; source segment  ; should be 04000h
+mov   ax, 05700h ; 0 = copy
+TEST_EMS_REGISTER_CALL_ALL 00000h; test larger extended to conventional copy
+
+mov   ax, 64
+xor   bx, bx
+call  init_page_map   ; init map state without remapping
+
+here:
+public here
+
+mov   ax, 36
+mov   dx, 04000h
+call  test_four_pages_from_segment_dx
+
+mov   word ptr ds:[si+2], 17  ; > 1MB copy
+mov   ax, 05700h ; 0 = copy
+TEST_EMS_REGISTER_CALL_ALL 09600h; too big
+
+mov   word ptr ds:[si+2], 1  ; 64kb copy
+mov   byte ptr ds:[si+4], 2  ; source type (bad)
+mov   ax, 05700h ; 0 = copy
+TEST_EMS_REGISTER_CALL_ALL 09800h; bad type
+
+mov   byte ptr ds:[si+4], 0  ; source type (conventional)
+mov   word ptr ds:[si+16], 127   ; dest segment
+mov   ax, 05700h ; 0 = copy
+TEST_EMS_REGISTER_CALL_ALL 09300h; out of logical range
+
+
+mov   word ptr ds:[si+16], 64   ; dest segment
+mov   ax, 05700h ; 0 = copy
+mov   word ptr ds:[si+14], 16384   ; dest offset
+TEST_EMS_REGISTER_CALL_ALL 09500h; bad extended offset
+
+mov   byte ptr ds:[si+11], 0   ; dest type (conventiona;)
+mov   word ptr ds:[si+16], 02400h   ; dest segment
+mov   ax, 05700h ; 0 = copy
+TEST_EMS_REGISTER_CALL_ALL 09200h; successful but overlap
+
+
+; todo test for 93h (too many logical)
+; todo test for A2h (1m wraparound)
+; todo test for 97h (xchg overlap)
+; todo implement backwards pagination.
 
 
 
