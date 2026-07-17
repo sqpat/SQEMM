@@ -910,6 +910,7 @@ public EMS_FUNCTION_048h
 
   test dx, dx
   jz   func_09_bad_handle
+  
   mov  ax, dx
   call COMMON_check_valid_handle
   jc   func_09_bad_handle
@@ -1255,6 +1256,9 @@ iret
 ;             (Physical page number mode)                    5500h     
 ;             Alter Page Map & Jump
 ;             (Segment address mode)                         5501h     
+func_22_bad_handle:
+mov   ah, 083h
+iret 
 
 EMS_FUNCTION_055h:
 
@@ -1265,6 +1269,11 @@ pop   ax
 ; if al = 0, then func 22. if al = 1, then func 23.
 cmp   al, 1
 ja    func_22_bad_subfunction
+
+xchg  ax, dx ; ax gets handle
+call  COMMON_check_valid_handle
+xchg  ax, dx ; ax gets handle
+jc    func_22_bad_handle
 
 
 push  ds
