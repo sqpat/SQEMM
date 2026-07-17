@@ -907,7 +907,6 @@ call  test_partial_pagemap
 PRINT_RUNNING_TEST 17
 
 
-; TODO: load from func 15, then use func 28
 
 ; init memory...
 mov   ax, 32
@@ -1417,6 +1416,94 @@ TEST_EMS_REGISTER_CALL_ALL 00001h
 PRINT_RUNNING_TEST 24
 ;     FUNCTION 24   MOVE/EXCHANGE MEMORY REGION
 
+; test 
+
+
+
+mov   si, OFFSET func_24_struct
+
+
+
+COMMENT @
+          move_source_dest_struct      STRUC
+             region_length             DD  ?
+             source_memory_type        DB  ?
+             source_handle             DW  ?
+             source_initial_offset     DW  ?
+             source_initial_seg_page   DW  ?
+             dest_memory_type          DB  ?
+             dest_handle               DW  ?
+             dest_initial_offset       DW  ?
+             dest_initial_seg_page     DW  ?
+          move_source_dest_struct      ENDS
+@
+
+; reset memory.
+
+mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
+
+mov   ax, 32
+xor   bx, bx
+call  init_page_map   ; init map state without remapping
+call  test_map_1700
+
+
+mov   word ptr ds:[si+0], 0  ; length
+mov   word ptr ds:[si+2], 1  ; 65536
+mov   byte ptr ds:[si+4], 0  ; source type (conventional)
+mov   word ptr ds:[si+5], dx  ; source handle
+mov   word ptr ds:[si+7], 0   ; source offset
+mov   word ptr ds:[si+9], 04000h   ; source segment
+mov   word ptr ds:[si+11], 0   ; dest type (conventional)
+mov   word ptr ds:[si+12], dx  ; dest handle
+mov   word ptr ds:[si+14], 0   ; dest offset
+mov   word ptr ds:[si+16], 02800h   ; dest segment
+
+mov   ax, 05700h ; 0 = copy
+TEST_EMS_REGISTER_CALL_ALL 00000h ; test conventional copy
+
+
+mov   ax, 32
+mov   dx, 02800h
+call  test_four_pages_from_segment_dx
+
+
+mov   word ptr ds:[si+0], 16385  ; extra length
+mov   byte ptr ds:[si+4], 1  ; source type (extended)
+mov   word ptr ds:[si+9], 36   ; source segment
+mov   ax, 05700h ; 0 = copy
+TEST_EMS_REGISTER_CALL_ALL 00000h; test larger extended to conventional copy
+
+; first page was bad!!!
+
+mov   ax, 36
+mov   dx, 02800h
+call  test_four_pages_from_segment_dx
+mov   ax, 40
+mov   dx, 03800h
+push  es
+
+mov   es, dx
+call  test_page_with_ax
+
+mov   ax, 41
+cwd
+mov   dl, byte ptr es:[04000h]
+
+TEST_RESULT_DX AX
+
+pop   es
+
+
+
+
+
+
+push  cs
+push  cs
+pop   ds
+pop   es
+
 
 ; todo: test -1 paging/unpaging
 ; todo test OS stuff?
@@ -1545,7 +1632,7 @@ show_running_test:
     POPA_MACRO
     ret
 
-    ; todo show expected values?
+
 
 
 COMMENT @
@@ -1777,6 +1864,28 @@ fill_in_64_pages:
     pop   cx
     ret
 
+test_four_pages_from_segment_dx:
+
+    push  es
+    push  dx
+    mov   es, dx
+    call  test_page_with_ax
+    inc   ax
+    add   dh, 4
+    mov   es, dx
+    call  test_page_with_ax
+    inc   ax
+    add   dh, 4
+    mov   es, dx
+    call  test_page_with_ax
+    inc   ax
+    add   dh, 4
+    mov   es, dx
+    call  test_page_with_ax
+    inc   ax
+    pop   dx
+    pop   es
+    ret
 
 
 
@@ -2707,10 +2816,45 @@ func_22_phys_struct_2:
     dw 0, 05000h
 
 
-func_23_struct:
+
+
+
+COMMENT @
+          move_source_dest_struct      STRUC
+             region_length             DD  ?
+             source_memory_type        DB  ?
+             source_handle             DW  ?
+             source_initial_offset     DW  ?
+             source_initial_seg_page   DW  ?
+             dest_memory_type          DB  ?
+             dest_handle               DW  ?
+             dest_initial_offset       DW  ?
+             dest_initial_seg_page     DW  ?
+          move_source_dest_struct      ENDS
+@
+
+func_24_struct:
+  ; length
   dw 0, 0
-  db 8
-  dw 0, 0
+  ; source
+    ; type
+    db 0
+    ; handle
+    dw 0
+    ; offset
+    dw 0
+    ; initial page
+    dw 0
+  ; dest
+    ; type
+    db 0
+    ; handle
+    dw 0
+    ; offset
+    dw 0
+    ; initial page
+    dw 0
+
 
 VARIABLE_expected_register_ax:
 dw 0
