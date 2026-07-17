@@ -1296,7 +1296,6 @@ jmp   dword ptr ds:[si]  ; far return will iret.
  
 
 
-; REFER TO EMS 4.0 documentation, this is a doozy!
 ;          24 Move Memory Region                             5700h     
 
 ;move_source_dest_struct      STRUC
@@ -1432,9 +1431,9 @@ mov        word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_logical_page+1], ax
 
 ; check params for accuracy BEFORE state push pop.
 call       func_24_do_bounds_checks
-
 call       func_24_set_up_segments
 call       func_24_do_overlap_check
+call       func_24_check_conventional_wraparound
 mov        byte ptr cs:[_RESIDENT_VARIABLE_FUNC_24_overlap_detected+1], al
 mov        dx, cx
 
@@ -1884,23 +1883,75 @@ func_24_clean_up_segments:
   ret
 
 func_24_do_bounds_checks:
- ;TODO this
-  ; conventional 1M boundary checks?
-  ; logical page count checks?
-  
 
-  test       bl, bl
-  jz         func_24_skip_si_check
-  cmp        si, 16384
-  jae        func_24_offset_too_high
- func_24_skip_si_check:
 
-  test       bh, bh
-  jz         func_24_skip_di_check
-  cmp        di, 16384
-  jae        func_24_offset_too_high
+
+  push    bp
+  push    cx
+
+  push    cx
+  shl     cx, 1
+  rcl     bp, 1
+  shl     cx, 1
+  rcl     bp, 1
+  pop     cx
+  and     cx, 16383
+  ;bp    is num logical pages, cx is leftover.
+   
+
+  test   bl, bl
+  jz     func_24_skip_si_check
+  cmp    si, 16384
+  jae    func_24_offset_too_high
+  push   bp
+  push   cx
+  push   bx
+  add    cx, si
+  cmp    cx, 16384
+  jb     func_24_source_dont_add_extra_page
+  inc    bp
+  func_24_source_dont_add_extra_page:
+  add    bp, dx  ; source logical page numbero
+  mov    bx, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_handle] ; preshifted 2
+  cmp    bp, word ptr cs:[_RESIDENT_VARIABLE_handle_list + BX + HANDLE_INFO.handle_num_pages]
+  pop    bx
+  pop    cx
+  pop    bp
+  ja     func_24_out_of_logical_range
+ 
+func_24_skip_si_check:
+
+  test   bh, bh
+  jz     func_24_skip_di_check
+  cmp    di, 16384
+  jae    func_24_offset_too_high
+  push   bx
+  add    cx, di
+  cmp    cx, 16384
+  jb     func_24_dest_dont_add_extra_page
+  inc    bp
+  func_24_dest_dont_add_extra_page:
+  add    bp, ax  ; dest logical page numbero
+  mov    bx, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_handle] ; preshifted 2
+  cmp    bp, word ptr cs:[_RESIDENT_VARIABLE_handle_list + BX + HANDLE_INFO.handle_num_pages]
+  pop    bx
+  ja     func_24_out_of_logical_range
+
  func_24_skip_di_check:
+  pop     cx
+  pop     bp
   ret
+
+func_24_offset_too_high:
+  add    sp, 6 ; pop stack
+  mov    ah, 095h   ; The offset within the logical page exceeds the length of the logical page.
+  jmp    func_24_error
+func_24_out_of_logical_range:
+  pop    cx
+  pop    bp
+  mov    ah, 093h   ; The length of the source or destination expanded memory region specified exceeds the length of the expanded memory region allocated either the source or destination handle.
+  add    sp, 2 ; pop return
+  jmp    func_24_error
 
 func_24_check_repage:
   
@@ -1949,15 +2000,14 @@ func_24_check_repage:
  func_24_dont_repage_dest:
   ret
 
-func_24_offset_too_high:
-  mov    ah, 095h   ; The offset within the logical page exceeds the length of the logical page.
-  jmp    func_24_error
 
+func_24_jmp_to_skip_conventional_overlap_check:
+  jmp   func_24_skip_conventional_overlap_check
 func_24_do_overlap_check:
   push   di
   push   si
   test   bx, bx
-  jnz    func_24_skip_conventional_overlap_check
+  jnz    func_24_jmp_to_skip_conventional_overlap_check
 
   mov    ax, ds
   SHIFT_MACRO  rol ax 4
@@ -1977,14 +2027,17 @@ func_24_do_overlap_check:
   add    di, dx
   adc    ax, 0
 
+  
 func_24_compare_overlap:
-  ; source dx.
-  ; dest ax
+  ; source dx:di
+  ; dest ax:si
 
   pop   dx
 
+    
+
 ; is DS:SI > ES:DI?
-  ; dx:ds
+  ; dx:si
   cmp   dx, ax
 
   ja    func_24_check_backwards_overlap
@@ -2065,8 +2118,73 @@ func_24_check_backwards_overlap:
   mov   byte ptr cs:[_RESIDENT_VARIABLE_FUNC_24_overlap_detected_do_backwards], 0
   jmp   func_24_continue_overlap_check
 
+func_24_conventional_wraparound:
+  pop   dx
+  mov   ah, 0A2h   ; An attempt was made to wrap around the 1M-byte address space of conventional memory during the move.
+  jmp   func_24_error
+
+func_24_check_conventional_wraparound:
+
+  test  bl, bl
+  jne   func_24_skip_source_1M_check
+  push  dx
+  push  ax
 
 
+  mov    ax, ds
+  SHIFT_MACRO  rol ax 4
+  mov    dx, ax
+  and    dx, 0FFF0h
+  and    ax, 0Fh
+  add    dx, si
+  adc    ax, 0
+
+  
+  add   dx, cx
+  adc   ax, bp
+  cmp   ax, 16
+  pop   ax
+  ja    func_24_conventional_wraparound
+  jne   func_24_not_source_wraparound
+  test  dx, dx
+  jmp   func_24_conventional_wraparound
+  func_24_not_source_wraparound:
+
+  pop   dx
+
+
+  func_24_skip_source_1M_check:
+  test  bh, bh
+  jne   func_24_skip_dest_1M_check
+  push  dx
+  push  ax
+
+  mov    ax, es
+  SHIFT_MACRO  rol ax 4
+  mov    dx, ax
+  and    dx, 0FFF0h
+  and    ax, 0Fh
+  add    dx, di
+  adc    ax, 0
+
+  add   dx, cx
+  adc   ax, bp
+  cmp   ax, 16
+  pop   ax
+
+  ja    func_24_conventional_wraparound
+  jne   func_24_not_dest_wraparound
+  jcxz  func_24_not_dest_wraparound
+  jmp   func_24_conventional_wraparound
+  func_24_not_dest_wraparound:
+  pop   dx
+
+
+
+  func_24_skip_dest_1M_check:
+
+  func_24_skip_1M_check:
+  ret
 
 
 
