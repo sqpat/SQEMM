@@ -1296,7 +1296,6 @@ PRINT_RUNNING_TEST 22
 
 
 mov   si, OFFSET func_22_struct_1
-mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
 mov   word ptr ds:[si], offset func_22_function_1
 mov   byte ptr ds:[si+4], 8
 mov   word ptr ds:[si+5], offset func_22_phys_struct_1
@@ -1305,6 +1304,15 @@ mov   word ptr ds:[si+7], cs
 
 mov   ax, 05502h
 TEST_EMS_REGISTER_CALL_ALL 08F02h
+
+mov   dx, word ptr ds:[VARIABLE_dead_handle]
+mov   ax, 05500h
+TEST_EMS_REGISTER_CALL_ALL 08300h
+mov   ax, 05501h
+TEST_EMS_REGISTER_CALL_ALL 08301h
+
+mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
+
 
 mov   ax, 05500h ; 0 = physical page numbers...
 TEST_EMS_REGISTER_CALL_ALL 00000h
@@ -1348,6 +1356,62 @@ call do_test_only_func_22
 ; TEST 23: test function 23 alter and call
 PRINT_RUNNING_TEST 23
 ;     FUNCTION 23   ALTER PAGE MAP & CALL
+
+; do tests similar to 22, but selfmodify returns into the functions.
+
+RET_OPCODE = 0C3h
+mov   word ptr ds:[func_22_modify_offset], RET_OPCODE
+mov   word ptr ds:[func_22_modify_offset_2], RET_OPCODE
+
+mov   si, OFFSET func_22_struct_1
+mov   word ptr ds:[si], offset func_22_function_1
+mov   byte ptr ds:[si+4], 8
+mov   word ptr ds:[si+5], offset func_22_phys_struct_1
+mov   word ptr ds:[si+2], cs
+mov   word ptr ds:[si+7], cs
+
+mov   ax, 05603h
+TEST_EMS_REGISTER_CALL_ALL 08F03h
+
+mov   dx, word ptr ds:[VARIABLE_dead_handle]
+mov   ax, 05600h
+TEST_EMS_REGISTER_CALL_ALL 08300h
+mov   ax, 05601h
+TEST_EMS_REGISTER_CALL_ALL 08301h
+
+mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
+
+mov   ax, 05500h ; 0 = physical page numbers...
+TEST_EMS_REGISTER_CALL_ALL 00000h
+
+
+; change pages out.
+mov   ax, 10
+xor   bx, bx
+call  init_page_map   ; init map state without remapping
+call  test_map_1700
+
+
+mov   word ptr ds:[si], offset func_22_function_2
+mov   byte ptr ds:[si+4], 0
+
+
+mov   ax, 05500h ; 0 = physical page numbers...
+TEST_EMS_REGISTER_CALL_ALL 00000h
+
+
+mov   byte ptr ds:[si+4], 4
+mov   word ptr ds:[si+5], offset func_22_phys_struct_2
+mov   word ptr ds:[si], offset func_22_function_3
+
+
+mov   ax, 05501h ; 1 = segment page numbers...
+TEST_EMS_REGISTER_CALL_ALL 00001h
+
+
+
+
+
 
 ; TEST 24: test function 24 move
 PRINT_RUNNING_TEST 24
@@ -2384,7 +2448,7 @@ func_22_function_2:
 
     pop   bx
     pop   ax
-
+    func_22_modify_offset_2:
     jmp  done_with_function_2
 
 ;; ACCESSORY FUNCTIONS END
