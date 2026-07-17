@@ -906,8 +906,6 @@ call  test_partial_pagemap
 ; TEST 17: test map 28 pagination
 PRINT_RUNNING_TEST 17
 
-here:
-public here 
 
 ; TODO: load from func 15, then use func 28
 
@@ -1287,10 +1285,64 @@ TEST_EMS_REGISTER_CALL_ALL 023h  ; warm boot
 ; TEST 21: test -1 paging/unpaging
 PRINT_RUNNING_TEST 21
 
+
+
 ; TEST 22: test function 22 alter and jump
 PRINT_RUNNING_TEST 22
 
 ;     FUNCTION 22   ALTER PAGE MAP & JUMP
+
+
+
+
+mov   si, OFFSET func_22_struct_1
+mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
+mov   word ptr ds:[si], offset func_22_function_1
+mov   byte ptr ds:[si+4], 8
+mov   word ptr ds:[si+5], offset func_22_phys_struct_1
+mov   word ptr ds:[si+2], cs
+mov   word ptr ds:[si+7], cs
+
+mov   ax, 05502h
+TEST_EMS_REGISTER_CALL_ALL 08F02h
+
+mov   ax, 05500h ; 0 = physical page numbers...
+TEST_EMS_REGISTER_CALL_ALL 00000h
+
+done_with_function_1:           ; i guess we didnt test anything...? so call in
+call do_test_only_func_22
+
+; change pages out.
+mov   ax, 10
+xor   bx, bx
+call  init_page_map   ; init map state without remapping
+call  test_map_1700
+
+
+mov   word ptr ds:[si], offset func_22_function_2
+mov   byte ptr ds:[si+4], 0
+
+
+mov   ax, 05500h ; 0 = physical page numbers...
+TEST_EMS_REGISTER_CALL_ALL 00000h
+done_with_function_2:
+call do_test_only_func_22
+
+mov   byte ptr ds:[si+4], 4
+mov   word ptr ds:[si+5], offset func_22_phys_struct_2
+mov   word ptr ds:[si], offset func_22_function_3
+
+
+mov   ax, 05501h ; 1 = segment page numbers...
+TEST_EMS_REGISTER_CALL_ALL 00001h
+
+done_with_function_3:
+call do_test_only_func_22
+
+
+
+
+
 
 
 ; TEST 23: test function 23 alter and call
@@ -2125,6 +2177,7 @@ do_ems_call_and_register_test:
     inc  word ptr ds:[VARIABLE_test_count]
 
     int 067h
+    do_test_only_func_22:
     cmp  byte ptr ds:[VARIABLE_skip_al], 0
     jne  do_ah_test
     cmp  word ptr ds:[VARIABLE_expected_register_ax], ax
@@ -2253,6 +2306,86 @@ error_non_match:
     pop   dx
     pop   ax
     ret
+
+func_22_function_3:
+    push  es
+    push  ax
+    push  bx
+    mov   word ptr ds:[func_22_modify_offset+1], done_with_function_3 - func_22_modify_offset_AFTER
+    jmp  jump_into_func_22
+
+func_22_function_1:
+    
+    ; note note note uses sqemm index values
+
+    push  es
+    push  ax
+    push  bx
+
+    mov   ax, word ptr ds:[func_22_phys_struct_1+0]
+    mov   bx, word ptr ds:[VARIABLE_page_frame+2]
+    mov   es, bx
+    call  test_page_with_ax
+
+    mov   ax, word ptr ds:[func_22_phys_struct_1+4]
+    add   bh, 4
+    mov   es, bx
+    call  test_page_with_ax
+
+    mov   ax, word ptr ds:[func_22_phys_struct_1+8]
+    add   bh, 4
+    mov   es, bx
+    call  test_page_with_ax
+
+    mov   ax, word ptr ds:[func_22_phys_struct_1+12]
+    add   bh, 4
+    mov   es, bx
+    call  test_page_with_ax
+
+    jump_into_func_22:
+
+    mov   ax, word ptr ds:[func_22_phys_struct_1+16]
+    mov   bx, 04000h
+    mov   es, bx
+    call  test_page_with_ax
+
+    mov   ax, word ptr ds:[func_22_phys_struct_1+20]
+    mov   bx, 04400h
+    mov   es, bx
+    call  test_page_with_ax
+
+    mov   ax, word ptr ds:[func_22_phys_struct_1+24]
+    mov   bx, 04800h
+    mov   es, bx
+    call  test_page_with_ax
+
+    mov   ax, word ptr ds:[func_22_phys_struct_1+28]
+    mov   bx, 05000h
+    mov   es, bx
+    call  test_page_with_ax
+
+    pop   bx
+    pop   ax
+    pop   es
+    func_22_modify_offset:
+    jmp  done_with_function_1
+    func_22_modify_offset_AFTER:
+
+func_22_function_2:
+
+    ; change pages out.
+    push  ax
+    push  bx
+    
+    mov   ax, 10
+    mov   bx, 1
+    call  init_page_map   ; init map state without remapping
+    call  test_map_1700
+
+    pop   bx
+    pop   ax
+
+    jmp  done_with_function_2
 
 ;; ACCESSORY FUNCTIONS END
 ;; ACCESSORY FUNCTIONS END
@@ -2484,6 +2617,37 @@ dw 4, 4, 4, 4, 64
 
 dw 0  ; offset by 2
 
+func_22_struct_1:
+  dw OFFSET func_22_function_1 , 0
+  db 8
+  dw OFFSET func_22_phys_struct_1, 0
+
+
+
+func_22_phys_struct_1:
+; logical, page
+    dw 8,  0
+    dw 9,  1
+    dw 10, 2
+    dw 11, 3
+    dw 20, 4
+    dw 20, 5
+    dw 21, 6
+    dw 0,  8
+
+func_22_phys_struct_2:    
+; logical, page
+    dw 20, 04000h
+    dw 20, 04400h
+    dw 21, 04800h
+    dw 0, 05000h
+
+
+func_23_struct:
+  dw 0, 0
+  db 8
+  dw 0, 0
+
 VARIABLE_expected_register_ax:
 dw 0
 VARIABLE_expected_register_dx:
@@ -2520,6 +2684,7 @@ dw 0
 
 VARIABLE_error_count:
 dw 0
+VARIABLE_page_frame_2:
 
 ; DATA END
 ; DATA END
