@@ -1601,7 +1601,7 @@ TEST_EMS_REGISTER_CALL_ALL 09200h; successful but overlap
 ; test overlaps
 
 mov   word ptr ds:[si+0],  64  ; 64byte copy
-mov   word ptr ds:[si+2],  0  ; 64kb copy
+mov   word ptr ds:[si+2],  0  
 mov   byte ptr ds:[si+11], 0   ; dest type (conventiona;)
 mov   byte ptr ds:[si+4],  0  ; source type (conventional)
 mov   word ptr ds:[si+16], 02800h   ; dest segment
@@ -1628,8 +1628,8 @@ dec   di ; 0
 call  test_64_bytes_increasing
 
 ; now extended. map same page to 4000 and page frame.
-mov   byte ptr ds:[si+11], 1   ; dest type (conventiona;)
-mov   byte ptr ds:[si+4], 1  ; source type (conventional)
+mov   byte ptr ds:[si+11], 1   ; dest type (extended;)
+mov   byte ptr ds:[si+4], 1  ; source type (extended)
 
 mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
 mov   ax, 64
@@ -1668,9 +1668,59 @@ call  test_64_bytes_increasing
 
 ; test exchanges
 
+mov   word ptr ds:[si+0],  64  ; 64byte copy
+mov   word ptr ds:[si+2],  0  
+mov   byte ptr ds:[si+11], 0   ; dest type (conventiona;)
+mov   byte ptr ds:[si+4],  0  ; source type (conventional)
+mov   word ptr ds:[si+16], 02800h   ; dest segment
+mov   word ptr ds:[si+9],  02800h   ; source segment
+mov   word ptr ds:[si+14], 1   ; dest offset
+mov   word ptr ds:[si+7],  0   ; source offset
 
-; todo test for 97h (xchg overlap)
-; todo implement backwards pagination.
+mov   ax, 02800h
+mov   es, ax
+call  write_64_bytes_increasing
+
+mov   ax, 05701h ; 0 = copy
+TEST_EMS_REGISTER_CALL_ALL 09701h; successful but overlap
+
+mov   word ptr ds:[si+14], 040h   ; dest offset
+mov   ax, 05701h ; 0 = copy
+TEST_EMS_REGISTER_CALL_ALL 00001h; successful 
+
+mov   di, 040h
+call  test_64_bytes_increasing
+
+mov   ax, 05701h ; 0 = copy
+TEST_EMS_REGISTER_CALL_ALL 00001h; successful 
+
+xor   di, di
+call  test_64_bytes_increasing
+
+mov   byte ptr ds:[si+11], 1   ; dest type (extended;)
+mov   word ptr ds:[si+16], 64   ; dest segment
+mov   word ptr ds:[si+14], 03FE0h   ; dest offset
+
+mov   ax, 05701h ; 0 = copy
+TEST_EMS_REGISTER_CALL_ALL 00001h; successful 
+
+mov   ax, 043FEh
+mov   es, ax
+xor   di, di
+call  test_64_bytes_increasing
+
+mov   ax, 05701h ; 0 = copy
+TEST_EMS_REGISTER_CALL_ALL 00001h; successful 
+mov   ax, 02800h
+mov   es, ax
+xor   di, di
+call  test_64_bytes_increasing
+
+
+
+; todo test for 94h (overlap conventional + extended)
+
+
 
 
 
