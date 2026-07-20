@@ -97,10 +97,12 @@
   shr  al, 2   ; 0 4 8 C to 0 1 2 3
   shl  ah, 2   ; 0 1 2 to 0 4 8  (C D 0)
   or   al, ah  ; combine
+
+  mov  byte ptr ds:[SELFMODIFY_SCAT_set_page_frame_register_offset_5+1], al
+
   add  al, SCAT_PAGE_C000_REGISTER_OFFSET
 
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_4+1], al
-  mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_5+1], al
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_6+1], al
 
 ; additional 4 for minus cases.
@@ -108,7 +110,7 @@
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_1+1], al
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_7+1], al
 
-  mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_5+1], al
+
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_8+1], al
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_9+1], al
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_10+1], al
