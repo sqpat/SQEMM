@@ -1537,11 +1537,15 @@ func_24_exchange_more_memory:
    jmp  func_24_exchange_more_memory
 
 func_24_copy_memory_backwards:
+
 ; gross.
-; TODO source to end.
+; source to end.
 
 cmp  byte ptr cs:[_RESIDENT_VARIABLE_FUNC_24_overlap_detected_do_backwards], ah
 je   func_24_copy_forward_after_all
+
+test bl, bl
+jnz  func_24_setup_source_segment_backwards
 
 mov ax, ds
 SHIFT_MACRO rol ax 4
@@ -1558,6 +1562,50 @@ sbb  ax, 0
 SHIFT_MACRO ror ax 4
 mov ds, ax  ; ds:si modified.
 
+jmp func_24_done_with_backwards_source_segment
+func_24_setup_source_segment_backwards:
+
+; figure out how many EMS pages.
+xor  cx, cx
+mov  ax, dx
+dec  ax   ; sub 1 offset for backwards copy 
+add  ax, si
+adc  cx, bp
+mov  si, ax
+and  si, 16383
+;cx:ax 
+shl  ax, 1
+rcl  cx, 1
+shl  ax, 1
+rcl  cx, 1
+
+; cx has num ems pages to go forward...
+jcxz skip_backwards_repage_source
+push bx
+
+mov  bx, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_current_page]
+func_24_loop_setup_last_page_first_source:
+  mov   bx, word ptr cs:[bx + PAGE_INFO.page_info_next_page]
+  loop  func_24_loop_setup_last_page_first_source
+
+mov   word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_current_page], bx
+
+xchg  bx, dx
+sub   dx, OFFSET _RESIDENT_VARIABLE_page_list
+shr   dx, 1
+
+mov   ax, FUNC_24_SOURCE_PAGE_FRAME_INDEX
+call  UTIL_set_page
+mov   dx, bx
+
+pop  bx
+skip_backwards_repage_source:
+
+func_24_done_with_backwards_source_segment:
+test bh, bh
+jnz  func_24_setup_dest_segment_backwards
+
+
 mov ax, es
 SHIFT_MACRO rol ax 4
 mov cx, ax
@@ -1572,7 +1620,45 @@ add di, dx
 adc ax, bp
 SHIFT_MACRO ror ax 4
 mov es, ax  ; es:di modified.
+jmp func_24_done_with_backwards_dest_segment
+func_24_setup_dest_segment_backwards:
 
+xor  cx, cx
+mov  ax, dx
+dec  ax   ; sub 1 offset for backwards copy 
+add  ax, di
+adc  cx, bp
+mov  di, ax
+and  di, 16383
+;cx:ax 
+shl  ax, 1
+rcl  cx, 1
+shl  ax, 1
+rcl  cx, 1
+
+; cx has num ems pages to go forward...
+jcxz skip_backwards_repage_dest
+push bx
+
+mov  bx, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_current_page]
+func_24_loop_setup_last_page_first_dest:
+  mov   bx, word ptr cs:[bx + PAGE_INFO.page_info_next_page]
+  loop  func_24_loop_setup_last_page_first_dest
+
+mov   word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_current_page], bx
+
+xchg  bx, dx
+sub   dx, OFFSET _RESIDENT_VARIABLE_page_list
+shr   dx, 1
+
+mov   ax, FUNC_24_DEST_PAGE_FRAME_INDEX
+call  UTIL_set_page
+mov   dx, bx
+
+pop  bx
+skip_backwards_repage_dest:
+
+func_24_done_with_backwards_dest_segment:
 
 std
 
@@ -1591,8 +1677,6 @@ func_24_copy_more_memory_backwards:
    mov        ax, dx
    or         ax, bp
    jz         jump_to_func_24_done
-
-   ;call       func_24_check_repage ; does all the logical page repaging
 
    jmp        func_24_copy_more_memory_backwards
 
@@ -1679,8 +1763,8 @@ func_24_prep_copy_pointers_backwards:   ; return copy amount in cx
    ; ax/cx free
    ; now bp:dx carries count...
 
- test  bx, bx
- jnz   func_24_skip_backwards_normalize
+ test  bl, bl
+ jnz   func_24_skip_backwards_normalize_conventional_si
  ; we want ds:FFFx
  mov   ax, si
  or    ax, 0FFF0h ; create FFFn
@@ -1699,6 +1783,11 @@ func_24_prep_copy_pointers_backwards:   ; return copy amount in cx
  func_24_backwards_dssi_pointer_good:   
  mov   ds, ax  ; new ds:si set
 
+
+func_24_skip_backwards_normalize_conventional_si:
+ test  bh, bh
+ jnz   func_24_skip_backwards_normalize_conventional_di
+ 
  ; and es:FFFx
  mov   ax, di
  or    ax, 0FFF0h ; create FFFn
@@ -1719,14 +1808,94 @@ func_24_prep_copy_pointers_backwards:   ; return copy amount in cx
 
  mov   es, ax  ; new es:di set
 
- mov   cx, dx
- cmp   cx, 32768
- jb    func_24_skip_cap_conventional_size_backwards
-func_24_do_max_after_all_backwards:
- mov   cx, 32768
-func_24_skip_cap_conventional_size_backwards:
- jcxz  func_24_do_max_after_all_backwards   ; bp must be nonzero?
 
+ func_24_skip_backwards_normalize_conventional_di:
+ ; conventional adjustsments done. now check extened
+ test  bl, bl
+ jz    func_24_skip_backwards_normalize_exteneded_si
+ inc   si
+ jnz   func_24_skip_backwards_normalize_exteneded_si_dec_si
+ 
+ ; backwards page
+  mov   cx, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_current_page]
+  mov   si, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_handle]
+  mov   si, word ptr cs:[_RESIDENT_VARIABLE_handle_list + si + HANDLE_INFO.handle_first_page]
+
+  try_next_page_backwards_loop_source:
+    cmp   cx, word ptr cs:[si + PAGE_INFO.page_info_next_page]
+    je    found_page_backwards_source
+    mov   si, word ptr cs:[si + PAGE_INFO.page_info_next_page]
+    jmp   try_next_page_backwards_loop_source
+
+  found_page_backwards_source:
+  
+  push  dx
+  push  ax
+  mov   word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_current_page], si
+  mov   dx, si
+  sub   dx, OFFSET _RESIDENT_VARIABLE_page_list
+  shr   dx, 1
+  mov   ax, FUNC_24_SOURCE_PAGE_FRAME_INDEX
+  call  UTIL_set_page
+  pop   ax
+  pop   dx
+  mov   si, 16384 ; dec later, overshoot offset by 1
+
+ func_24_skip_backwards_normalize_exteneded_si_dec_si:
+ dec   si
+ func_24_skip_backwards_normalize_exteneded_si:
+ test  bh, bh
+ jz    func_24_skip_backwards_normalize_exteneded_di
+ inc   di
+ jnz   func_24_skip_backwards_normalize_exteneded_di_dec_di
+
+ ; backwards page
+  mov   cx, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_current_page]
+  mov   di, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_handle]
+  mov   di, word ptr cs:[_RESIDENT_VARIABLE_handle_list + di + HANDLE_INFO.handle_first_page]
+
+  try_next_page_backwards_loop_dest:
+    cmp   cx, word ptr cs:[di + PAGE_INFO.page_info_next_page]
+    je    found_page_backwards_dest
+    mov   di, word ptr cs:[di + PAGE_INFO.page_info_next_page]
+    jmp   try_next_page_backwards_loop_dest
+
+  found_page_backwards_dest:
+  
+  push  dx
+  push  ax
+  mov   word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_current_page], di
+  mov   dx, di
+  sub   dx, OFFSET _RESIDENT_VARIABLE_page_list
+  shr   dx, 1
+  mov   ax, FUNC_24_DEST_PAGE_FRAME_INDEX
+  call  UTIL_set_page
+  pop   ax
+  pop   dx
+
+ mov    di, 16384 ; dec later, overshoot offset by 1
+
+func_24_skip_backwards_normalize_exteneded_di_dec_di:
+ dec    di
+func_24_skip_backwards_normalize_exteneded_di:
+
+; now ds:si and es:di are set. figure out cx.
+ mov   cx, 0FFFEh
+
+ cmp   cx, si
+ jb    func_24_backwards_dont_cap_to_si
+ mov   cx, si
+ func_24_backwards_dont_cap_to_si:
+ cmp   cx, di
+ jb    func_24_backwards_dont_cap_to_di
+ mov   cx, di
+ func_24_backwards_dont_cap_to_di:
+
+ inc cx ; plus one for backwards copy offset.
+
+
+
+; compare to count
 func_24_bounds_check_backwards:
  ; dx has original count.
  cmp        cx, dx   ; is length smaller than bp:dx?
@@ -1735,43 +1904,6 @@ func_24_bounds_check_backwards:
  jne        func_24_ax_smaller_do_copy_backwards
  mov        cx, dx
  func_24_ax_smaller_do_copy_backwards:
-
-
-
-func_24_skip_backwards_normalize:
-
- ; todo: backwards step thru expanded memory 
-ret
-
-COMMENT @
-; TODO THE BELOW
- ; segments/offsets were normalized if conventional.
- ; now calculate copy length for this iter.
- ;
- ; bp:dx still count
-
- test  bx, bx
- jz    func_24_use_conventional_max
- 
- mov   cx, 16384
- cmp   bx, 0100h  
- je    func_24_use_di_value    ; only dest is extended
- ja    func_24_use_min_of_both ; both are extended
- func_24_use_si_value:         ; only source is extended
- sub   cx, si
- jmp   func_24_bounds_check_backwards
- func_24_use_di_value:
- sub   cx, di
- jmp   func_24_bounds_check_backwards
- func_24_use_min_of_both:
- mov   ax, cx
- sub   cx, si
- sub   ax, di
- cmp   cx, ax
- jbe   func_24_bounds_check_backwards
- xchg  ax, cx
- jmp   func_24_bounds_check_backwards
- @
 
 
 
@@ -1883,9 +2015,6 @@ func_24_clean_up_segments:
   ret
 
 func_24_do_bounds_checks:
-
-
-
   push    bp
   push    cx
 
@@ -3186,6 +3315,7 @@ _RESIDENT_VARIABLE_access_blocked:
 db 0
 
 
+ALIGN 2
 ; global handle (first allocation)
 
 
