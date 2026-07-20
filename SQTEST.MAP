@@ -1,7 +1,7 @@
 Open Watcom Linker Version 2.0 beta Sep  3 2024 02:05:05 (32-bit)
 Copyright (c) 2002-2024 The Open Watcom Contributors. All Rights Reserved.
 Portions Copyright (c) 1985-2002 Sybase, Inc. All Rights Reserved.
-Created on:       26/07/17 14:15:16
+Created on:       26/07/19 15:01:30
 Executable Image: sqtest.exe
 creating a DOS executable
 
@@ -13,7 +13,7 @@ creating a DOS executable
 Group                           Address              Size
 =====                           =======              ====
 
-DGROUP                          0000:0000            00001a92
+DGROUP                          0000:0000            00001cb4
 
 
 
@@ -24,8 +24,8 @@ DGROUP                          0000:0000            00001a92
 Segment                Class          Group          Address         Size
 =======                =====          =====          =======         ====
 
-_TEXT                  CODE           DGROUP         0000:0000       00001a91
-_DATA                  DATA           DGROUP         01a9:0002       00000000
+_TEXT                  CODE           DGROUP         0000:0000       00001cb3
+_DATA                  DATA           DGROUP         01cb:0004       00000000
 
 
                         +----------------+
@@ -39,17 +39,17 @@ Address        Symbol
 =======        ======
 
 Module: sqtest.obj(sqtest.ASM)
-0000:124c*     PAGE_RANDOM_MAP_1700
-0000:12a4*     TEST_MAP_1700
-0000:10a1*     TEST_PAGE_WITH_AX
+0000:1420*     PAGE_RANDOM_MAP_1700
+0000:1478*     TEST_MAP_1700
+0000:1275*     TEST_PAGE_WITH_AX
 0000:0623*     LOOP_TEST_RANDOM_FOUR
-0000:11c3*     PAGE_RANDOM_MAP_4400
-0000:122c*     TEST_PARTIAL_PAGEMAP
-0000:16f1*     MAP_1700_PAGE_LIST_FOUR
-0000:10f4*     TEST_64_PAGES_IN_REVERSE
-0000:135d*     CONTINUE_AFTER_AX
-0000:1169*     TEST_RANDOM_FOUR_5700
-0000:110a*     TEST_RANDOM_FOUR_5701
+0000:1397*     PAGE_RANDOM_MAP_4400
+0000:1400*     TEST_PARTIAL_PAGEMAP
+0000:1913*     MAP_1700_PAGE_LIST_FOUR
+0000:12c8*     TEST_64_PAGES_IN_REVERSE
+0000:1531*     CONTINUE_AFTER_AX
+0000:133d*     TEST_RANDOM_FOUR_5700
+0000:12de*     TEST_RANDOM_FOUR_5701
 Warning! W1014: stack segment not found
 Warning! W1023: no starting address found, using 0000:0000
 
@@ -59,6 +59,6 @@ Warning! W1023: no starting address found, using 0000:0000
                         +-----------------------+
 
 Stack size:  09e8 (2536.)
-Memory size:  1a92 (6802.)
+Memory size:  1cb4 (7348.)
 Entry point address: 0000:0000
-Link time: 00:00.00
+Link time: 00:00.55

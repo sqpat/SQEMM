@@ -1549,9 +1549,10 @@ call  test_map_1700
 ; x test extended to extended
 ;  x 1MB copy?
 ; x test conventional to extended
-; test error cases
-; test overlaps
+; ~ test error cases
+; ~ test overlaps
 ;   force backwards.
+;    - implement backwards pagination in driver
 ; test exchange in all these cases
 
 ; convetional to extended
@@ -1565,8 +1566,6 @@ mov   ax, 64
 xor   bx, bx
 call  init_page_map   ; init map state without remapping
 
-here:
-public here
 
 mov   ax, 36
 mov   dx, 04000h
@@ -1595,11 +1594,81 @@ TEST_EMS_REGISTER_CALL_ALL 09500h; bad extended offset
 mov   byte ptr ds:[si+11], 0   ; dest type (conventiona;)
 mov   word ptr ds:[si+16], 02400h   ; dest segment
 mov   ax, 05700h ; 0 = copy
+TEST_EMS_REGISTER_CALL_ALL 09200h; successful but overlap 
+
+
+
+; test overlaps
+
+mov   word ptr ds:[si+0],  64  ; 64byte copy
+mov   word ptr ds:[si+2],  0  ; 64kb copy
+mov   byte ptr ds:[si+11], 0   ; dest type (conventiona;)
+mov   byte ptr ds:[si+4],  0  ; source type (conventional)
+mov   word ptr ds:[si+16], 02800h   ; dest segment
+mov   word ptr ds:[si+9],  02800h   ; source segment
+mov   word ptr ds:[si+14], 1   ; dest offset
+mov   word ptr ds:[si+7],  0   ; source offset
+
+mov   ax, 02800h
+mov   es, ax
+call  write_64_bytes_increasing
+
+mov   ax, 05700h ; 0 = copy
 TEST_EMS_REGISTER_CALL_ALL 09200h; successful but overlap
 
+mov   di, 1
+call  test_64_bytes_increasing
 
-; todo test for 93h (too many logical)
-; todo test for A2h (1m wraparound)
+mov   word ptr ds:[si+14], 0   ; dest offset
+mov   word ptr ds:[si+7], 1   ; source offset
+mov   ax, 05700h ; 0 = copy
+TEST_EMS_REGISTER_CALL_ALL 09200h; successful but overlap
+
+dec   di ; 0 
+call  test_64_bytes_increasing
+
+; now extended. map same page to 4000 and page frame.
+mov   byte ptr ds:[si+11], 1   ; dest type (conventiona;)
+mov   byte ptr ds:[si+4], 1  ; source type (conventional)
+
+mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
+mov   ax, 64
+xor   bx, bx
+call  init_page_map
+
+
+mov   word ptr ds:[si+14], 1   ; dest offset
+mov   word ptr ds:[si+7],  1   ; source offset
+mov   word ptr ds:[si+16], 64   ; dest segment
+mov   word ptr ds:[si+9],  64   ; source segment
+mov   word ptr ds:[si+14], 03FE1h   ; dest offset
+mov   word ptr ds:[si+7],  03FE0h   ; source offset
+
+; write from page 64 to page 65.  This requires extended backwards pagination
+
+mov   ax, 043FEh
+mov   es, ax
+mov   di, 1
+call  write_64_bytes_increasing
+
+mov   ax, 05700h ; 0 = copy
+TEST_EMS_REGISTER_CALL_ALL 09200h; successful but overlap
+
+mov   di, 1
+call  test_64_bytes_increasing
+
+mov   word ptr ds:[si+14], 03FE0h   ; dest offset
+mov   word ptr ds:[si+7],  03FE1h   ; source offset
+mov   ax, 05700h ; 0 = copy
+TEST_EMS_REGISTER_CALL_ALL 09200h; successful but overlap
+
+dec   di ; 0 
+call  test_64_bytes_increasing
+
+
+; test exchanges
+
+
 ; todo test for 97h (xchg overlap)
 ; todo implement backwards pagination.
 
@@ -2668,6 +2737,62 @@ func_22_function_2:
     func_22_modify_offset_2:
     jmp  done_with_function_2
 
+write_64_bytes_increasing:
+
+    push di
+    push ax
+    push cx
+
+    xor  di, di
+
+    xor  ax, ax
+    mov  cx, 64
+
+    loop_write_64:
+        stosb
+        inc ax
+        loop loop_write_64
+
+    pop  cx
+    pop  ax
+    pop  di
+    
+    ret
+
+test_64_bytes_increasing:
+
+    push di
+    push ax
+    push cx
+
+
+
+
+    xor  ax, ax
+    mov  cx, 64
+
+    loop_test_64:
+        scasb
+        jne   print_test_error_64byte
+        inc ax
+        loop loop_test_64
+    return_test_page_64:
+
+
+    pop  cx
+    pop  ax
+    pop  di
+    
+    ret
+
+print_test_error_64byte:
+    push  dx
+    PRINT_STRING move_64_error
+    pop   dx
+
+    call  prompt_for_key
+    jmp   return_test_page_64
+
 ;; ACCESSORY FUNCTIONS END
 ;; ACCESSORY FUNCTIONS END
 ;; ACCESSORY FUNCTIONS END
@@ -2767,6 +2892,9 @@ scan_test_success_segment:
 db "0000"
 db " $"
 
+
+move_64_error:
+db 0Dh, 0Ah, "    Failed overlap copy!$"
 
 ; STRINGS END
 ; STRINGS END
