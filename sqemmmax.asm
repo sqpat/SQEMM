@@ -1133,6 +1133,7 @@ jmp   func_51_add_pages_back_to_free
 ;             (Segment address mode)                         5601h     
 ;             Get Page Map Stack Space Size                  5602h     
 func_23_bad_handle:
+pop   ax
 mov   ah, 083h
 iret 
 func_23_error_bad_page:
@@ -1149,18 +1150,18 @@ iret
 ALIGN 2
 
 do_func_5602:
-mov   bx, 020h   ; probably less ok... we use 18-20 bytes (decimal) at worst?
-xor   ah, ah
+mov   bx, 030h   ; probably ok... we use 32-34 bytes (decimal) at worst?
 iret
 
 EMS_FUNCTION_056h:
 xchg  ax, bx ; restore bx
 pop   ax  ; get subfunction back.
-; if ah = 0, then func 22. if ah = 1, then func 23.
+
+xor   ah, ah
 cmp   al, 2 
 ja    func_23_bad_subfunction
 je    do_func_5602
-
+push  ax
 xchg  ax, dx ; ax gets handle
 call  COMMON_check_valid_handle
 xchg  ax, dx ; handle back in dx
@@ -1168,87 +1169,82 @@ jc    func_23_bad_handle
 
 ; save registers.
 push  ds
-PUSHA_MACRO
-cbw
-xchg  ax, bp  ; bp = 0 or 1 for subfunction
-xor   cx, cx
-mov   cl, byte ptr ds:[si + 9]
-jcxz  func_56_loop_got_all_pages
-lds   si, dword ptr ds:[si + 10]
-func_56_loop_get_next_page:
-lodsw   ; unset, skip over
-lodsw
-test  bp, bp
-je    func_23_got_page_value
-call  COMMON_util_get_register_for_segment
-func_23_got_page_value:
-call  UTIL_get_page  ; we have an absolute page, not hande/logical page
 
-cmp   ax, -1
-je    func_23_error_bad_page
-mov   word ptr ds:[si-4], ax
-loop  func_56_loop_get_next_page
-func_56_loop_got_all_pages:
-
-POPA_MACRO
-pop   ds
-push  ds
 PUSHA_MACRO
+
 xor   cx, cx
 mov   cl, byte ptr ds:[si + 4]
+jcxz  func_56_skip_first_remap
 lds   si, dword ptr ds:[si + 5]
 mov   ah, 050h
 int   067h
-POPA_MACRO
+func_56_skip_first_remap:
+POPA_MACRO ; ax restored.
+
 pop   ds
+
+
+; push it all in case func wrecks it. CURRENTLY only AX ons tack.
+push  es
+push  di
+push  bp
+push  dx
+push  cx
+push  bx
 
 push  ds
 push  si
-push  word ptr ds:[si + 10]
-push  word ptr ds:[si + 12]
-push  word ptr ds:[si + 9]
+
+push  dx  ; handle
+push  word ptr ds:[si + 10] ; todo what ; offset
+push  word ptr ds:[si + 12] ; todo what ; segment
+push  word ptr ds:[si + 9] ; todo what  ; count
 push  ax
 push  ax
 xchg  ax, si
 mov   si, sp
-push  word ptr ss:[si+18] ; gross but ok
+push  word ptr ss:[si+34] ; gross but ok. we need flags in the call target.
 popf
 xchg  ax, si
 pop   ax
+; mov   ah, 056h ; todo not sure if this gets 0 or 56.
+
+
 call  dword ptr ds:[si]  
+
+
 pop   ax
-pop   cx
+pop   cx  ; count
 xor   ch, ch
-pop   ds
+pop   ds  ; segment
+pop   si  ; offset
+pop   dx  ; handle
+
+jcxz  func_56_skip_old_repage
+
+mov   ah, 050h
+int   067h
+
+
+
+
+
+
+func_56_skip_old_repage:
+
 pop   si
+pop   ds
 
-
-push  bp
-push  dx
-
-xchg  ax, bp
-
-func_56_loop_get_next_page_for_restore:
-lodsw   ; page value
-xchg  ax, dx
-lodsw   ; page index
-test  bp, bp
-je    func_23_got_page_value_for_restore
-call  COMMON_util_get_register_for_segment
-func_23_got_page_value_for_restore:
-call  UTIL_set_page   ; we have an absolute page, not hande/logical page
-loop  func_56_loop_get_next_page_for_restore
-
-
-
+pop   bx
+pop   cx
 pop   dx
 pop   bp
 
-pop   si
-pop   ds
+pop   di
 
-mov   al, byte ptr cs:[_current_call_subfunction_value] ; restore..s
-xor   ah, ah
+pop   es
+pop   ax ; ah already zero
+
 iret 
 
 
