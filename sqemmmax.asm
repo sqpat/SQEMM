@@ -2527,8 +2527,12 @@ ENDIF
 
 
 EMS_FUNCTION_05Ch:
-
+public EMS_FUNCTION_05Ch
 xchg  ax, bx
+; unmap everything to -1
+
+call  UTIL_unmap_all_pages
+
 pop   ax
 xor   ah, ah
 iret 

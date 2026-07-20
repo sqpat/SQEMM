@@ -55,3 +55,50 @@ SELFMODIFY_SCAT_add_page_frame_register_offset_10:
   add   ax, SCAT_PAGE_OFFSET_AMT
   out   dx, ax
   ret
+
+
+
+
+UTIL_unmap_all_pages:
+  push  cx
+  push  dx
+  push  bx
+  
+  mov   bx, SCAT_CHIPSET_UNMAP_VALUE
+  mov   cx, 24
+  mov   ax, 12
+SELFMODIFY_SCAT_set_page_select_register_5:
+  mov   dx, SCAT_PAGE_SELECT_REGISTER
+
+  UTIL_loop_unmap_next_page:
+   
+    out   dx, al
+    dec   dx
+    dec   dx
+    inc   ax
+    xchg  ax, bx
+    out   dx, ax
+    inc   dx
+    inc   dx
+    xchg  ax, bx
+    loop  UTIL_loop_unmap_next_page
+
+  mov  cx, 4
+SELFMODIFY_SCAT_set_page_select_register_12:
+  mov  al, SCAT_PAGE_C000_REGISTER_OFFSET
+
+  UTIL_loop_unmap_next_page_frame:
+    out   dx, al
+    dec   dx
+    dec   dx
+    xchg  ax, bx
+    out   dx, ax
+    inc   dx
+    inc   dx
+    xchg  ax, bx
+    loop  UTIL_loop_unmap_next_page_frame
+
+  pop  bx
+  pop  dx
+  pop  cx
+  ret

@@ -58,3 +58,38 @@ SELFMODIFY_FANTASY_add_page_frame_offset_4:
   add   ax, FANTASY_PAGE_OFFSET_AMT
   out   FANTASY_PAGE_SET_REGISTER, ax
   ret
+
+
+UTIL_unmap_all_pages:
+  push  cx
+
+  push  bx
+  
+  mov   bx, -1
+  mov   cx, 24
+  mov   ax, 12
+  
+  UTIL_loop_unmap_next_page:
+    out   FANTASY_PAGE_SELECT_REGISTER, al
+    inc   ax
+    xchg  ax, bx
+    out   FANTASY_PAGE_SET_REGISTER, ax
+    xchg  ax, bx
+    loop  UTIL_loop_unmap_next_page
+
+  mov  cx, 4
+SELFMODIFY_FANTASY_add_page_frame_offset_6:
+  mov  al, 4
+
+  UTIL_loop_unmap_next_page_frame:
+    out   FANTASY_PAGE_SELECT_REGISTER, al
+    inc   ax
+    xchg  ax, bx
+    out   FANTASY_PAGE_SET_REGISTER, ax
+    xchg  ax, bx
+    loop  UTIL_loop_unmap_next_page_frame
+
+  pop  bx
+
+  pop  cx
+  ret

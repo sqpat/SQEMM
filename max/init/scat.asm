@@ -17,12 +17,14 @@
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_3+1], al
 
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_set_register_4+1], al
+  add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_5+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_6+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_7+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_8+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_9+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_10+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_11+1], al
+  add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_12+1], al
   mov   ax, 0218h
 
   use_default_ports:
@@ -98,6 +100,7 @@
   add  al, SCAT_PAGE_C000_REGISTER_OFFSET
 
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_4+1], al
+  mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_5+1], al
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_6+1], al
 
 ; additional 4 for minus cases.
