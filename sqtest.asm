@@ -764,7 +764,7 @@ TEST_EMS_REGISTER_CALL_NO_CX 00000h
 cmp   cx, 28
 jb    go_skip_conventional
 cmp   cx, dx
-jne   go_skip_conventional  ; todo better error string
+jne   go_skip_conventional  ; todo implement 4 page card test path
 mov   word ptr ds:[VARIABLE_page_count], cx  
 
 mov   si, OFFSET map_1700_page_list_full ; offset by 2 
@@ -1359,8 +1359,9 @@ PRINT_RUNNING_TEST 23
 ; do tests similar to 22, but selfmodify returns into the functions.
 
 RET_OPCODE = 0C3h
-mov   word ptr ds:[func_22_modify_offset], RET_OPCODE
-mov   word ptr ds:[func_22_modify_offset_2], RET_OPCODE
+RET_FAR_OPCODE = 0CBh
+mov   word ptr ds:[func_22_modify_offset], RET_FAR_OPCODE
+mov   word ptr ds:[func_22_modify_offset_2], RET_FAR_OPCODE
 
 mov   si, OFFSET func_22_struct_1
 mov   word ptr ds:[si], offset func_22_function_1
@@ -1368,6 +1369,15 @@ mov   byte ptr ds:[si+4], 8
 mov   word ptr ds:[si+5], offset func_22_phys_struct_1
 mov   word ptr ds:[si+2], cs
 mov   word ptr ds:[si+7], cs
+mov   byte ptr ds:[si+9], 0
+mov   word ptr ds:[si+10], offset func_22_phys_struct_1
+mov   word ptr ds:[si+12], cs
+mov   word ptr ds:[si+14], 0
+mov   word ptr ds:[si+16], 0
+
+
+
+
 
 mov   ax, 05603h
 TEST_EMS_REGISTER_CALL_ALL 08F03h
@@ -1378,10 +1388,13 @@ TEST_EMS_REGISTER_CALL_ALL 08300h
 mov   ax, 05601h
 TEST_EMS_REGISTER_CALL_ALL 08301h
 
+
 mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
 
-mov   ax, 05500h ; 0 = physical page numbers...
+mov   ax, 05600h ; 0 = physical page numbers...
 TEST_EMS_REGISTER_CALL_ALL 00000h
+
+
 
 
 ; change pages out.
@@ -1390,13 +1403,28 @@ xor   bx, bx
 call  init_page_map   ; init map state without remapping
 call  test_map_1700
 
+mov  di, OFFSET func_22_phys_struct_3
+mov   byte ptr ds:[si+9], 28
+mov   word ptr ds:[si+10], offset func_22_phys_struct_3
+
+
 
 mov   word ptr ds:[si], offset func_22_function_2
 mov   byte ptr ds:[si+4], 0
 
 
-mov   ax, 05500h ; 0 = physical page numbers...
+mov   ax, 05600h ; 0 = physical page numbers...
 TEST_EMS_REGISTER_CALL_ALL 00000h
+
+; should be restored
+mov   ax, 10
+mov   bx, 1 ; dont remap
+call  init_page_map   ; init map state without remapping
+call  test_map_1700  
+
+
+
+; store old pages for restore.
 
 
 mov   byte ptr ds:[si+4], 4
@@ -1404,7 +1432,8 @@ mov   word ptr ds:[si+5], offset func_22_phys_struct_2
 mov   word ptr ds:[si], offset func_22_function_3
 
 
-mov   ax, 05501h ; 1 = segment page numbers...
+
+mov   ax, 05601h ; 1 = segment page numbers...
 TEST_EMS_REGISTER_CALL_ALL 00001h
 
 
@@ -1544,16 +1573,6 @@ call  init_page_map   ; init map state without remapping
 call  test_map_1700
 
 
-; todo: 
-
-; x test extended to extended
-;  x 1MB copy?
-; x test conventional to extended
-; ~ test error cases
-; ~ test overlaps
-;   force backwards.
-;    - implement backwards pagination in driver
-; test exchange in all these cases
 
 ; convetional to extended
 mov   word ptr ds:[si+2], 1  ; 64kb copy
@@ -1717,7 +1736,7 @@ xor   di, di
 call  test_64_bytes_increasing
 
 
-
+; todo test xchg extended to extended?
 ; todo test for 94h (overlap conventional + extended)
 
 
@@ -3048,6 +3067,7 @@ ENDM
 func_21_handle_directory: ; reuse this region
 func_26_hardware_info: ; reuse this region
 
+func_22_phys_struct_3:
 pagemap_1_func_15:
 partial_pagemap_1_func_16_save_area:
 REPT 64
@@ -3080,7 +3100,9 @@ func_22_struct_1:
   dw OFFSET func_22_function_1 , 0
   db 8
   dw OFFSET func_22_phys_struct_1, 0
-
+  db 0
+  dw 0, 0
+  dw 0, 0
 
 
 func_22_phys_struct_1:
