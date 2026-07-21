@@ -136,6 +136,7 @@ ENDIF
   func_1700_handle_default_page:
   ; mapping to page -1
   xchg ax, bx
+  dec  ax
   out  FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
   loop       func_1700_loop_next_page
   
