@@ -1746,8 +1746,6 @@ pop   ds
 pop   es
 
 
-; todo: test -1 paging/unpaging
-; todo test OS stuff?
 
 ; TEST 25: Test allocate page special cases 
 PRINT_RUNNING_TEST 25
@@ -1755,8 +1753,79 @@ PRINT_RUNNING_TEST 25
 
 
 
-; deallocate
 
+PRINT_RUNNING_TEST 26
+
+; page to some garbage
+mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
+mov   ax, CONVENTIONAL_COPY_PAGE+1
+xor   bx, bx
+call  init_page_map   ; init map state without remapping
+
+
+; copy conventional unmapped to ems. page around. unmap again. confirm equality
+
+;     FUNCTION 29   PREPARE EXPANDED MEMORY HARDWARE FOR WARM BOOT
+mov   ax, 05C23h
+TEST_EMS_REGISTER_CALL_ALL 00023h  ; prepare for warm boot
+
+CONVENTIONAL_COPY_PAGE = 16
+
+
+mov   word ptr ds:[si+0], 0  ; length
+mov   word ptr ds:[si+2], 6  ; 384k
+mov   byte ptr ds:[si+4], 0  ; source type (conventional)
+mov   word ptr ds:[si+7], 0   ; source offset
+mov   word ptr ds:[si+9], 04000h   ; source segment  ; 4000-A000
+mov   word ptr ds:[si+11], 1   ; dest type (extended)
+mov   byte ptr ds:[si+12], dl  ; dest handle
+mov   word ptr ds:[si+14], 0   ; dest offset
+mov   word ptr ds:[si+16], CONVENTIONAL_COPY_PAGE   ; dest segment
+mov   ax, 05700h ; 0 = copy
+TEST_EMS_REGISTER_CALL_ALL 00000h ; copy conventional out
+
+call  check_conventional_copy
+
+mov  ax, 04E00h
+TEST_EMS_REGISTER_CALL_ALL 0000h  ; store -1 pages
+
+
+mov   ax, CONVENTIONAL_COPY_PAGE+1
+xor   bx, bx
+call  init_page_map   ; garbage pages
+
+mov   ax, 05C23h
+TEST_EMS_REGISTER_CALL_ALL 00023h  ; unmap
+
+call  check_conventional_copy ; check
+
+mov   ax, CONVENTIONAL_COPY_PAGE+1
+xor   bx, bx
+call  init_page_map   ; garbage pages
+
+
+; set up conventional pages
+
+mov   si, OFFSET map_1700_page_list_full
+mov   di, si
+
+; init page map to -1 again..
+mov   ax, -1
+mov   cx, word ptr ds:[VARIABLE_page_count]
+push  cx
+loop_unmap_next_page:
+    stosw
+    add  di, 2
+    loop loop_unmap_next_page
+
+pop  cx
+mov   ax, 05000h 
+TEST_EMS_REGISTER_CALL_ALL 0000h ; unmap those pages via func 17...
+
+call  check_conventional_copy ; check
+
+
+; deallocate 
 
 ; TEST 30: Deallocation
 PRINT_RUNNING_TEST 30
@@ -1784,10 +1853,6 @@ TEST_EMS_REGISTER_CALL_ALL 00023h  ; clean context up...
 
 mov   ax, 04510h
 TEST_EMS_REGISTER_CALL_ALL 0010h
-
-;     FUNCTION 29   PREPARE EXPANDED MEMORY HARDWARE FOR WARM BOOT
-mov   ax, 05C23h
-TEST_EMS_REGISTER_CALL_ALL 00023h  ; warm boot
 
 
 
@@ -2861,6 +2926,66 @@ print_test_error_64byte:
     call  prompt_for_key
     jmp   return_test_page_64
 
+check_conventional_copy:
+
+    push  ax
+    push  cx
+    push  bp
+    push  ds
+    push  es
+    push  si
+    push  di
+
+    ; use page frame to compare to 4000...A000
+    mov   cx, 6
+    mov   bp, 04000h
+    mov   ax, CONVENTIONAL_COPY_PAGE  ; page frame
+    xor   di, di
+    xor   si, si
+
+
+    loop_next_conventional_64k:
+        mov   es, bp
+
+        call  page_in_four_pages_starting_at_ax ; set up page frame
+        push  ds
+        mov   ds, word ptr ds:[VARIABLE_page_frame+2]  ; page frame segment
+
+        push  cx
+        mov   cx, 32768
+        repe  cmpsw
+        pop   cx
+        pop   ds
+        jne   conventional_non_match
+
+
+        add   bp, 01000h
+        add   ax, 4
+        loop  loop_next_conventional_64k
+
+    skip_rest_of_conventional_check:
+
+    pop  di
+    pop  si
+    pop  es
+    pop  ds
+    pop  bp
+    pop  cx
+    pop  ax
+
+
+    ret
+
+conventional_non_match:  
+
+    push  dx
+    PRINT_STRING unmap_error
+    pop   dx
+
+    call  prompt_for_key
+
+    jmp   skip_rest_of_conventional_check
+
 ;; ACCESSORY FUNCTIONS END
 ;; ACCESSORY FUNCTIONS END
 ;; ACCESSORY FUNCTIONS END
@@ -2963,6 +3088,9 @@ db " $"
 
 move_64_error:
 db 0Dh, 0Ah, "    Failed overlap copy!$"
+
+unmap_error:
+db 0Dh, 0Ah, "    Failed conventional unmap test!$"
 
 ; STRINGS END
 ; STRINGS END
