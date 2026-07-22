@@ -1,3 +1,8 @@
+chipset_page_lookup:
+
+  db 0E0h, 0E4h, 0E8h, 0ECh
+
+
 ; Two-word pairs. first word is page frame (04000h, 04400h... etc) up to f000.  
 ;                 second word its physical ems index port
 ; 144 bytes long 
@@ -7,6 +12,6 @@
 mappable_phys_page_struct:
 
 mappable_phys_page_struct_page_frame:
-  dw 0D000h, 0000h, 0D400h, 0001h, 0D800h, 0002h, 0DC00h, 0003h
+  dw 0E000h, 0000h, 0E400h, 0001h, 0E800h, 0002h, 0EC00h, 0003h
 
 

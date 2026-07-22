@@ -1,19 +1,23 @@
-
+; note: bx on stack
   ; page frame's pages are 260h, 261h, 262h, 263h
 
   ; al and bx are still the args
 
   push dx  
- 
-  add ax, LOTECH_PAGE_REGISTER_0
-  mov dx, ax
-  mov ax, bx
+  xor  ah, ah
+  push ax
+  SELFMODIFY_LOTECH_set_page_select_register_4:
+  add  ax, LOTECH_BASE_PAGE_REGISTER
+  xchg ax, dx
+  xchg ax, bx
 
   ; since FF works as an unmap, lets just write that.
 
-  cli
+
   out   dx, al   ; write 16 bit page num. 
   
   pop   dx
-  xor   ax, ax  
+  pop   ax
+  pop   bx  ;  still ons tack
+
   iret

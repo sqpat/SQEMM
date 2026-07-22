@@ -7,7 +7,7 @@
 
   push dx  
  
-  add ax, LOTECH_PAGE_REGISTER_0
+  add ax, LOTECH_BASE_PAGE_REGISTER
   mov dx, ax
   mov ax, bx
 

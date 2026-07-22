@@ -11,9 +11,11 @@ SELFMODIFY_FANTASY_add_page_frame_offset_10:
   mov   bl, 4
 
 
-  cmp   byte ptr cs:[_current_call_subfunction_value], 1
-  je    func_16_sub_01
-  ja    not_func_16_sub_00
+  cmp   byte ptr cs:[_current_call_subfunction_value], 2
+  ja    func_16_bad_subfunction
+  je    func_16_sub_02
+  jpo   func_16_sub_01
+
 
 func_16_sub_00:
 
@@ -62,10 +64,6 @@ func_16_pop_and_return:
 
 iret
 
-not_func_16_sub_00:
-cmp   byte ptr cs:[_current_call_subfunction_value], 2
-ja    func_16_bad_subfunction
-; fall thru
 
 func_16_sub_02:
 ;          GET SIZE OF PARTIAL PAGE MAP SAVE ARRAY SUBFUNCTION

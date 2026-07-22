@@ -9,7 +9,7 @@
   ; next page in ax....
 
   lodsw
-  add  ax,  LOTECH_PAGE_REGISTER_0
+  add  ax,  LOTECH_BASE_PAGE_REGISTER
   mov  dx, ax
   lodsw
 

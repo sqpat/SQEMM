@@ -9,8 +9,9 @@
   ; next page in ax....
 
   lodsw
-  add  ax,  LOTECH_PAGE_REGISTER_0
-  mov  dx, ax
+  SELFMODIFY_LOTECH_set_page_select_register_8:
+  add  ax, LOTECH_BASE_PAGE_REGISTER
+  xchg ax, dx
   lodsw
   call COMMON_util_get_register_for_segment
 

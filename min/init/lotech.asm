@@ -1,5 +1,5 @@
 
-  mov   dx, LOTECH_PAGE_REGISTER_0
+  mov   dx, LOTECH_BASE_PAGE_REGISTER
   mov   ax, 000h 
   out   dx, al   ; write 8 bit page num. 
   inc   dx

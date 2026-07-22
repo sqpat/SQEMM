@@ -297,8 +297,10 @@ NOT_FUNC_50h:
 
 EMS_FUNCTION_044h:
 
+
+
 _RESIDENT_VARIABLE_pageable_frame_count_1:
-  cmp        al, 010h
+  cmp        al, CHIPSET_PAGE_FRAME_COUNT
   jae        func_05_page_too_high
 
 ; get actual page bx for handle dx
@@ -711,7 +713,7 @@ iret
 EMS_FUNCTION_045h:
 xchg       ax, bx  ; put bx back
 test       dx, dx
-je         func_06_no_emm_handle_found ; zero handle illegal
+je         func_06_no_emm_handle_found_skip_pop_bx ; zero handle illegal
 push       bx
 mov        bx, dx ; handle
 SHIFT_MACRO shl bx 2
@@ -746,6 +748,7 @@ iret
 
 func_06_no_emm_handle_found:
 pop        bx
+func_06_no_emm_handle_found_skip_pop_bx:
 pop        ax
 mov        ah, 083h  ; The memory manager couldn't find the EMM handle your program specified.
 iret
