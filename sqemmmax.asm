@@ -708,7 +708,7 @@ mov        ah, 087h  ; There aren't enough expanded memory pages present in the 
 iret
 func_43_alloc_pages_0_error:
 xchg       ax, bx
-cwd        ; dx = 0
+
 pop        ax
 mov        ah, 089h  ; Your program attempted to allocate zero pages.
 iret
