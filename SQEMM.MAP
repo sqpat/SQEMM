@@ -1,7 +1,7 @@
 Open Watcom Linker Version 2.0 beta Sep  3 2024 02:05:05 (32-bit)
 Copyright (c) 2002-2024 The Open Watcom Contributors. All Rights Reserved.
 Portions Copyright (c) 1985-2002 Sybase, Inc. All Rights Reserved.
-Created on:       26/07/20 20:29:42
+Created on:       26/07/22 10:03:49
 Executable Image: sqemm.exe
 creating a DOS executable
 
@@ -13,7 +13,7 @@ creating a DOS executable
 Group                           Address              Size
 =====                           =======              ====
 
-DGROUP                          0000:0000            0000313e
+DGROUP                          0000:0000            00002c1e
 
 
 
@@ -24,8 +24,8 @@ DGROUP                          0000:0000            0000313e
 Segment                Class          Group          Address         Size
 =======                =====          =====          =======         ====
 
-_TEXT                  CODE           DGROUP         0000:0000       0000313d
-_DATA                  DATA           DGROUP         0313:000e       00000000
+_TEXT                  CODE           DGROUP         0000:0000       00002c1d
+_DATA                  DATA           DGROUP         02c1:000e       00000000
 
 
                         +----------------+
@@ -39,18 +39,19 @@ Address        Symbol
 =======        ======
 
 Module: sqemm.obj(sqemm.ASM)
-0000:0d43*     EMS_FUNCTION_05CH
-0000:02ff*     EMS_FUNCTION_05AH
-0000:0402*     _RESIDENT_VARIABLE_HANDLE_COUNT
-0000:04c6*     EMS_FUNCTION_051H
-0000:0165*     EMS_FUNCTION_050H
-0000:2b70*     END_OF_DRIVER_LABEL
-0000:1004*     _RESIDENT_VARIABLE_HANDLE_LIST
-0000:041c*     EMS_FUNCTION_047H
-0000:0473*     EMS_FUNCTION_048H
-0000:23f0*     _RESIDENT_VARIABLE_PAGE_LIST
+0000:0e07*     EMS_FUNCTION_05CH
+0000:0e38*     EMS_FUNCTION_05BH
+0000:0333*     EMS_FUNCTION_05AH
+0000:0438*     _RESIDENT_VARIABLE_HANDLE_COUNT
+0000:04fc*     EMS_FUNCTION_051H
+0000:0175*     EMS_FUNCTION_050H
+0000:2770*     END_OF_DRIVER_LABEL
+0000:1184*     _RESIDENT_VARIABLE_HANDLE_LIST
+0000:0452*     EMS_FUNCTION_047H
+0000:04a9*     EMS_FUNCTION_048H
+0000:2570*     _RESIDENT_VARIABLE_PAGE_LIST
 0000:0014*     EMS_DRIVER_INIT
-0000:0f8c*     COMMON_DEALLOCATE_PAGES
+0000:1107*     COMMON_DEALLOCATE_PAGES
 Warning! W1014: stack segment not found
 Warning! W1023: no starting address found, using 0000:0000
 
@@ -60,6 +61,6 @@ Warning! W1023: no starting address found, using 0000:0000
                         +-----------------------+
 
 Stack size:  09e8 (2536.)
-Memory size:  313e (12606.)
+Memory size:  2c1e (11294.)
 Entry point address: 0000:0000
-Link time: 00:00.55
+Link time: 00:00.00

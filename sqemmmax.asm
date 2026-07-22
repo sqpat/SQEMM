@@ -630,8 +630,8 @@ ja       func_26_bad_subfunction
 je       do_func_5901
 do_func_5900:
 mov      word ptr es:[di], 0400h   ; 16kb page size
-mov      word ptr es:[di+2], ax    ; 0 alternate mapping sets
-mov      word ptr es:[di+4], LENGTH_OF_STACK    ; 0 alternate mapping sets
+mov      word ptr es:[di+2], MAX_CONTEXT_COUNT    ; 0 alternate mapping sets
+mov      word ptr es:[di+4], LENGTH_OF_STACK
 mov      word ptr es:[di+6], ax    ; 0 dma mapping sets
 mov      word ptr es:[di+8], ax    ; 0 dma set behaivor
 pop        ax
@@ -2539,7 +2539,8 @@ iret
 
 ; NOTE: FUNC 28 ENTRY POINT IN HERE
 ; requires alternate register sets. Most chipsets do not support this
-; todo: ht18, fantasy... others?
+; todo: topcat, ht18, fantasy... others?
+; scamp, scat: no
 
 
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
@@ -3182,6 +3183,12 @@ dw DEFAULT_ACCESS_KEY_LOW, DEFAULT_ACCESS_KEY_HIGH
 _RESIDENT_VARIABLE_access_blocked:
 db 0
 
+IFDEF MAX_CONTEXT_COUNT
+   _RESIDENT_VARIABLE_context_is_allocated:
+   REPT MAX_CONTEXT_COUNT
+    db 0
+   ENDM
+ENDIF
 
 ALIGN 2
 ; global handle (first allocation)

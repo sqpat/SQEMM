@@ -92,6 +92,9 @@ do_func_5b06:
 pop   ax
 test  bl, bl
 jz    func_28_return_ok ; value 0 is fine.
+func_28_return_dma_not_supported:
+mov   ah, 09Eh ; Dedicated DMA channels are not supported.
+iret
 func_28_return_not_supported:
 mov   ah, 09Ch ; Alternate DMA register sets are not supported, and the DMA register set specified is not zero.
 func_28_return_ok:
