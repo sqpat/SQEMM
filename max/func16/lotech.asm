@@ -17,9 +17,13 @@ public here
   push dx
   push cx
   push si
+  push bx
+
+  lodsw
+  mov  cx, ax
+
+
   
-SELFMODIFY_LOTECH_set_page_select_register_10:
-  mov   dx, LOTECH_BASE_PAGE_REGISTER
 
   jnz   func_16_sub_01
 
@@ -32,23 +36,24 @@ func_16_sub_00:
 ;             mappable_segment         DW  (?)  DUP  (?)
 ;          partial_page_map_struct     ENDS
 
-  lodsw
   stosw        ; count
-  xchg  ax, cx ; count
 
+
+  xor   bx, bx  ; zero bh
 func_16_sub_00_save_next_page_frame_register:
   lodsw
   ; ax has segment... 
   call  COMMON_util_get_physical_register_for_segment
+  mov   bl, al
   stosw
 
-  add   dl, al
-  push  ax
-  in    al, dx
+
+
+  mov   al, byte ptr cs:[bx + _RESIDENT_VARIABLE_driver_local_page_cache]
   xor   ah, ah
   stosw
-  pop   ax
-  sub   dl, al  ; reset port
+
+
 
   loop  func_16_sub_00_save_next_page_frame_register
 
@@ -58,6 +63,7 @@ func_16_sub_01_done_recording_registers:
 
 
 func_16_pop_and_return:
+  pop   bx
   pop   si
   pop   cx
   pop   dx
@@ -83,16 +89,20 @@ iret
 
 
 func_16_sub_01:
-  lodsw
-  xchg ax, cx  ; count
+
+SELFMODIFY_LOTECH_set_page_select_register_10:
+  mov   dx, LOTECH_BASE_PAGE_REGISTER
+
 func_16_sub_01_save_next_page_frame_register:
   lodsw
-  push  ax
-  add   dl, al
+  mov   bl, al
+  add   dl, bl
   lodsw
   out   dx, al
-  pop   ax
-  sub   dl, al
+  mov   byte ptr cs:[bx + _RESIDENT_VARIABLE_driver_local_page_cache], al
+
+
+  sub   dl, bl
   loop  func_16_sub_01_save_next_page_frame_register
 jmp func_16_sub_01_done_recording_registers
 

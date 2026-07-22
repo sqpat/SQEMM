@@ -2,14 +2,14 @@
 UTIL_get_page:
 
 ; return value at page index (ax) in (ax)
-  push  dx
-SELFMODIFY_LOTECH_set_page_select_register_1:
-  mov   dx, LOTECH_BASE_PAGE_REGISTER
-  add   dx, ax
+  push  bx
+  xchg  ax, bx
+  xor   bh, bh
 
-  in    al, dx
+
+  mov   al, byte ptr cs:[bx + _RESIDENT_VARIABLE_driver_local_page_cache]
   xor   ah, ah
-  pop   dx
+  pop   bx
   ret
 
 
@@ -21,12 +21,16 @@ UTIL_set_page:
 public UTIL_set_page
 ; write page (dx) to page index (ax)
 
-  xchg  ax, dx
 
+  xchg  ax, bx
+  mov   byte ptr cs:[bx + _RESIDENT_VARIABLE_driver_local_page_cache], dl
+  xchg  ax, bx
+  xchg  ax, dx
 SELFMODIFY_LOTECH_set_page_select_register_2:
   add   dx, LOTECH_BASE_PAGE_REGISTER  
 
   out   dx, al   ; select EMS page
+
 
 SELFMODIFY_LOTECH_set_page_select_register_9:
   sub   dx, LOTECH_BASE_PAGE_REGISTER  

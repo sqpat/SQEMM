@@ -4,11 +4,9 @@
   mov   ax, LOTECH_BASE_PAGE_REGISTER
 
 
-  mov   word ptr ds:[SELFMODIFY_LOTECH_set_page_select_register_1+1], ax
   mov   word ptr ds:[SELFMODIFY_LOTECH_set_page_select_register_3+1], ax
   mov   word ptr ds:[SELFMODIFY_LOTECH_set_page_select_register_4+1], ax
   mov   word ptr ds:[SELFMODIFY_LOTECH_set_page_select_register_5+1], ax
-  mov   word ptr ds:[SELFMODIFY_LOTECH_set_page_select_register_6+1], ax
   mov   word ptr ds:[SELFMODIFY_LOTECH_set_page_select_register_7+1], ax
   mov   word ptr ds:[SELFMODIFY_LOTECH_set_page_select_register_8+1], ax
   mov   word ptr ds:[SELFMODIFY_LOTECH_set_page_select_register_10+1], ax
