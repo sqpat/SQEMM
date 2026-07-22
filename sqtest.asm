@@ -457,6 +457,14 @@ TEST_EMS_REGISTER_CALL_ALL 000Eh
 
 
 
+; test 0 pages
+
+mov   ax, 04309h
+xor   bx, bx
+
+TEST_EMS_REGISTER_CALL_ALL 08909h ; zero page should fail
+
+
 
 
 
@@ -498,13 +506,51 @@ PRINT_HANDLE
 mov   word ptr ds:[VARIABLE_saved_handle_5], dx
 
 mov   ax, 0420Ah
+TEST_EMS_REGISTER_CALL_NO_BX_DX 000Ah
 
+mov   ax, word ptr ds:[VARIABLE_unallocated_page_count]
+sub   ax, 64 + 16
+mov   word ptr ds:[expected_value], ax
+mov   dx, bx
+TEST_RESULT_DX_NO_VAL
+
+here:
+public here
+
+;     FUNCTION 27   ALLOCATE STANDARD/RAW PAGES
+
+mov   ax, 05A02h
+TEST_EMS_REGISTER_CALL_ALL 08F02h ; bad subfunction
+xor   bx, bx  ; zero page allocation should be ok
+mov   ax, 05A00h
+TEST_EMS_REGISTER_CALL_NO_DX 00000h ; ok?
+
+push  dx  ; store handle
+
+; make sure none were allocated...
+mov   ax, 0420Ah
 TEST_EMS_REGISTER_CALL_NO_BX_DX 000Ah
 mov   ax, word ptr ds:[VARIABLE_unallocated_page_count]
 sub   ax, 64 + 16
 mov   word ptr ds:[expected_value], ax
 mov   dx, bx
 TEST_RESULT_DX_NO_VAL
+
+pop   dx ; retrieve handle for deallocation
+
+mov   ax, 0450Eh
+TEST_EMS_REGISTER_CALL_ALL 000Eh
+
+; and test none were deallocated once more
+; make sure none were allocated...
+mov   ax, word ptr ds:[VARIABLE_unallocated_page_count]
+sub   ax, 64 + 16
+mov   word ptr ds:[expected_value], ax
+mov   dx, bx
+TEST_RESULT_DX_NO_VAL
+
+
+
 
 mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
 
@@ -1806,14 +1852,9 @@ pop   es
 
 
 
-; TEST 25: Test allocate page special cases 
+
+; TEST 25: Test unmap/-1 pages
 PRINT_RUNNING_TEST 25
-;     FUNCTION 27   ALLOCATE STANDARD/RAW PAGES
-
-
-
-
-PRINT_RUNNING_TEST 26
 
 ; page to some garbage
 mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
