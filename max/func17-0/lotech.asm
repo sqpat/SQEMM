@@ -9,10 +9,12 @@
   ; next page in ax....
 
   lodsw
-  SELFMODIFY_LOTECH_set_page_select_register_7:
-  add  ax, LOTECH_BASE_PAGE_REGISTER
-  xchg ax, dx
+  xchg   ax, dx ; store...
   lodsw
+  SELFMODIFY_LOTECH_set_page_select_register_7:
+  add   ax, LOTECH_BASE_PAGE_REGISTER
+  xchg  ax, dx ; put both where they need to be..
+
 
   out   dx, al   ; write 8 bit page num. 
 

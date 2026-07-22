@@ -1,23 +1,31 @@
 ; consider pusha/popa?
 ; cli/sti? not sure
 
-  push ax  ; restore into bx 
+here:
+public here
+
+  xchg  ax, bx ; restore bx
+  pop   ax
+
+
+  cmp   al, 2
+  ja    func_16_bad_subfunction
+  mov   ah, 0
+  je    func_16_sub_02
+  test  al, al
+  push ax
   push dx
   push cx
-  push di
   push si
   
 SELFMODIFY_LOTECH_set_page_select_register_10:
   mov   dx, LOTECH_BASE_PAGE_REGISTER
 
-  cmp   byte ptr cs:[_current_call_subfunction_value], 2
-  ja    func_16_bad_subfunction
-  je    func_16_sub_02
-  jpo   func_16_sub_01
+  jnz   func_16_sub_01
 
 ; fall thru
-func_16_sub_00:
-
+func_16_sub_00:  
+  push di
 ; ds:si format
 ; partial_page_map_struct     STRUC
 ;             mappable_segment_count   DW  ?
@@ -32,7 +40,8 @@ func_16_sub_00_save_next_page_frame_register:
   lodsw
   ; ax has segment... 
   call  COMMON_util_get_physical_register_for_segment
-  
+  stosw
+
   add   dl, al
   push  ax
   in    al, dx
@@ -43,36 +52,28 @@ func_16_sub_00_save_next_page_frame_register:
 
   loop  func_16_sub_00_save_next_page_frame_register
 
+  pop   di
 func_16_sub_00_done_recording_registers:
 func_16_sub_01_done_recording_registers:
-  xchg  ax, cx  ; zero ax
+
 
 func_16_pop_and_return:
   pop   si
-  pop   di
   pop   cx
   pop   dx
-  pop   bx ; restore from ax
-  pop   ax
-  xor   ah, ah
+  pop   ax ; ah already
+
 
 iret
 
 
 func_16_sub_02:
 ;          GET SIZE OF PARTIAL PAGE MAP SAVE ARRAY SUBFUNCTION
-  pop   si
-  pop   di
-  pop   cx
-  pop   dx
-  pop   bx ; restore from ax
 
-  pop   ax
-  xor   ah, ah
   mov  al, bl ; num pages
-
-  SHIFT_MACRO shl  al 2 ; two words per entry.
-  add  al, 2  ; count
+  shl  al, 1 ; times four, dword per page.
+  inc  ax  ; plus two for cx
+  shl  al, 1
 iret
 
 
@@ -97,12 +98,6 @@ jmp func_16_sub_01_done_recording_registers
 
 
 func_16_bad_subfunction:
-  pop   si
-  pop   di
-  pop   cx
-  pop   dx
-  pop   bx ; restore from ax
-  pop   ax
 
   mov        ah, 084h
   iret

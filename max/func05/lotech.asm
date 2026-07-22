@@ -16,8 +16,8 @@
 
   out   dx, al   ; write 16 bit page num. 
   
-  pop   dx
   pop   ax
+  pop   dx
   pop   bx  ;  still ons tack
 
   iret

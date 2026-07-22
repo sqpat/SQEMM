@@ -711,6 +711,7 @@ iret
 ;         6  Deallocate Pages                               45h       
 
 EMS_FUNCTION_045h:
+public EMS_FUNCTION_045h
 xchg       ax, bx  ; put bx back
 test       dx, dx
 je         func_06_no_emm_handle_found_skip_pop_bx ; zero handle illegal

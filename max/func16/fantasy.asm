@@ -14,7 +14,9 @@ SELFMODIFY_FANTASY_add_page_frame_offset_10:
   cmp   byte ptr cs:[_current_call_subfunction_value], 2
   ja    func_16_bad_subfunction
   je    func_16_sub_02
-  jpo   func_16_sub_01
+  test  al, al
+  jnz   func_16_sub_01
+
 
 
 func_16_sub_00:
