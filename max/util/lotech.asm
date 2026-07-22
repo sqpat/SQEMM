@@ -47,7 +47,7 @@ UTIL_unmap_all_pages:
   push  ax
 SELFMODIFY_LOTECH_set_page_select_register_3:
   mov   dx, LOTECH_BASE_PAGE_REGISTER
-  mov   al, -1
+  mov   ax, -1
   out   dx, al
   inc   dx
   out   dx, al
@@ -55,6 +55,10 @@ SELFMODIFY_LOTECH_set_page_select_register_3:
   out   dx, al
   inc   dx
   out   dx, al
+  mov   word ptr cs:[_RESIDENT_VARIABLE_driver_local_page_cache+0], ax
+  ;mov   word ptr cs:[_RESIDENT_VARIABLE_driver_local_page_cache+1], ax
+  mov   word ptr cs:[_RESIDENT_VARIABLE_driver_local_page_cache+2], ax
+  ;mov   word ptr cs:[_RESIDENT_VARIABLE_driver_local_page_cache+3], ax
   pop   ax
   pop   dx
   ret

@@ -5,7 +5,7 @@ chipset_page_lookup:
 
 _RESIDENT_VARIABLE_driver_local_page_cache:
   REPT CHIPSET_PAGE_FRAME_COUNT
-     dw 0  ; we are actually only using 4 bytes, whatever.
+     dw -1  ; we are actually only using 4 bytes, whatever.
   ENDM
 
 ; Two-word pairs. first word is page frame (04000h, 04400h... etc) up to f000.  

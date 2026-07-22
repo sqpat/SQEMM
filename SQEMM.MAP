@@ -1,7 +1,7 @@
 Open Watcom Linker Version 2.0 beta Sep  3 2024 02:05:05 (32-bit)
 Copyright (c) 2002-2024 The Open Watcom Contributors. All Rights Reserved.
 Portions Copyright (c) 1985-2002 Sybase, Inc. All Rights Reserved.
-Created on:       26/07/23 00:11:46
+Created on:       26/07/23 00:20:12
 Executable Image: sqemm.exe
 creating a DOS executable
 
@@ -13,7 +13,7 @@ creating a DOS executable
 Group                           Address              Size
 =====                           =======              ====
 
-DGROUP                          0000:0000            00002866
+DGROUP                          0000:0000            0000286e
 
 
 
@@ -24,8 +24,8 @@ DGROUP                          0000:0000            00002866
 Segment                Class          Group          Address         Size
 =======                =====          =====          =======         ====
 
-_TEXT                  CODE           DGROUP         0000:0000       00002865
-_DATA                  DATA           DGROUP         0286:0006       00000000
+_TEXT                  CODE           DGROUP         0000:0000       0000286d
+_DATA                  DATA           DGROUP         0286:000e       00000000
 
 
                         +----------------+
@@ -41,11 +41,11 @@ Address        Symbol
 Module: sqemm.obj(sqemm.ASM)
 0000:0315*     _RESIDENT_VARIABLE_HANDLE_COUNT
 0000:0c2d*     UTIL_SET_PAGE
-0000:2438*     END_OF_DRIVER_LABEL
-0000:0f4c*     _RESIDENT_VARIABLE_HANDLE_LIST
+0000:2440*     END_OF_DRIVER_LABEL
+0000:0f54*     _RESIDENT_VARIABLE_HANDLE_LIST
 0000:0b82*     FUNCTION_15_SAVE_PAGE_MAP
 0000:02be*     EMS_FUNCTION_045H
-0000:2338*     _RESIDENT_VARIABLE_PAGE_LIST
+0000:2340*     _RESIDENT_VARIABLE_PAGE_LIST
 0000:0014*     EMS_DRIVER_INIT
 0000:0ba8*     HERE
 Warning! W1014: stack segment not found
@@ -57,6 +57,6 @@ Warning! W1023: no starting address found, using 0000:0000
                         +-----------------------+
 
 Stack size:  09e8 (2536.)
-Memory size:  2866 (10342.)
+Memory size:  286e (10350.)
 Entry point address: 0000:0000
-Link time: 00:00.55
+Link time: 00:00.00
