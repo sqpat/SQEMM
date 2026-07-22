@@ -60,8 +60,8 @@ dw OFFSET DRIVER_INIT
 EMS_DRIVER_INIT:
 public EMS_DRIVER_INIT
 ; store 32 bit pointer to request header
-mov  word ptr cs:[request_header_pointer], bx        
-mov  word ptr cs:[request_header_pointer+2], es        
+mov  word ptr cs:[_RESIDENT_VARIABLE_request_header_pointer], bx        
+mov  word ptr cs:[_RESIDENT_VARIABLE_request_header_pointer+2], es        
 retf 
 
 
@@ -69,7 +69,7 @@ EMS_DRIVER_CALL:
 push  bx
 push  ds
 
-lds  bx, dword ptr cs:[request_header_pointer]
+lds  bx, dword ptr cs:[_RESIDENT_VARIABLE_request_header_pointer]
 
 cmp  byte ptr ds:[bx + DOS_DRIVER_REQUEST_HEADER.drrh_command_code], 0
 SELFMODIFY_prevent_double_init:
@@ -142,7 +142,7 @@ ENDIF
 ALIGN 2
 
 ;  32-bit pointer to arguments to driver
-request_header_pointer dd 00000000h 
+_RESIDENT_VARIABLE_request_header_pointer dd 00000000h 
 
 
 
@@ -779,7 +779,7 @@ DRIVER_NOT_INSTALLED:
 mov        ah, 9  ; PRINT_STRING
 int        021h
 
-lds        bx, [request_header_pointer]
+lds        bx, [_RESIDENT_VARIABLE_request_header_pointer]
 mov        word ptr ds:[bx + 3], 0810ch
 mov        word ptr ds:[bx + 0eh], OFFSET end_of_driver_label
 mov        word ptr ds:[bx + 010h], cs
@@ -907,7 +907,7 @@ mov        dx, OFFSET string_driver_successfully_installed
 mov        ah, 9  ; PRINT_STRING
 int        021h
 
-lds        bx, dword ptr ds:[request_header_pointer]
+lds        bx, dword ptr ds:[_RESIDENT_VARIABLE_request_header_pointer]
 mov        word ptr ds:[bx + 3], 0100h
 
 ; 0Eh: MS-DOS 5 set pointer to end of memory used by driver
@@ -924,7 +924,7 @@ ret
 process_command_line:
 
 push       ds
-lds        si, dword ptr cs:[request_header_pointer]
+lds        si, dword ptr cs:[_RESIDENT_VARIABLE_request_header_pointer]
 lds        si, ds:[si + 012h]  ; todo whats this offset
 xor        cx, cx
 
@@ -960,7 +960,7 @@ parse_driver_params:
 push       cx
 
 mov        cx, word ptr cs:[_INIT_PARAM_command_line_length] ; max param length
-les        di, dword ptr cs:[request_header_pointer]
+les        di, dword ptr cs:[_RESIDENT_VARIABLE_request_header_pointer]
 les        di, es:[di + 012h]  ; todo whats this offset
 
 mov        al, "-"

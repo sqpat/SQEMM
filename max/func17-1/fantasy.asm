@@ -171,3 +171,5 @@ IF COMPISA GE COMPILE_186
 ELSE
   jmp func_1701_exit
 ENDIF
+  _temp_byte:
+  db, 0

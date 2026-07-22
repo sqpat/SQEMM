@@ -60,8 +60,8 @@ dw OFFSET DRIVER_INIT
 EMS_DRIVER_INIT:
 public EMS_DRIVER_INIT
 ; store 32 bit pointer to request header
-mov  word ptr cs:[request_header_pointer], bx        
-mov  word ptr cs:[request_header_pointer+2], es        
+mov  word ptr cs:[_RESIDENT_VARIABLE_request_header_pointer], bx        
+mov  word ptr cs:[_RESIDENT_VARIABLE_request_header_pointer+2], es        
 retf 
 
 
@@ -69,7 +69,7 @@ EMS_DRIVER_CALL:
 push  bx
 push  ds
 
-lds  bx, dword ptr cs:[request_header_pointer]
+lds  bx, dword ptr cs:[_RESIDENT_VARIABLE_request_header_pointer]
 
 cmp  byte ptr ds:[bx + DOS_DRIVER_REQUEST_HEADER.drrh_command_code], 0
 SELFMODIFY_prevent_double_init:
@@ -156,7 +156,7 @@ db -1
 ALIGN 2
 
 ;  32-bit pointer to arguments to driver
-request_header_pointer dd 00000000h 
+_RESIDENT_VARIABLE_request_header_pointer dd 00000000h 
 
 
 
@@ -201,12 +201,9 @@ dw  OFFSET EMS_FUNCTION_05Bh
 dw  OFFSET EMS_FUNCTION_05Ch
 dw  OFFSET EMS_FUNCTION_05Dh
 
-; DEBUG_MODE = 1
 
 _current_call_subfunction_value:
 dw  0
-_temp_byte:
-db 0
 
 
  
@@ -233,7 +230,7 @@ jcxz     skip_func_5000h
 
 
 EMS_FUNCTION_050h:
-public EMS_FUNCTION_050h
+
 
 ;          17 Map/Unmap Multiple Handle Pages
 ;             (Physical page number mode)                    5000h     
@@ -313,7 +310,7 @@ SHIFT_MACRO shl bx 2  ;  SIZE HANDLE_INFO
 cmp   word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page], -1
 je    func_05_handle_not_found
 inc   cx
-jz    skip_page_lookup
+jz    func_05_skip_page_lookup
 dec   cx
 cmp   cx, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages]
 ja    func_05_logical_page_too_high
@@ -329,7 +326,7 @@ sub   bx, OFFSET _RESIDENT_VARIABLE_page_list
 shr   bx, 1  ; board physical page
 ; note: this number should be OFFSET BY THE CONVENTIONAL ETC offset!!
 
-skip_page_lookup:
+func_05_skip_page_lookup:
 
 pop   cx
 
@@ -390,9 +387,6 @@ xchg       ax, bx
 ; ah is already 0 because bh was 0 from jump table lookup
 pop        ax
 xor        ah, ah
-IFDEF DEBUG_MODE
-call   DEBUG_check_all_handles
-ENDIF
 iret
 
 
@@ -405,11 +399,7 @@ NOT_FUNC_44h:
 
 ; don't support oob function types
 push       ax   ; gross, need to store al.
-IFDEF DEBUG_MODE
-   mov        word ptr cs:[_current_call_subfunction_value], ax
-ELSE
-   mov        byte ptr cs:[_current_call_subfunction_value], al
-ENDIF
+mov        byte ptr cs:[_current_call_subfunction_value], al
 mov        al, ah
 cmp        al, 05dh
 ja         bad_function
@@ -446,7 +436,7 @@ xchg       ax, bx
 EMS_FUNCTION_058h: ; this path  doesnt xchg ax bx
 cbw         
 cmp        byte ptr cs:[_current_call_subfunction_value], 1
-jae        func_58_not_5800
+jae        func_25_not_5800
 EMS_FUNCTION_05800h:
 push       ds
 push       si
@@ -464,26 +454,20 @@ sub        di, 01000h
 ; ah 0 from original xchg ah
 pop        si
 pop        ds
-IFDEF DEBUG_MODE
-call   DEBUG_check_all_handles
-ENDIF
 pop        ax
 xor        ah, ah
 iret
-func_58_not_5800:
-ja         func_58_invalid_subfunction
+func_25_not_5800:
+ja         func_25_invalid_subfunction
 EMS_FUNCTION_05801h:
 _RESIDENT_VARIABLE_pageable_frame_count_3:
 mov        cx, 01000h
 ; ah already 0.
-IFDEF DEBUG_MODE
-call   DEBUG_check_all_handles
-ENDIF
 pop        ax
 xor        ah, ah
 iret
 
-func_58_invalid_subfunction:
+func_25_invalid_subfunction:
 pop        ax
 mov        ah, 08fh
 iret
@@ -519,13 +503,13 @@ jne   func_3000_bad_access
 cmp   word ptr cs:[_RESIDENT_VARIABLE_access_key+2], cx
 jne   func_3000_bad_access
 cmp   al, 2
-je    do_func_5D02
+je    do_func_30_02
 mov   byte ptr cs:[_RESIDENT_VARIABLE_access_blocked], al ; 0 or 1 (or 2) based on subfunction.
 
 
 
 iret
-do_func_5D02:
+do_func_30_02:
 
 mov   word ptr cs:[_RESIDENT_VARIABLE_access_key+0], DEFAULT_ACCESS_KEY_LOW
 mov   word ptr cs:[_RESIDENT_VARIABLE_access_key+2], DEFAULT_ACCESS_KEY_HIGH
@@ -558,7 +542,7 @@ xchg  ax, bx
 func_26_bad_subfunction:
 pop        ax
 func_30_bad_subfunction:
-func_52_bad_subfunction:
+func_19_bad_subfunction:
 mov        ah, 08fh
 iret
 
@@ -573,12 +557,12 @@ xchg       ax, bx
 pop        ax
 
 cmp        al, 2
-jb         func_52_unsupported
-ja         func_52_bad_subfunction
+jb         func_19_unsupported
+ja         func_19_bad_subfunction
 xor        ax, ax
 iret
 
-func_52_unsupported:
+func_19_unsupported:
 mov        ah, 091h ; This feature is not supported.
 iret
 
@@ -586,7 +570,7 @@ iret
 ;      Allocate Raw Pages                             5A01h     109
 
 EMS_FUNCTION_05Ah:
-public EMS_FUNCTION_05Ah
+
 cmp  byte ptr cs:[_current_call_subfunction_value], 1
 ja   func_27_bad_subfunction
 jmp  allocate_pages_skip_zero_check 
@@ -607,7 +591,7 @@ iret
 EMS_FUNCTION_042h:
 ;      FUNCTION 3    GET UNALLOCATED PAGE COUNT
 xchg       ax, bx ; zero ah
-do_func_5901:
+do_func_26_01:
 mov        bx, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count]
 _RESIDENT_VARIABLE_total_EMS_page_count:
 mov        dx, 01000h  ; return in dx
@@ -627,8 +611,8 @@ jne      func_26_access_denied
 xor      ax, ax
 cmp      byte ptr cs:[_current_call_subfunction_value], 1
 ja       func_26_bad_subfunction
-je       do_func_5901
-do_func_5900:
+je       do_func_26_01
+do_func_26_00:
 mov      word ptr es:[di], 0400h   ; 16kb page size
 mov      word ptr es:[di+2], MAX_CONTEXT_COUNT    ; 0 alternate mapping sets
 mov      word ptr es:[di+4], LENGTH_OF_STACK
@@ -650,19 +634,19 @@ EMS_FUNCTION_043h:
 ; ax has bx value..
 
 test       ax, ax
-jz         func_43_alloc_pages_0_error
+jz         func_04_alloc_pages_0_error
 allocate_pages_skip_zero_check:
 
 cmp        ax, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count]
-ja         func_43_allocated_too_many_pages
+ja         func_04_allocated_too_many_pages
 cmp        ax, word ptr cs:[_RESIDENT_VARIABLE_total_EMS_page_count+1]
-ja         func_43_allocated_too_many_pages_above_total
+ja         func_04_allocated_too_many_pages_above_total
 
 
 
 call       COMMON_get_next_free_handle
 test       dx, dx
-js         func_43_no_handles_Left
+js         func_04_no_handles_Left
 
 inc        word ptr cs:[_RESIDENT_VARIABLE_handle_count]
 mov        bx, dx
@@ -684,35 +668,32 @@ call       COMMON_allocate_pages
 
 
 
-IFDEF DEBUG_MODE
-call   DEBUG_check_all_handles
-ENDIF
 pop        ax
 xor        ah, ah
 iret
 
 
 
-func_43_no_handles_Left:
+func_04_no_handles_Left:
 
 xchg       ax, bx
 cwd        ; dx = 0
 pop        ax
 mov        ah, 085h  ; All EMM handles are being used.
 iret
-func_43_allocated_too_many_pages_above_total:
+func_04_allocated_too_many_pages_above_total:
 xchg       ax, bx
 cwd        ; dx = 0
 pop        ax
 mov        ah, 087h  ; There aren't enough expanded memory pages present in the system to satisfy your program's request.
 iret
-func_43_alloc_pages_0_error:
+func_04_alloc_pages_0_error:
 xchg       ax, bx
 
 pop        ax
 mov        ah, 089h  ; Your program attempted to allocate zero pages.
 iret
-func_43_allocated_too_many_pages:
+func_04_allocated_too_many_pages:
 xchg       ax, bx
 cwd        ; dx = 0
 pop        ax
@@ -730,16 +711,16 @@ iret
 EMS_FUNCTION_045h:
 xchg       ax, bx  ; put bx back
 test       dx, dx
-je         func_45_no_emm_handle_found ; zero handle illegal
+je         func_06_no_emm_handle_found ; zero handle illegal
 push       bx
 mov        bx, dx ; handle
 SHIFT_MACRO shl bx 2
 cmp        word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages], -1
 
-je         func_45_no_emm_handle_found
+je         func_06_no_emm_handle_found
 shl        bx, 1
 cmp        word ptr cs:[_RESIDENT_VARIABLE_handle_page_stack + bx], -1
-jne        func_45_stack_exists
+jne        func_06_stack_exists
 add        bx, OFFSET _RESIDENT_VARIABLE_handlename_list
 xor        ax, ax
 mov        word ptr cs:[bx], ax   ; zero handle name
@@ -753,26 +734,23 @@ call       COMMON_deallocate_pages
 
 dec        word ptr cs:[_RESIDENT_VARIABLE_handle_count]  ; handle freed, increment handle count
 
-IFDEF DEBUG_MODE
-call   DEBUG_check_all_handles
-ENDIF
 pop        ax
 xor        ah, ah
 iret
 
-func_45_stack_exists:
+func_06_stack_exists:
 pop        bx
 pop        ax
 mov        ah, 086h  ; The memory manager detected a save or restore  page mapping context error (Function 8 or 9).
 iret
 
-func_45_no_emm_handle_found:
+func_06_no_emm_handle_found:
 pop        bx
 pop        ax
 mov        ah, 083h  ; The memory manager couldn't find the EMM handle your program specified.
 iret
 
-func_4C_no_emm_handle_found:
+func_13_no_emm_handle_found:
 xchg       ax, bx  ; restore bx
 
 pop        ax
@@ -815,7 +793,7 @@ mov        bx, dx ; handle
 SHIFT_MACRO shl bx 2
 mov        bx, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages]
 cmp        bx, -1
-je         func_4C_no_emm_handle_found
+je         func_13_no_emm_handle_found
 pop        ax
 xor        ah, ah
 
@@ -830,7 +808,7 @@ iret
 ;          8  Save Page Map                                  47h       
 
 EMS_FUNCTION_047h:
-public EMS_FUNCTION_047h
+
 
 ; consider a small fixed size to save these..
 
@@ -871,9 +849,6 @@ public EMS_FUNCTION_047h
   pop  bx
 
 
-IFDEF DEBUG_MODE
-call   DEBUG_check_all_handles
-ENDIF
 
 pop        ax
 xor        ah, ah
@@ -902,7 +877,7 @@ iret
 ;          9  Restore Page Map                               48h       
 
 EMS_FUNCTION_048h:
-public EMS_FUNCTION_048h
+
 
 ; consider a small fixed size to save these..
 
@@ -953,9 +928,6 @@ public EMS_FUNCTION_048h
   pop  dx
   pop  si
 
-IFDEF DEBUG_MODE
-call   DEBUG_check_all_handles
-ENDIF
 pop        ax
 xor        ah, ah
 
@@ -963,10 +935,10 @@ iret
 
 
 
-func_51_no_emm_handle_found_popbx:
+func_18_no_emm_handle_found_popbx:
 mov     bx, cx
 pop     cx
-func_51_no_emm_handle_found:
+func_18_no_emm_handle_found:
 pop        ax
 mov     ah, 083h  ; The memory manager couldn't find the EMM handle your program specified.
 iret
@@ -976,19 +948,19 @@ iret
 ; DX = handle
 ;BX = reallocation_count                     
 EMS_FUNCTION_051h:
-public EMS_FUNCTION_051h
+
 xchg       ax, bx ; todo juggle less
 
 
 test  dx, dx
-jne   func_51_done_with_os_hanlde_stuff ; zero handle illegal
-func_51_handle_os_handle:
+jne   func_18_done_with_os_hanlde_stuff ; zero handle illegal
+func_18_handle_os_handle:
 mov   ax, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages]
 cmp   bx, DEFAULT_CONVENTIONAL_PAGE_COUNT
-jb    func_51_done_with_os_hanlde_stuff
+jb    func_18_done_with_os_hanlde_stuff
 mov   bx, DEFAULT_CONVENTIONAL_PAGE_COUNT  ; deallocating OS pages below minimum not allowed. (for now.)
 
-func_51_done_with_os_hanlde_stuff:
+func_18_done_with_os_hanlde_stuff:
 push  cx
 mov   cx, bx ; reallocation count
 mov   bx, dx ; handle
@@ -996,15 +968,15 @@ SHIFT_MACRO shl bx 2
 
 mov   ax, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages]
 cmp   ax, -1
-je    func_51_no_emm_handle_found_popbx
+je    func_18_no_emm_handle_found_popbx
 cmp   ax, cx
-je    func_51_done_reallocating_equal_pages
-jcxz  func_51_set_0_page_case
+je    func_18_done_reallocating_equal_pages
+jcxz  func_18_set_0_page_case
 cmp   cx, word ptr cs:[_RESIDENT_VARIABLE_total_EMS_page_count+1]
-ja    func_51_allocated_too_many_pages_above_total
+ja    func_18_allocated_too_many_pages_above_total
 add   ax, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count]
 cmp   cx, ax
-ja    func_51_allocated_too_many_pages_above_available
+ja    func_18_allocated_too_many_pages_above_available
 mov   ax, cx
 xchg  ax, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages]    ; new num pages.
 add   word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count], ax
@@ -1017,22 +989,22 @@ push  dx
 xor   dx, dx  ; keep track of overallocation.
 
 test  ax, ax
-jne   loop_func_51_add_page
+jne   loop_func_18_add_page
 inc   dx
 mov   ax, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_head]  ; allocate from head.
 mov   word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page], ax
-loop_func_51_add_page:
+loop_func_18_add_page:
 cmp   ax, -1
-jne   func_51_loop_good_page
-func_51_get_page_head_first:
+jne   func_18_loop_good_page
+func_18_get_page_head_first:
 mov   ax, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_head]  ; allocate from head.
 mov   word ptr cs:[bx + PAGE_INFO.page_info_next_page], ax
 inc   dx  ; flag that we allocated new pages
-func_51_loop_good_page:
+func_18_loop_good_page:
 
 xchg  ax, bx ; bx gets next page.
 mov   ax, word ptr cs:[bx + PAGE_INFO.page_info_next_page]
-loop  loop_func_51_add_page
+loop  loop_func_18_add_page
 
 ; we have reallocated. possble cleanup:
 ; 1. need to FF end of realloc'd list.
@@ -1051,54 +1023,51 @@ xchg   ax, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_head]  ; 2A is done
 ;1:
 dec   dx
 pop   dx
-jz    func_51_clean_up_and_return_success
+jz    func_18_clean_up_and_return_success
 ; 2b
 
-func_51_add_pages_back_to_free:
+func_18_add_pages_back_to_free:
 ; ax has new first page
 
 
-loop_func_51_addback_page:
+loop_func_18_addback_page:
 
 cmp   word ptr cs:[bx + PAGE_INFO.page_info_next_page], cx    ; -1 check
-je    func_51_found_new_end_page
+je    func_18_found_new_end_page
 mov   bx, word ptr cs:[bx + PAGE_INFO.page_info_next_page]
-jmp  loop_func_51_addback_page
-func_51_found_new_end_page:
+jmp  loop_func_18_addback_page
+func_18_found_new_end_page:
 mov   word ptr cs:[bx + PAGE_INFO.page_info_next_page], ax  ; old free head.
 
 
 
 
-func_51_clean_up_and_return_success:
+func_18_clean_up_and_return_success:
 
 pop   bx ; numpages
-func_51_clean_up_and_return_success_no_popbx:
+func_18_clean_up_and_return_success_no_popbx:
 pop   cx ; original cx
 
-IFDEF DEBUG_MODE
-call   DEBUG_check_all_handles
-ENDIF
 pop        ax
 xor        ah, ah
 iret
 
-func_51_allocated_too_many_pages_above_total:
+func_18_allocated_too_many_pages_above_total:
 mov        ah, 087h  ; There aren't enough expanded memory pages present in the system to satisfy your program's request.
-func_51_done_reallocating_equal_pages:
+func_18_done_reallocating_equal_pages:
 mov        bx, cx
 pop        cx
 pop        ax
 xor        ah, ah
 iret
-func_51_allocated_too_many_pages_above_available:
+func_18_allocated_too_many_pages_above_available:
 mov        bx, cx
 pop        cx
 pop        ax
 mov        ah, 088h  ; The number of unallocated pages is insufficient for the new allocation request. 
 iret
 
-func_51_set_0_page_case:
+func_18_set_0_page_case:
 
 ; todo remove all pages and set a null first page.
 push  cx        ; zero to pop into numpages/bx later.
@@ -1115,7 +1084,7 @@ xchg  word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_head], ax
 
 ; ax has old free head.
 
-jmp   func_51_add_pages_back_to_free
+jmp   func_18_add_pages_back_to_free
 
 
 
@@ -1149,7 +1118,7 @@ iret
 
 ALIGN 2
 
-do_func_5602:
+do_func_23_02:
 mov   bx, 030h   ; probably ok... we use 32-34 bytes (decimal) at worst?
 iret
 
@@ -1160,7 +1129,7 @@ pop   ax  ; get subfunction back.
 xor   ah, ah
 cmp   al, 2 
 ja    func_23_bad_subfunction
-je    do_func_5602
+je    do_func_23_02
 push  ax
 xchg  ax, dx ; ax gets handle
 call  COMMON_check_valid_handle
@@ -1174,11 +1143,11 @@ PUSHA_MACRO
 
 xor   cx, cx
 mov   cl, byte ptr ds:[si + 4]
-jcxz  func_56_skip_first_remap
+jcxz  func_21_skip_first_remap
 lds   si, dword ptr ds:[si + 5]
 mov   ah, 050h
 int   067h
-func_56_skip_first_remap:
+func_21_skip_first_remap:
 POPA_MACRO ; ax restored.
 
 pop   ds
@@ -1220,7 +1189,7 @@ pop   ds  ; segment
 pop   si  ; offset
 pop   dx  ; handle
 
-jcxz  func_56_skip_old_repage
+jcxz  func_21_skip_old_repage
 
 mov   ah, 050h
 int   067h
@@ -1230,7 +1199,7 @@ int   067h
 
 
 
-func_56_skip_old_repage:
+func_21_skip_old_repage:
 
 pop   si
 pop   ds
@@ -2527,7 +2496,7 @@ ENDIF
 
 
 EMS_FUNCTION_05Ch:
-public EMS_FUNCTION_05Ch
+
 xchg  ax, bx
 ; unmap everything to -1
 
@@ -2690,13 +2659,13 @@ xchg ax, bx
 pop  ax  ; take advantage of later pusha
 xor  ah, ah
 cmp  al, 1
-jb   do_func_5400
-je   do_func_5401
+jb   do_func_21_00
+je   do_func_21_01
 cmp  al, 2
 jne  func_21_bad_subfunction
 mov  bx, MAX_HANDLE_COUNT
 iret
-do_func_5401:
+do_func_21_01:
 ; search for handle
 push  es
 PUSHA_MACRO
@@ -2753,7 +2722,7 @@ mov   ah, 0A0h ; No corresponding handle could be found for the handle name spec
 
 iret
 
-do_func_5400:  
+do_func_21_00:  
 
 push  ds
 PUSHA_MACRO
@@ -2921,7 +2890,7 @@ COMMON_allocate_zero_pages:
 
 
 COMMON_deallocate_pages:
-public  COMMON_deallocate_pages
+
    ; deallocate all pages from handle dx
    push bx
    push dx
@@ -3001,177 +2970,7 @@ COMMON_get_next_free_handle:
 
 
 
-IFDEF DEBUG_MODE
 
-_current_error_pointer:
-dw 0
-
-
-
-DEBUG_check_all_handles:
-push  ax
-PUSHA_MACRO
-push ds
-push es
-
-push cs
-pop  ds
-
-
-
-mov  si, OFFSET _RESIDENT_VARIABLE_handle_list - (SIZE HANDLE_INFO)
-mov  ax, 0EC00h
-mov  es, ax
-mov  di, word ptr ds:[_current_error_pointer]
-xor  ax, ax ; handle
-cwd   ; dx = handle
- 
- mov  bp, -1
- mov  dx, -1
- loop_next_handle_check:
-   test dx, dx
-   jz   skip_conventional
-   mov  cx, word ptr ds:[si + HANDLE_INFO.handle_num_pages]
-   mov  bx, word ptr ds:[si + HANDLE_INFO.handle_first_page]
-   cmp  cx, bp
-   je   skip_unused_handle
-   inc  ax
-   jcxz handle_num_pages_was_zero  ; todo error check?
-      loop_next_page_check:
-        cmp bx, bp
-        je  error_bad_handle_found
-        mov  bx, word ptr ds:[bx + PAGE_INFO.page_info_next_page]
-        inc  ax
-        loop loop_next_page_check
-
-   cmp bx, bp
-   jne last_page_not_null
-
-   jmp last_page_is_good
-   
-   handle_num_pages_was_zero:
-   skip_conventional:   
-   skip_unused_handle:
-   iterate_to_next_handle:
-
-   inc  dx
-   add  si, (SIZE HANDLE_INFO)
-   cmp  si, (OFFSET _RESIDENT_VARIABLE_handle_list + (MAX_HANDLE_COUNT * (SIZE HANDLE_INFO)))
-   jb   loop_next_handle_check
-
-   xchg ax, dx
-   mov    ax, word ptr ds:[_current_call_subfunction_value]
-   stosw
-   mov    ax, 07Fh ; call done
-   stosw
-   xchg ax, dx
-   stosw
-   add    di, 0Fh
-   and    di, 03FF0h
-   mov  word ptr ds:[_current_error_pointer], di
-
-
-pop  es
-pop  ds
-POPA_MACRO
-pop  ax
-skip_it_all:
-ret
-
-error_bad_handle_found:
-push   ax
-mov    ax, word ptr ds:[_current_call_subfunction_value]
-stosw
-mov    ax, 1 ; error 1
-stosw
-mov  ax, cx
-stosw
-mov  ax, word ptr ds:[si + HANDLE_INFO.handle_num_pages]
-stosw
-mov  ax, word ptr ds:[si + HANDLE_INFO.handle_first_page]
-stosw
-mov    ax, dx
-stosw
-
-add    di, 0Fh
-and    di, 03FF0h
-pop    ax
-jmp    iterate_to_next_handle
-
-last_page_not_null:
-push   ax
-mov    ax, word ptr ds:[_current_call_subfunction_value]
-stosw
-mov    ax, 2 ; error 2
-stosw
-xor  ax, ax
-
-      inner_loop_next_page_check:
-        cmp bx, bp
-        je   inner_found_end
-        mov  bx, word ptr ds:[bx + PAGE_INFO.page_info_next_page]
-        inc  ax
-        ;cmp  ax, 03000h
-        ;jae  error_infinite
-
-        jmp  inner_loop_next_page_check
-      inner_found_end:
-
-
-stosw
-mov  ax, word ptr ds:[si + HANDLE_INFO.handle_num_pages]
-stosw
-mov  ax, word ptr ds:[si + HANDLE_INFO.handle_first_page]
-stosw
-mov    ax, dx
-stosw
-
-
-add    di, 0Fh
-and    di, 03FF0h
-pop    ax
-jmp    iterate_to_next_handle
-
-
-last_page_is_good:
-push   ax
-mov    ax, word ptr ds:[_current_call_subfunction_value]
-stosw
-mov    ax, 010h ; page good
-stosw
-
-mov  ax, word ptr ds:[si + HANDLE_INFO.handle_num_pages]
-stosw
-mov  ax, word ptr ds:[si + HANDLE_INFO.handle_first_page]
-stosw
-mov    ax, dx
-stosw
-
-
-add    di, 0Fh
-and    di, 03FF0h
-pop    ax
-jmp    iterate_to_next_handle
-
-
-error_infinite:
-mov    ax, 0FFFFh ; infinite
-stosw
-
-mov  ax, word ptr ds:[si + HANDLE_INFO.handle_num_pages]
-stosw
-mov  ax, word ptr ds:[si + HANDLE_INFO.handle_first_page]
-stosw
-mov    ax, dx
-stosw
-
-
-add    di, 0Fh
-and    di, 03FF0h
-xor    ax, ax
-pop    ax
-jmp    iterate_to_next_handle
-ENDIF
 
 
 ALIGN 2
@@ -3284,56 +3083,56 @@ end_of_driver_label:
 public end_of_driver_label
 
 
-string_resident_driver_size                 db            "EMS Driver Resident Memory Usage: "
-string_resident_driver_size_EDIT_OFFSET     db            "      Bytes, Entrypoint:  "
-string_resident_driver_location_EDIT_OFFSET db            "0000:0000",'$'
+STRING_resident_driver_size                 db            "EMS Driver Resident Memory Usage: "
+STRING_resident_driver_size_EDIT_OFFSET     db            "      Bytes, Entrypoint:  "
+STRING_resident_driver_location_EDIT_OFFSET db            "0000:0000",'$'
 
-string_driver_exists db 0Dh, 0Ah, 'EMS Driver already loaded (chaining not supported).',0Dh, 0Ah, '$'
-string_driver_successfully_installed db 0Dh, 0Ah, 'SQEMM successfully initialized.', 0Ah, 0Dh, '$'
-string_driver_failed_installing db 0Dh, 0Ah, ' Driver not installed.', 0Ah,  '$'
-string_bad_page_frame_param db 0Dh, 0Ah,  'Bad Page Frame Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
-string_bad_page_count_param db 0Dh, 0Ah,  'Bad Page Count Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
-string_bad_page_offset_param db 0Dh, 0Ah, 'Bad Page Offset Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
+STRING_driver_exists db 0Dh, 0Ah, 'EMS Driver already loaded (chaining not supported).',0Dh, 0Ah, '$'
+STRING_driver_successfully_installed db 0Dh, 0Ah, 'SQEMM successfully initialized.', 0Ah, 0Dh, '$'
+STRING_driver_failed_installing db 0Dh, 0Ah, ' Driver not installed.', 0Ah,  '$'
+STRING_bad_page_frame_param db 0Dh, 0Ah,  'Bad Page Frame Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
+STRING_bad_page_count_param db 0Dh, 0Ah,  'Bad Page Count Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
+STRING_bad_page_offset_param db 0Dh, 0Ah, 'Bad Page Offset Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
 
-string_parsed_parameter                     db            " (User Parameter)", 0Dh, 0Ah,'$'
-string_unparsed_parameter                   db            " (Default Parameter)", 0Dh, 0Ah,'$'
+STRING_parsed_parameter                     db            " (User Parameter)", 0Dh, 0Ah,'$'
+STRING_unparsed_parameter                   db            " (Default Parameter)", 0Dh, 0Ah,'$'
 
-string_good_port_param                      db            "Using Port:  "
-string_good_port_param_EDIT_OFFSET          db            "0208",'$'
-string_good_page_frame_param                db            "Page Frame:  "
-string_good_page_frame_param_EDIT_OFFSET    db            "D000",'$'
-string_good_page_count_param                db            "Page Count:  "
-string_good_page_count_param_EDIT_OFFSET    db            "0256",'$'
-string_good_page_offset_param               db            "Page Offset: "
-string_good_page_offset_param_EDIT_OFFSET   db            "0128",'$'
+STRING_good_port_param                      db            "Using Port:  "
+STRING_good_port_param_EDIT_OFFSET          db            "0208",'$'
+STRING_good_page_frame_param                db            "Page Frame:  "
+STRING_good_page_frame_param_EDIT_OFFSET    db            "D000",'$'
+STRING_good_page_count_param                db            "Page Count:  "
+STRING_good_page_count_param_EDIT_OFFSET    db            "0256",'$'
+STRING_good_page_offset_param               db            "Page Offset: "
+STRING_good_page_offset_param_EDIT_OFFSET   db            "0128",'$'
 
 
 
 
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for VLSI SCAMP', 0Dh, 0Ah,'$'
+  STRING_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for VLSI SCAMP', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Fantasy Card', 0Dh, 0Ah,'$'
+  STRING_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Fantasy Card', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Rodneys 286 Chipset', 0Dh, 0Ah,'$'
+  STRING_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Rodneys 286 Chipset', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for C&T SCAT', 0Dh, 0Ah,'$'
+  STRING_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for C&T SCAT', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Headland HT-18, HT-21, HT-22, HT-25', 0Dh, 0Ah,'$'
+  STRING_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Headland HT-18, HT-21, HT-22, HT-25', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Headland HT-12', 0Dh, 0Ah,'$'
+  STRING_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Headland HT-12', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for HEDAKA/CITYGATE/PCCHIPS Chipsets', 0Dh, 0Ah,'$'
+  STRING_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for HEDAKA/CITYGATE/PCCHIPS Chipsets', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Lo-tech EMS Board', 0Dh, 0Ah,'$'
+  STRING_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Lo-tech EMS Board', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Chips NEAT', 0Dh, 0Ah,'$'
+  STRING_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Chips NEAT', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Intel Above Board', 0Dh, 0Ah,'$'
+  STRING_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Intel Above Board', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for SARC RC2016A', 0Dh, 0Ah,'$'
+  STRING_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for SARC RC2016A', 0Dh, 0Ah,'$'
 ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-  string_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Standard EMS Boards', 0Dh, 0Ah,'$'
+  STRING_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Standard EMS Boards', 0Dh, 0Ah,'$'
 ENDIF
 
 _INIT_PARAM_command_line_length:
@@ -3346,7 +3145,7 @@ push       cs
 pop        ds
 ; selfmodify to disable double init.
 mov        byte ptr ds:[SELFMODIFY_prevent_double_init+1], OFFSET RETURN_UNRECOGNIZED_COMMAND - SELFMODIFY_prevent_double_init_AFTER     ; overwrite pointer to this init function with pointer to "failed to install" (03fa5h)
-mov        dx, OFFSET string_main_header
+mov        dx, OFFSET STRING_main_header
 
 mov        ah, 9  ; PRINT_STRING
 int        021h
@@ -3362,13 +3161,13 @@ rep        cmpsb
 jne        EMS_INTERRUPT_FREE
 ; an ems driver is already installed
 
-mov        dx, OFFSET string_driver_exists
+mov        dx, OFFSET STRING_driver_exists
 
 DRIVER_NOT_INSTALLED:
 mov        ah, 9  ; PRINT_STRING
 int        021h
 
-lds        bx, [request_header_pointer]
+lds        bx, [_RESIDENT_VARIABLE_request_header_pointer]
 mov        word ptr ds:[bx + 3], 0810ch
 mov        word ptr ds:[bx + 0eh], OFFSET end_of_driver_label
 mov        word ptr ds:[bx + 010h], cs
@@ -3454,7 +3253,7 @@ pop        es
 std
 mov        ax, si   ; end of driver 
 mov        bx, 10
-mov        di, OFFSET string_resident_driver_size_EDIT_OFFSET + 3
+mov        di, OFFSET STRING_resident_driver_size_EDIT_OFFSET + 3
 
 print_next_size_digit:
   cwd
@@ -3472,14 +3271,14 @@ cld
 mov        byte ptr ds:[done_editing_string], RET_OPCODE
 
 mov        ax, cs
-mov        di, OFFSET string_resident_driver_location_EDIT_OFFSET
+mov        di, OFFSET STRING_resident_driver_location_EDIT_OFFSET
 
 call       do_print_driver_param_hex
 inc        di   ; skip colon
 mov        ax, OFFSET MAIN_EMS_INTERRUPT_VECTOR
 call       do_print_driver_param_hex
 
-mov        dx, OFFSET string_resident_driver_size
+mov        dx, OFFSET STRING_resident_driver_size
 mov        ah, 9  ; PRINT_STRING
 int        021h
 
@@ -3497,16 +3296,13 @@ int        021h
 
 DRIVER_INSTALLED:
 
-IFDEF DEBUG_MODE
-call   DEBUG_check_all_handles
-ENDIF
 
 
-mov        dx, OFFSET string_driver_successfully_installed
+mov        dx, OFFSET STRING_driver_successfully_installed
 mov        ah, 9  ; PRINT_STRING
 int        021h
 
-lds        bx, dword ptr ds:[request_header_pointer]
+lds        bx, dword ptr ds:[_RESIDENT_VARIABLE_request_header_pointer]
 mov        word ptr ds:[bx + 3], 0100h
 
 ; 0Eh: MS-DOS 5 set pointer to end of memory used by driver
@@ -3522,32 +3318,32 @@ ret
 ; turns out ms-dos pre-capitalizes it all? (what about other DOS?) consider removing. 
 process_command_line:
 
-push       ds
-lds        si, dword ptr cs:[request_header_pointer]
-lds        si, ds:[si + 012h]  ; todo whats this offset
-xor        cx, cx
+   push       ds
+   lds        si, dword ptr cs:[_RESIDENT_VARIABLE_request_header_pointer]
+   lds        si, ds:[si + 012h]  ; todo whats this offset
+   xor        cx, cx
 
-parse_next_character:
-lodsb
-cmp        al, 0Dh
-je         done_processing_command_line
-inc        cx
+   pcl_parse_next_character:
+      lodsb
+      cmp        al, 0Dh
+      je         pcl_done_processing_command_line
+      inc        cx
 
-; capitalize character
-cmp        al, 061h
-jb         no_upper
-cmp        al, 07Ah
-ja         no_upper
-sub        al, 020h
-mov        byte ptr ds:[si-1], al
-no_upper:
+      ; capitalize character
+      cmp        al, 061h
+      jb         no_upper
+      cmp        al, 07Ah
+      ja         no_upper
+      sub        al, 020h
+      mov        byte ptr ds:[si-1], al
+      no_upper:
 
-jmp        parse_next_character
+      jmp        pcl_parse_next_character
 
-done_processing_command_line:
-mov        word ptr cs:[_INIT_PARAM_command_line_length], cx
-pop        ds
-ret
+   pcl_done_processing_command_line:
+   mov        word ptr cs:[_INIT_PARAM_command_line_length], cx
+   pop        ds
+   ret
 
 
 parse_driver_params:
@@ -3559,11 +3355,11 @@ parse_driver_params:
 push       cx
 
 mov        cx, word ptr cs:[_INIT_PARAM_command_line_length] ; max param length
-les        di, dword ptr cs:[request_header_pointer]
+les        di, dword ptr cs:[_RESIDENT_VARIABLE_request_header_pointer]
 les        di, es:[di + 012h]  ; todo whats this offset
 
 mov        al, "-"
-mov        word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET string_unparsed_parameter ; default not found
+mov        word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_unparsed_parameter ; default not found
 
 search_for_next_param:
 repne      scasb      
@@ -3577,7 +3373,7 @@ jne        not_equals
 inc        di
 not_equals:
 stc   ; carry on if found.
-mov       word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET string_parsed_parameter
+mov       word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_parsed_parameter
 done_not_found:
 pop        cx
 
@@ -3588,40 +3384,40 @@ ret
 ; still returns carry on success
 
 parse_driver_params_get_int:
-push      dx
-call      parse_driver_params
-jnc       arg_parsed_fail
-xor       ax, ax  ; zero ah
-cwd               ; dx is running total
-loop_next_char:
-mov       al, byte ptr es:[di]
-cmp       al, " "
-je        arg_parsed_success
-cmp       al, 0Dh ; end of line. do we also check for 0Ah? 
-je        arg_parsed_success
-sub       al, "0"
-jb        arg_parsed_fail
-cmp       al, 9
-ja        arg_parsed_fail
-push      ax     ; store value
-mov       al, 10
-mul       dx       ; shift running total one decimal digit over
-xchg      ax, dx   ; result in dx
-pop       ax     ; restore value
-add       dx, ax ; add new digit
-inc       di
-jmp       loop_next_char
+   push      dx
+   call      parse_driver_params
+   jnc       arg_parsed_fail
+   xor       ax, ax  ; zero ah
+   cwd               ; dx is running total
+   loop_next_char:
+      mov       al, byte ptr es:[di]
+      cmp       al, " "
+      je        arg_parsed_success
+      cmp       al, 0Dh ; end of line. do we also check for 0Ah? 
+      je        arg_parsed_success
+      sub       al, "0"
+      jb        arg_parsed_fail
+      cmp       al, 9
+      ja        arg_parsed_fail
+      push      ax     ; store value
+      mov       al, 10
+      mul       dx       ; shift running total one decimal digit over
+      xchg      ax, dx   ; result in dx
+      pop       ax     ; restore value
+      add       dx, ax ; add new digit
+      inc       di
+      jmp       loop_next_char
 
-arg_parsed_fail:
-clc
-pop       ax
-ret
+   arg_parsed_fail:
+   clc
+   pop       ax
+   ret
 
-arg_parsed_success:
-stc
-xchg      ax, dx
-pop       dx  
-ret
+   arg_parsed_success:
+   stc
+   xchg      ax, dx
+   pop       dx  
+   ret
 
 print_driver_param_4_char_int:
   mov      cx, 3
@@ -3635,29 +3431,30 @@ print_driver_param:
 ; ds:dx = print offset (synergy with dos interrupt)
 ; carry flag on = print hex. off = print int.
 ; cx has number of digits for decimal print. hex always prints 4.
-  push      bx
-  push      ds
-  pop       es  ; enable stosw
-  jc        do_print_driver_param_hex
+   push      bx
+   push      ds
+   pop       es  ; enable stosw
+   jc        do_print_driver_param_hex
 
 ; put AX decimal value in es:di
-  push      dx
-  add       di, cx  ; cx has max digit count. iter backwards. 
-  std               ; assume no dir flag coming in 
-  
-  mov       bx, 10
+   push      dx
+   add       di, cx  ; cx has max digit count. iter backwards. 
+   std               ; assume no dir flag coming in 
 
-  do_next_digit:
-  xor       dx, dx
-  div       bx
-  xchg      ax, dx  ; get   remainder in ax
-  add       al, '0' ; ASCIIfy
-  stosb             ; print remainder from ax
-  xchg      ax, dx  ; get   quotient back in ax
-  loop   do_next_digit
-  clc
-  pop       dx
-  jmp   done_editing_string
+   mov       bx, 10
+
+   do_next_digit:
+      xor       dx, dx
+      div       bx
+      xchg      ax, dx  ; get   remainder in ax
+      add       al, '0' ; ASCIIfy
+      stosb             ; print remainder from ax
+      xchg      ax, dx  ; get   quotient back in ax
+      loop   do_next_digit
+   clc
+   pop       dx
+jmp   done_editing_string
+
 do_print_driver_param_hex:
 
 ; thanks zero318 for original impl
@@ -3684,8 +3481,8 @@ do_print_driver_param_hex:
   XOR  AX, (("A" - 10) AND 0FFh) OR (("A" - 10) SHL 8)
   ADD  AX, BX
   STOSW
-done_editing_string:
-    
+
+done_editing_string:    
   mov        ah, 9  ; PRINT_STRING
   int        021h
 
