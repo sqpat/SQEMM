@@ -906,8 +906,6 @@ call  test_partial_pagemap
 ; TEST 17: test map 28 pagination
 PRINT_RUNNING_TEST 17
 
-
-
 ; init memory...
 mov   ax, 32
 xor   bx, bx
@@ -915,12 +913,75 @@ call  init_page_map
 call  test_map_1700
 
 
-mov   di, offset pagemap_1_func_15
-mov   si, di
+
+mov   ax, 05B03h
+TEST_EMS_REGISTER_CALL_NO_BX 00003h
+test  bx, bx
+je    no_alternate_register_sets
+
+push  bx
+
+mov   bl, 0FFh  ; probably dont have 255 sets right?
+mov   ax, 05B01h
+TEST_EMS_REGISTER_CALL_ALL 09D01h
+pop   bx
+
+mov   ax, 05B01h
+TEST_EMS_REGISTER_CALL_ALL 00001h ; page back
+
+push  bx
+
+
+mov   ax, 0  ; change pages in this set..
+xor   bx, bx
+call  init_page_map  
+call  test_map_1700
+
+; change back to original set
+xor   bx, bx
+mov   es, bx
+mov   di, bx
+mov   ax, 05B01h
+TEST_EMS_REGISTER_CALL_ALL 00001h
+push  cs
+pop   es
+
+
+
+mov   ax, 32
+mov   bx, 1
+call  init_page_map  
+call  test_map_1700
+
+
+
+pop   bx
+
+mov   ax, 05B04h
+TEST_EMS_REGISTER_CALL_ALL 00004h ; deallocate
+
+
+mov   ax, 05B04h
+TEST_EMS_REGISTER_CALL_ALL 09D04h ; re-deallocate
+
+
+jmp   continue_register_set_testing
+no_alternate_register_sets:
+
+
+
 
 mov   ax, 05B01h
 mov   bx, 1
 TEST_EMS_REGISTER_CALL_ALL 09C01h
+
+mov   bx, 1
+mov   ax, 05B04h
+TEST_EMS_REGISTER_CALL_ALL 09C04h
+
+continue_register_set_testing:
+mov   di, offset pagemap_1_func_15
+mov   si, di
 
 mov  ax, 04E00h
 TEST_EMS_REGISTER_CALL_ALL 0000h  ; previous state recorded in the spot
@@ -1208,9 +1269,7 @@ mov   ax, 05B03h
 TEST_EMS_REGISTER_CALL_NO_BX 00003h
 mov   ax, 05B04h
 TEST_EMS_REGISTER_CALL_ALL 00004h
-mov   bx, 1
-mov   ax, 05B04h
-TEST_EMS_REGISTER_CALL_ALL 09C04h
+
 
 mov   ax, 05B05h
 TEST_EMS_REGISTER_CALL_NO_BX 00005h
@@ -1218,7 +1277,7 @@ mov   ax, 05B06h
 TEST_EMS_REGISTER_CALL_ALL 00006h
 mov   bx, 1
 mov   ax, 05B07h
-TEST_EMS_REGISTER_CALL_ALL 09C07h
+TEST_EMS_REGISTER_CALL_ALL 09E07h
 
 ; done with func 28 stuff
 
