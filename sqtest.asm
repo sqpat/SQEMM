@@ -2234,6 +2234,70 @@ call  test_map_1700
 
 
 
+; TEST 21: test -1 paging/unpaging (page frame only)
+PRINT_RUNNING_TEST 21
+
+; what's the desired behavior?? undefined/hw dependent i think
+
+; TEST 22: test function 22 alter and jump (page frame only)
+PRINT_RUNNING_TEST 22
+
+;     FUNCTION 22   ALTER PAGE MAP & JUMP
+
+
+mov   si, OFFSET func_22_struct_1
+mov   word ptr ds:[si], offset func_22_function_1_PAGEFRAME
+mov   byte ptr ds:[si+4], 4
+mov   word ptr ds:[si+5], offset func_22_phys_struct_1_PAGEFRAME
+mov   word ptr ds:[si+2], cs
+mov   word ptr ds:[si+7], cs
+
+mov   ax, 05502h
+TEST_EMS_REGISTER_CALL_ALL 08F02h
+
+mov   dx, word ptr ds:[VARIABLE_dead_handle]
+mov   ax, 05500h
+TEST_EMS_REGISTER_CALL_ALL 08300h
+mov   ax, 05501h
+TEST_EMS_REGISTER_CALL_ALL 08301h
+
+mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
+
+
+mov   ax, 05500h ; 0 = physical page numbers...
+TEST_EMS_REGISTER_CALL_ALL 00000h
+
+done_with_function_1_PAGEFRAME:           ; i guess we didnt test anything...? so call in
+call do_test_only_func_22
+
+; change pages out.
+mov   ax, 10
+xor   bx, bx
+call  init_page_map   ; init map state without remapping
+call  test_map_1700
+
+
+mov   word ptr ds:[si], offset func_22_function_2_PAGEFRAME
+mov   byte ptr ds:[si+4], 0
+
+
+mov   ax, 05500h ; 0 = physical page numbers...
+TEST_EMS_REGISTER_CALL_ALL 00000h
+done_with_function_2_PAGEFRAME:
+call do_test_only_func_22
+
+mov   byte ptr ds:[si+4], 4
+mov   word ptr ds:[si+5], offset func_22_phys_struct_2_PAGEFRAME
+mov   word ptr ds:[si], offset func_22_function_3_PAGEFRAME
+
+
+mov   ax, 05501h ; 1 = segment page numbers...
+TEST_EMS_REGISTER_CALL_ALL 00001h
+
+done_with_function_3_PAGEFRAME:
+call do_test_only_func_22
+
+
 
 
 
@@ -3132,6 +3196,7 @@ func_22_function_3:
     push  es
     push  ax
     push  bx
+    func_22_modify_offset_3:
     mov   word ptr ds:[func_22_modify_offset+1], done_with_function_3 - func_22_modify_offset_AFTER
     jmp  jump_into_func_22
 
@@ -3207,6 +3272,64 @@ func_22_function_2:
     pop   ax
     func_22_modify_offset_2:
     jmp  done_with_function_2
+    func_22_modify_offset_2_AFTER:
+
+func_22_function_3_PAGEFRAME:
+    push  es
+    push  ax
+    push  bx
+    jmp  done_with_function_3_PAGEFRAME 
+
+func_22_function_1_PAGEFRAME:
+    
+    ; note note note uses sqemm index values
+
+    push  es
+    push  ax
+    push  bx
+
+    mov   ax, word ptr ds:[func_22_phys_struct_1_PAGEFRAME+0]
+    mov   bx, word ptr ds:[VARIABLE_page_frame+2]
+    mov   es, bx
+    call  test_page_with_ax
+
+    mov   ax, word ptr ds:[func_22_phys_struct_1_PAGEFRAME+4]
+    add   bh, 4
+    mov   es, bx
+    call  test_page_with_ax
+
+    mov   ax, word ptr ds:[func_22_phys_struct_1_PAGEFRAME+8]
+    add   bh, 4
+    mov   es, bx
+    call  test_page_with_ax
+
+    mov   ax, word ptr ds:[func_22_phys_struct_1_PAGEFRAME+12]
+    add   bh, 4
+    mov   es, bx
+    call  test_page_with_ax
+
+
+    pop   bx
+    pop   ax
+    pop   es
+    func_22_modify_offset_PAGEFRAME:
+    jmp  done_with_function_1_PAGEFRAME
+
+func_22_function_2_PAGEFRAME:
+
+    ; change pages out.
+    push  ax
+    push  bx
+    
+    mov   ax, 10
+    mov   bx, 1
+    call  init_page_map   ; init map state without remapping
+    call  test_map_1700
+
+    pop   bx
+    pop   ax
+    func_22_modify_offset_2_PAGEFRAME:
+    jmp  done_with_function_2_PAGEFRAME
 
 write_64_bytes_increasing:
 
@@ -3602,6 +3725,19 @@ func_22_phys_struct_2:
     dw 21, 04800h
     dw 0, 05000h
 
+func_22_phys_struct_1_PAGEFRAME:
+; logical, page
+    dw 20,  0
+    dw 22,  1
+    dw 21,  2
+    dw 23,  3
+
+func_22_phys_struct_2_PAGEFRAME: 
+; logical, page
+    dw 20, 0E000h
+    dw 22, 0E400h
+    dw 21, 0E800h
+    dw 23, 0EC00h
 
 
 
