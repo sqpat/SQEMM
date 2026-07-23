@@ -196,11 +196,13 @@ TEST_EMS_REGISTER_CALL_NO_BX 0002h
 
 PRINT_HEX_VALUE_BX string_hex_page_frame_address string_hex_page_frame_address_offset
 mov   word ptr ds:[VARIABLE_page_frame+2], bx
-mov   word ptr ds:[partial_pagemap_1_func_16_page_frame+0], bx
+mov   word ptr ds:[partial_pagemap_1_func_16_page_frame_1+0], bx
+mov   word ptr ds:[partial_pagemap_1_func_16_page_frame_2+0], bx
 add   bh, 04h
 mov   word ptr ds:[VARIABLE_page_frame+6], bx
 add   bh, 04h
-mov   word ptr ds:[partial_pagemap_1_func_16_page_frame+2], bx
+mov   word ptr ds:[partial_pagemap_1_func_16_page_frame_1+2], bx
+mov   word ptr ds:[partial_pagemap_1_func_16_page_frame_2+2], bx
 mov   word ptr ds:[VARIABLE_page_frame+10], bx
 add   bh, 04h
 mov   word ptr ds:[VARIABLE_page_frame+14], bx
@@ -1257,6 +1259,8 @@ mov  ax, 04F01h   ; restore
 TEST_EMS_REGISTER_CALL_ALL 01h
 
 ; test those pages.
+mov   si, offset partial_pagemap_1_func_16_pagemap
+mov   bx, offset partial_pagemap_1_values - partial_pagemap_1_func_16_pagemap  - 4
 call  test_partial_pagemap  
 
 
@@ -2036,7 +2040,7 @@ DO_PAGE_FRAME_ONLY_TESTS:
 PRINT_RUNNING_TEST 16
 PRINT_RUNNING_TEST 17
 
-; TEST 18: test pages in conventional region via function 15 get/set page map
+; TEST 18: test pages in page frame region via function 15 get/set page map
 PRINT_RUNNING_TEST 18
 
 ;     FUNCTION 15   GET/SET PAGE MAP
@@ -2102,9 +2106,42 @@ call  init_page_map   ; init map state without remapping
 call  test_map_1700
 
 
-; TEST 19: test pages in conventional region via function 16 get/set partial page map
+; TEST 19: test pages in page frame region via function 16 get/set partial page map
 PRINT_RUNNING_TEST 19
 
+
+;     FUNCTION 16   GET/SET PARTIAL PAGE MAP
+
+mov  ax, 04F02h  ; get size
+mov  bx, 8
+TEST_EMS_REGISTER_CALL_NO_AL 00h
+
+; initialize page state, 32 and up
+mov   ax, 32
+xor   bx, bx
+call  init_page_map  
+call  test_map_1700
+
+; get partial page map.
+mov  si, OFFSET  partial_pagemap_page_frame_func_16_pagemap
+mov  di, OFFSET  partial_pagemap_1_func_16_save_area
+mov  ax, 04F00h  ; save
+TEST_EMS_REGISTER_CALL_ALL 00h
+
+; change pagemap
+mov   ax, 0
+xor   bx, bx
+call  init_page_map  
+
+call  test_map_1700
+
+mov  si, di     ; save area 
+mov  ax, 04F01h   ; restore
+TEST_EMS_REGISTER_CALL_ALL 01h
+
+mov  si, OFFSET  partial_pagemap_page_frame_func_16_pagemap
+mov  bx, offset  partial_pagemap_page_frame_values - partial_pagemap_page_frame_func_16_pagemap  - 4
+call  test_partial_pagemap  
 
 
 
@@ -2680,8 +2717,9 @@ public test_partial_pagemap
     push  di
 
     xchg  ax, di  ; test base
-    mov   si, offset partial_pagemap_1_func_16_pagemap
-    mov   bx, offset partial_pagemap_1_values - partial_pagemap_1_func_16_pagemap  - 4
+    ; passed in
+    ;mov   si, offset partial_pagemap_1_func_16_pagemap
+    ;mov   bx, offset partial_pagemap_1_values - partial_pagemap_1_func_16_pagemap  - 4
     lodsw
     xchg  ax, cx
 
@@ -3422,13 +3460,24 @@ partial_pagemap_1_func_16_pagemap:
 dw 8
 dw 04000h, 05000h, 06000h
 dw 07000h, 08000h, 09000h
-partial_pagemap_1_func_16_page_frame:
+partial_pagemap_1_func_16_page_frame_1:
 dw 0D000h, 0D800h
 
 partial_pagemap_1_values:
 dw 32, 36, 40
 dw 44, 48, 52
 dw 56, 58
+
+
+partial_pagemap_page_frame_func_16_pagemap:
+dw 2
+partial_pagemap_1_func_16_page_frame_2:
+dw 0D000h, 0D800h
+
+partial_pagemap_page_frame_values:
+dw 32, 34
+
+
 
 func_14_page_counts:
 dw 4, 4, 4, 4, 64
