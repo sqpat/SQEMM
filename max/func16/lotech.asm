@@ -8,7 +8,7 @@
 
   cmp   al, 2
   ja    func_16_bad_subfunction
-  mov   ah, 0
+  cbw  
   je    func_16_sub_02
   test  al, al
   push ax
@@ -18,7 +18,7 @@
   push bx
 
   lodsw
-  mov  cx, ax
+  xchg ax, cx
 
 
   
