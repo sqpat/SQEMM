@@ -514,8 +514,6 @@ mov   word ptr ds:[expected_value], ax
 mov   dx, bx
 TEST_RESULT_DX_NO_VAL
 
-here:
-public here
 
 ;     FUNCTION 27   ALLOCATE STANDARD/RAW PAGES
 
@@ -1083,8 +1081,39 @@ PRINT_RUNNING_TEST 15
 
 mov   ax, 05801h
 TEST_EMS_REGISTER_CALL_NO_CX 00001h
+
+here:
+public here
+
+
+
+mov   word ptr ds:[VARIABLE_page_count], cx  
+
+
+mov   dx, cx
+mov   ax, 05800h
+mov   di, OFFSET map_1700_page_list_full ; offset by 2 
+
+TEST_EMS_REGISTER_CALL_NO_CX 00000h
+
+mov   si, OFFSET map_1700_page_list_full ; offset by 2 
+mov   di, OFFSET map_1701_page_list_full + 2
+
+; copy page list to 1701
+
+push  cx 
+shl   cx, 1  ; we also write the logical entries, which are garbage for now.
+rep   movsw
+
+pop   cx
+
+
+
+
 cmp   cx, 28
 jae   continue_conventional
+;cmp   cx, dx
+;je    continue_conventional  ; todo what's this check for...?
 
 
 go_skip_conventional:
@@ -1092,23 +1121,9 @@ PRINT_STRING str_no_conventional_tests
 jmp   DO_PAGE_FRAME_ONLY_TESTS
 
 continue_conventional:
-mov   dx, cx
-mov   ax, 05800h
-mov   di, OFFSET map_1700_page_list_full ; offset by 2 
-
-TEST_EMS_REGISTER_CALL_NO_CX 00000h
 
 
-cmp   cx, 28
-jb    go_skip_conventional
-cmp   cx, dx
-jne   go_skip_conventional  ; todo implement 4 page card test path
-mov   word ptr ds:[VARIABLE_page_count], cx  
 
-mov   si, OFFSET map_1700_page_list_full ; offset by 2 
-mov   di, OFFSET map_1701_page_list_full + 2
-shl   cx, 1  ; we also write the logical entries, which are garbage for now.
-rep   movsw
 
 
 ; TEST 16: test pages in conventional region via function 5 page one
@@ -1150,7 +1165,7 @@ mov  di, OFFSET pagemap_1_func_15
 mov  si, di
 
 mov  ax, 04E03h
-TEST_EMS_REGISTER_CALL_AH 00h
+TEST_EMS_REGISTER_CALL_NO_AL 00h
 
 ; use al for anything??
 
@@ -1159,6 +1174,8 @@ mov   ax, 32
 xor   bx, bx
 call  init_page_map  
 call  test_map_1700
+
+; wrong ds:si????
 
 mov  ax, 04E00h
 TEST_EMS_REGISTER_CALL_ALL 0000h
@@ -1195,6 +1212,8 @@ call  init_page_map   ; init map state without remapping
 call  test_map_1700
 
 mov   si, di  ; restore to the 16 offset one
+
+; this one is bad?
 
 mov  ax, 04E01h
 TEST_EMS_REGISTER_CALL_ALL 0001h  ; restore
@@ -2008,7 +2027,85 @@ mov   ax, 04C00h
 int   021h
 
 
+
+
+
 DO_PAGE_FRAME_ONLY_TESTS:
+
+; skip? conventional versions.
+PRINT_RUNNING_TEST 16
+PRINT_RUNNING_TEST 17
+
+; TEST 18: test pages in conventional region via function 15 get/set page map
+PRINT_RUNNING_TEST 18
+
+;     FUNCTION 15   GET/SET PAGE MAP
+
+mov   dx, word ptr cs:[VARIABLE_saved_handle_5]
+
+mov  di, OFFSET pagemap_1_func_15
+mov  si, di
+
+mov  ax, 04E03h
+TEST_EMS_REGISTER_CALL_NO_AL 00h
+
+; use al for anything??
+
+; page in something known - 32 and up for conventional pages. afterwards we will page to 0 and test..
+mov   ax, 32
+xor   bx, bx
+call  init_page_map  
+call  test_map_1700  ; todo fails. the si/di diff internally is bad? all zeroes?
+
+mov  ax, 04E00h
+TEST_EMS_REGISTER_CALL_ALL 0000h
+
+; ES:DI gets the contents filled.
+call  test_map_1700 ; nothing should have changed.
+
+mov   ax, 0
+call  init_page_map   ; remap from 32 to 0 
+call  test_map_1700   ; confirm thats good
+
+mov  ax, 04E01h
+TEST_EMS_REGISTER_CALL_ALL 0001h  ; restore
+
+mov   ax, 32
+mov   bx, 1
+call  init_page_map   ; init map state without remapping
+call  test_map_1700
+
+mov   ax, 16        ; 2nd set for get/set will be 16 indexed.
+xor   bx, bx
+call  init_page_map  
+call  test_map_1700
+
+
+mov   di, OFFSET pagemap_2_func_15
+
+mov  ax, 04E02h
+TEST_EMS_REGISTER_CALL_ALL 0002h  ; restore
+
+mov   ax, 32
+mov   bx, 1
+call  init_page_map   ; init map state without remapping
+call  test_map_1700
+
+mov   si, di  ; restore to the 16 offset one
+
+mov  ax, 04E01h
+TEST_EMS_REGISTER_CALL_ALL 0001h  ; restore
+
+mov   ax, 16
+mov   bx, 1
+call  init_page_map   ; init map state without remapping
+call  test_map_1700
+
+
+; TEST 19: test pages in conventional region via function 16 get/set partial page map
+PRINT_RUNNING_TEST 19
+
+
 
 
 
@@ -2674,6 +2771,8 @@ page_random_map_1701:
     pop   cx
     ret
 
+public map_1700_page_list_full
+public map_1701_page_list_full
 test_map_1700:
 public test_map_1700
     push  cx
@@ -3273,6 +3372,7 @@ db "Handle name error: "
 
 EMPTY_HANDLE_LOCATION:
 db  0, 0, 0, 0, 0, 0, 0, 0, "$"
+ALIGN 2
 
 
 VARIABLE_page_frame:  ; page frame separated by 4 each
@@ -3288,6 +3388,8 @@ dw  0, 0  ; four pages
 dw  0, 1
 dw  0, 2
 dw  0, 3
+
+
 
 func_1400_handle_page_list: ; reuse this region...
 
