@@ -1,8 +1,6 @@
 ; consider pusha/popa?
 ; cli/sti? not sure
 
-here:
-public here
 
   xchg  ax, bx ; restore bx
   pop   ax

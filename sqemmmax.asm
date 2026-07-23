@@ -194,7 +194,7 @@ dw  OFFSET EMS_FUNCTION_054h
 dw  OFFSET EMS_FUNCTION_055h
 dw  OFFSET EMS_FUNCTION_056h
 dw  OFFSET EMS_FUNCTION_057h
-dw  OFFSET EMS_FUNCTION_058h_JUMP
+dw  OFFSET EMS_FUNCTION_058h
 dw  OFFSET EMS_FUNCTION_059h
 dw  OFFSET EMS_FUNCTION_05Ah
 dw  OFFSET EMS_FUNCTION_05Bh
@@ -433,15 +433,17 @@ iret
 ;             phys_page_number         DW ?
 ;          mappable_phys_page_struct   ENDS
 
-EMS_FUNCTION_058h_JUMP:
+EMS_FUNCTION_058h:
 xchg       ax, bx
-EMS_FUNCTION_058h: ; this path  doesnt xchg ax bx
-cbw         
-cmp        byte ptr cs:[_current_call_subfunction_value], 1
-jae        func_25_not_5800
+pop        ax
+cbw
+cmp        al, 1
+ja        func_25_invalid_subfunction
+je        EMS_FUNCTION_05801h
 EMS_FUNCTION_05800h:
 push       ds
 push       si
+
 push       cs
 pop        ds
 mov        si, OFFSET mappable_phys_page_struct
@@ -454,19 +456,18 @@ _RESIDENT_VARIABLE_pageable_frame_count_5:
 sub        di, 01000h
 
 ; ah 0 from original xchg ah
+
 pop        si
 pop        ds
-pop        ax
-xor        ah, ah
+
+
 iret
-func_25_not_5800:
-ja         func_25_invalid_subfunction
 EMS_FUNCTION_05801h:
 _RESIDENT_VARIABLE_pageable_frame_count_3:
 mov        cx, 01000h
 ; ah already 0.
-pop        ax
-xor        ah, ah
+
+
 iret
 
 func_25_invalid_subfunction:
@@ -2328,14 +2329,21 @@ iret
 EMS_FUNCTION_04Eh:
 
 ; chipset needs to implement  FUNCTION_15_GET_PAGE_MAP and FUNCTION_15_SET_PAGE_MAP
+  xchg ax, bx
+  pop  ax
+  cmp  al, 3 
+  je   func_15_sub_03
+  ja   func_15_bad_subfunction
+  cbw  ; zero ah
+  push  ax  
+  push  bx  ; restore into bx 
+  push  cx
+  push  di
+  push  si
+  cmp  al, 1
+  je   func_15_sub_01
+  ja   func_15_sub_02
 
-  push ax  ; restore into bx 
-  push cx
-  push di
-  push si
-  cmp   byte ptr cs:[_current_call_subfunction_value], 1
-  je    func_15_sub_01
-  ja    not_func_15_sub_00
 func_15_sub_00:
   call  FUNCTION_15_GET_PAGE_MAP
 
@@ -2344,13 +2352,12 @@ func_15_pop_and_return:
   pop   si
   pop   di
   pop   cx
-  pop   bx ; restore from ax 
-  pop   ax
-  xor   ah, ah
+  pop   bx 
+  pop   ax ; ah already 0
   iret  
 func_15_bad_subfunction:
   mov   ah, 08Fh
-  jmp   func_15_pop_and_return
+  iret
 
 func_15_sub_01:
   call  FUNCTION_15_SAVE_PAGE_MAP
@@ -2369,7 +2376,8 @@ func_15_sub_02:
  jmp func_15_pop_and_return
 func_15_sub_03:
 ;          GET SIZE OF PAGE MAP SAVE ARRAY SUBFUNCTION
-mov  ax, LENGTH_OF_STACK
+  mov  ax, LENGTH_OF_STACK
+  iret  
  jmp func_15_pop_and_return
 
 
