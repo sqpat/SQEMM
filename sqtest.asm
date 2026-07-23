@@ -2146,6 +2146,97 @@ call  test_partial_pagemap
 
 
 
+; TEST 20: test map 28 pagination )page frame only)
+PRINT_RUNNING_TEST 20
+
+; init memory...
+mov   ax, 32
+xor   bx, bx
+call  init_page_map  
+call  test_map_1700
+
+
+
+mov   ax, 05B03h
+TEST_EMS_REGISTER_CALL_NO_BX 00003h
+
+; pretty sure no page frame devices have alterate register sets?
+;test  bx, bx
+;je    no_alternate_register_sets
+
+
+
+
+
+mov   ax, 05B01h
+mov   bx, 1
+TEST_EMS_REGISTER_CALL_ALL 09C01h
+
+mov   bx, 1
+mov   ax, 05B04h
+TEST_EMS_REGISTER_CALL_ALL 09C04h
+
+
+mov   di, offset pagemap_1_func_15
+mov   si, di
+
+mov  ax, 04E00h
+TEST_EMS_REGISTER_CALL_ALL 0000h  ; previous state recorded in the spot
+
+mov   ax, 0
+xor   bx, bx
+call  init_page_map  
+call  test_map_1700  ; switch to 0
+
+; bx 0
+mov   ax, 05B01h
+TEST_EMS_REGISTER_CALL_ALL 00001h  ; write the values at the pointer. 
+
+; should change back to 32.
+mov   ax, 32
+mov   bx, 1
+call  init_page_map  
+call  test_map_1700
+
+mov   ax, 0
+xor   bx, bx
+call  init_page_map  
+call  test_map_1700  ; switch to 0
+
+
+mov   ax,  05B00h
+mov   bx, 1
+TEST_EMS_REGISTER_CALL_NO_BX 00000h ; does nothing.
+
+mov   ax, 0
+mov   bx, 1
+call  init_page_map  
+call  test_map_1700
+
+
+xor   bx, bx
+mov   ax, 05B00h
+TEST_EMS_REGISTER_CALL_NO_BX 00000h  ; store state
+
+mov   ax, 32
+mov   bx, 0
+call  init_page_map  
+call  test_map_1700
+
+
+mov  ax, 04E01h
+TEST_EMS_REGISTER_CALL_ALL 00001h  ; restore the func 28 state
+
+mov   ax, 0
+mov   bx, 1
+call  init_page_map  
+call  test_map_1700
+
+
+
+
+
+
 
 
 jmp   DONE_WITH_TESTS
