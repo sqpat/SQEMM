@@ -776,319 +776,10 @@ public loop_test_random_four
 
 
 
-;; CONVENTIONAL TESTS. SKIP IF NOT SUPPORTED?
-;; CONVENTIONAL TESTS. SKIP IF NOT SUPPORTED?
-;; CONVENTIONAL TESTS. SKIP IF NOT SUPPORTED?
-;; CONVENTIONAL TESTS. SKIP IF NOT SUPPORTED?
 
 
-; TEST 12: check conventional pagination capabilities
+; TEST 12: test handle attribute
 PRINT_RUNNING_TEST 12
-
-
-;     FUNCTION 25   GET MAPPABLE PHYSICAL ADDRESS ARRAY
-; set up conventional. skip conventional tests if the
-
-mov   ax, 05801h
-TEST_EMS_REGISTER_CALL_NO_CX 00001h
-cmp   cx, 28
-jae   continue_conventional
-
-
-go_skip_conventional:
-PRINT_STRING str_no_conventional_tests
-jmp   skip_conventional
-
-continue_conventional:
-mov   dx, cx
-mov   ax, 05800h
-mov   di, OFFSET map_1700_page_list_full ; offset by 2 
-
-TEST_EMS_REGISTER_CALL_NO_CX 00000h
-
-
-cmp   cx, 28
-jb    go_skip_conventional
-cmp   cx, dx
-jne   go_skip_conventional  ; todo implement 4 page card test path
-mov   word ptr ds:[VARIABLE_page_count], cx  
-
-mov   si, OFFSET map_1700_page_list_full ; offset by 2 
-mov   di, OFFSET map_1701_page_list_full + 2
-shl   cx, 1  ; we also write the logical entries, which are garbage for now.
-rep   movsw
-
-
-; TEST 13: test pages in conventional region via function 5 page one
-PRINT_RUNNING_TEST 13
-
-mov   dx, word ptr cs:[VARIABLE_saved_handle_5]
-mov   cx, 8
-mov   si, OFFSET map_1700_page_list_full
-loop_random_conventional_pages_4400:
-    call  page_random_map_4400
-    loop loop_random_conventional_pages_4400
-
-; TEST 14: test random pages in conventional region via function 17 map/unmap multiple
-PRINT_RUNNING_TEST 14
-
-
-
-; tables creates.
-
-mov   dx, word ptr cs:[VARIABLE_saved_handle_5]
-mov   cx, 8
-loop_random_conventional_pages:
-    call  page_random_map_1700
-    call  test_map_1700
-    call  page_random_map_1701
-    call  test_map_1701
-    loop  loop_random_conventional_pages
-
-
-
-
-
-; TEST 15: test pages in conventional region via function 15 get/set page map
-PRINT_RUNNING_TEST 15
-
-;     FUNCTION 15   GET/SET PAGE MAP
-
-mov  di, OFFSET pagemap_1_func_15
-mov  si, di
-
-mov  ax, 04E03h
-TEST_EMS_REGISTER_CALL_AH 00h
-
-; use al for anything??
-
-; page in something known - 32 and up for conventional pages. afterwards we will page to 0 and test..
-mov   ax, 32
-xor   bx, bx
-call  init_page_map  
-call  test_map_1700
-
-mov  ax, 04E00h
-TEST_EMS_REGISTER_CALL_ALL 0000h
-
-; ES:DI gets the contents filled.
-call  test_map_1700 ; nothing should have changed.
-
-mov   ax, 0
-call  init_page_map   ; remap from 32 to 0 
-call  test_map_1700   ; confirm thats good
-
-mov  ax, 04E01h
-TEST_EMS_REGISTER_CALL_ALL 0001h  ; restore
-
-mov   ax, 32
-mov   bx, 1
-call  init_page_map   ; init map state without remapping
-call  test_map_1700
-
-mov   ax, 16        ; 2nd set for get/set will be 16 indexed.
-xor   bx, bx
-call  init_page_map  
-call  test_map_1700
-
-
-mov   di, OFFSET pagemap_2_func_15
-
-mov  ax, 04E02h
-TEST_EMS_REGISTER_CALL_ALL 0002h  ; restore
-
-mov   ax, 32
-mov   bx, 1
-call  init_page_map   ; init map state without remapping
-call  test_map_1700
-
-mov   si, di  ; restore to the 16 offset one
-
-mov  ax, 04E01h
-TEST_EMS_REGISTER_CALL_ALL 0001h  ; restore
-
-mov   ax, 16
-mov   bx, 1
-call  init_page_map   ; init map state without remapping
-call  test_map_1700
-
-
-; TEST 16: test pages in conventional region via function 16 get/set partial page map
-PRINT_RUNNING_TEST 16
-
-
-;     FUNCTION 16   GET/SET PARTIAL PAGE MAP
-
-mov  ax, 04F02h  ; get size
-mov  bx, 8
-TEST_EMS_REGISTER_CALL_NO_AL 00h
-
-; initialize page state, 32 and up
-mov   ax, 32
-xor   bx, bx
-call  init_page_map  
-call  test_map_1700
-
-; get partial page map.
-mov  si, OFFSET  partial_pagemap_1_func_16_pagemap
-mov  di, OFFSET  partial_pagemap_1_func_16_save_area
-mov  ax, 04F00h  ; save
-TEST_EMS_REGISTER_CALL_ALL 00h
-
-; change pagemap
-mov   ax, 0
-xor   bx, bx
-call  init_page_map  
-call  test_map_1700
-
-mov  si, di     ; save area 
-mov  ax, 04F01h   ; restore
-TEST_EMS_REGISTER_CALL_ALL 01h
-
-; test those pages.
-call  test_partial_pagemap  
-
-
-; TEST 17: test map 28 pagination
-PRINT_RUNNING_TEST 17
-
-; init memory...
-mov   ax, 32
-xor   bx, bx
-call  init_page_map  
-call  test_map_1700
-
-
-
-mov   ax, 05B03h
-TEST_EMS_REGISTER_CALL_NO_BX 00003h
-test  bx, bx
-je    no_alternate_register_sets
-
-push  bx
-
-mov   bl, 0FFh  ; probably dont have 255 sets right?
-mov   ax, 05B01h
-TEST_EMS_REGISTER_CALL_ALL 09D01h
-pop   bx
-
-mov   ax, 05B01h
-TEST_EMS_REGISTER_CALL_ALL 00001h ; page back
-
-push  bx
-
-
-mov   ax, 0  ; change pages in this set..
-xor   bx, bx
-call  init_page_map  
-call  test_map_1700
-
-; change back to original set
-xor   bx, bx
-mov   es, bx
-mov   di, bx
-mov   ax, 05B01h
-TEST_EMS_REGISTER_CALL_ALL 00001h
-push  cs
-pop   es
-
-
-
-mov   ax, 32
-mov   bx, 1
-call  init_page_map  
-call  test_map_1700
-
-
-
-pop   bx
-
-mov   ax, 05B04h
-TEST_EMS_REGISTER_CALL_ALL 00004h ; deallocate
-
-
-mov   ax, 05B04h
-TEST_EMS_REGISTER_CALL_ALL 09D04h ; re-deallocate
-
-
-jmp   continue_register_set_testing
-no_alternate_register_sets:
-
-
-
-
-mov   ax, 05B01h
-mov   bx, 1
-TEST_EMS_REGISTER_CALL_ALL 09C01h
-
-mov   bx, 1
-mov   ax, 05B04h
-TEST_EMS_REGISTER_CALL_ALL 09C04h
-
-continue_register_set_testing:
-mov   di, offset pagemap_1_func_15
-mov   si, di
-
-mov  ax, 04E00h
-TEST_EMS_REGISTER_CALL_ALL 0000h  ; previous state recorded in the spot
-
-mov   ax, 0
-xor   bx, bx
-call  init_page_map  
-call  test_map_1700  ; switch to 0
-
-; bx 0
-mov   ax, 05B01h
-TEST_EMS_REGISTER_CALL_ALL 00001h  ; write the values at the pointer. 
-
-; should change back to 32.
-mov   ax, 32
-mov   bx, 1
-call  init_page_map  
-call  test_map_1700
-
-mov   ax, 0
-xor   bx, bx
-call  init_page_map  
-call  test_map_1700  ; switch to 0
-
-
-mov   ax,  05B00h
-mov   bx, 1
-TEST_EMS_REGISTER_CALL_NO_BX 00000h ; does nothing.
-
-mov   ax, 0
-mov   bx, 1
-call  init_page_map  
-call  test_map_1700
-
-
-xor   bx, bx
-mov   ax, 05B00h
-TEST_EMS_REGISTER_CALL_NO_BX 00000h  ; store state
-
-mov   ax, 32
-mov   bx, 0
-call  init_page_map  
-call  test_map_1700
-
-
-mov  ax, 04E01h
-TEST_EMS_REGISTER_CALL_ALL 00001h  ; restore the func 28 state
-
-mov   ax, 0
-mov   bx, 1
-call  init_page_map  
-call  test_map_1700
-
-
-
-
-
-skip_conventional:
-
-; TEST 18: test handle attribute
-PRINT_RUNNING_TEST 18
 
 ;     FUNCTION 19   GET/SET HANDLE ATTRIBUTE (CONTINUED)
 mov   ax, 05202h  ; get capability
@@ -1121,8 +812,8 @@ TEST_EMS_REGISTER_CALL_ALL 09100h  ; unsupported
 
 
 
-; TEST 19: test handle name stuff
-PRINT_RUNNING_TEST 19
+; TEST 13: test handle name stuff
+PRINT_RUNNING_TEST 13
 
 ;     FUNCTION 20   GET/SET HANDLE NAME
 
@@ -1264,8 +955,8 @@ add   di, 10
 mov   si, offset HANDLE_NAME_4
 call  compare_handle_name
 
-; TEST 20: test OS features
-PRINT_RUNNING_TEST 20
+; TEST 14: test OS features
+PRINT_RUNNING_TEST 14
 ;     FUNCTION 30   ENABLE/DISABLE OS/E FUNCTION SET FUNCTIONS
 
 mov   ax, 05D03h
@@ -1374,6 +1065,314 @@ TEST_EMS_REGISTER_CALL_ALL 0000h  ; enable access.
 
 mov   ax, 05D02h
 TEST_EMS_REGISTER_CALL_ALL 0002h ; release key again
+
+
+
+;; CONVENTIONAL TESTS. SKIP IF NOT SUPPORTED?
+;; CONVENTIONAL TESTS. SKIP IF NOT SUPPORTED?
+;; CONVENTIONAL TESTS. SKIP IF NOT SUPPORTED?
+;; CONVENTIONAL TESTS. SKIP IF NOT SUPPORTED?
+
+
+; TEST 15: check conventional pagination capabilities
+PRINT_RUNNING_TEST 15
+
+
+;     FUNCTION 25   GET MAPPABLE PHYSICAL ADDRESS ARRAY
+; set up conventional. skip conventional tests if the
+
+mov   ax, 05801h
+TEST_EMS_REGISTER_CALL_NO_CX 00001h
+cmp   cx, 28
+jae   continue_conventional
+
+
+go_skip_conventional:
+PRINT_STRING str_no_conventional_tests
+jmp   DO_PAGE_FRAME_ONLY_TESTS
+
+continue_conventional:
+mov   dx, cx
+mov   ax, 05800h
+mov   di, OFFSET map_1700_page_list_full ; offset by 2 
+
+TEST_EMS_REGISTER_CALL_NO_CX 00000h
+
+
+cmp   cx, 28
+jb    go_skip_conventional
+cmp   cx, dx
+jne   go_skip_conventional  ; todo implement 4 page card test path
+mov   word ptr ds:[VARIABLE_page_count], cx  
+
+mov   si, OFFSET map_1700_page_list_full ; offset by 2 
+mov   di, OFFSET map_1701_page_list_full + 2
+shl   cx, 1  ; we also write the logical entries, which are garbage for now.
+rep   movsw
+
+
+; TEST 16: test pages in conventional region via function 5 page one
+PRINT_RUNNING_TEST 16
+
+mov   dx, word ptr cs:[VARIABLE_saved_handle_5]
+mov   cx, 8
+mov   si, OFFSET map_1700_page_list_full
+loop_random_conventional_pages_4400:
+    call  page_random_map_4400
+    loop loop_random_conventional_pages_4400
+
+; TEST 17: test random pages in conventional region via function 17 map/unmap multiple
+PRINT_RUNNING_TEST 17
+
+
+
+; tables creates.
+
+mov   dx, word ptr cs:[VARIABLE_saved_handle_5]
+mov   cx, 8
+loop_random_conventional_pages:
+    call  page_random_map_1700
+    call  test_map_1700
+    call  page_random_map_1701
+    call  test_map_1701
+    loop  loop_random_conventional_pages
+
+
+
+
+
+; TEST 18: test pages in conventional region via function 15 get/set page map
+PRINT_RUNNING_TEST 18
+
+;     FUNCTION 15   GET/SET PAGE MAP
+
+mov  di, OFFSET pagemap_1_func_15
+mov  si, di
+
+mov  ax, 04E03h
+TEST_EMS_REGISTER_CALL_AH 00h
+
+; use al for anything??
+
+; page in something known - 32 and up for conventional pages. afterwards we will page to 0 and test..
+mov   ax, 32
+xor   bx, bx
+call  init_page_map  
+call  test_map_1700
+
+mov  ax, 04E00h
+TEST_EMS_REGISTER_CALL_ALL 0000h
+
+; ES:DI gets the contents filled.
+call  test_map_1700 ; nothing should have changed.
+
+mov   ax, 0
+call  init_page_map   ; remap from 32 to 0 
+call  test_map_1700   ; confirm thats good
+
+mov  ax, 04E01h
+TEST_EMS_REGISTER_CALL_ALL 0001h  ; restore
+
+mov   ax, 32
+mov   bx, 1
+call  init_page_map   ; init map state without remapping
+call  test_map_1700
+
+mov   ax, 16        ; 2nd set for get/set will be 16 indexed.
+xor   bx, bx
+call  init_page_map  
+call  test_map_1700
+
+
+mov   di, OFFSET pagemap_2_func_15
+
+mov  ax, 04E02h
+TEST_EMS_REGISTER_CALL_ALL 0002h  ; restore
+
+mov   ax, 32
+mov   bx, 1
+call  init_page_map   ; init map state without remapping
+call  test_map_1700
+
+mov   si, di  ; restore to the 16 offset one
+
+mov  ax, 04E01h
+TEST_EMS_REGISTER_CALL_ALL 0001h  ; restore
+
+mov   ax, 16
+mov   bx, 1
+call  init_page_map   ; init map state without remapping
+call  test_map_1700
+
+
+; TEST 19: test pages in conventional region via function 16 get/set partial page map
+PRINT_RUNNING_TEST 19
+
+
+;     FUNCTION 16   GET/SET PARTIAL PAGE MAP
+
+mov  ax, 04F02h  ; get size
+mov  bx, 8
+TEST_EMS_REGISTER_CALL_NO_AL 00h
+
+; initialize page state, 32 and up
+mov   ax, 32
+xor   bx, bx
+call  init_page_map  
+call  test_map_1700
+
+; get partial page map.
+mov  si, OFFSET  partial_pagemap_1_func_16_pagemap
+mov  di, OFFSET  partial_pagemap_1_func_16_save_area
+mov  ax, 04F00h  ; save
+TEST_EMS_REGISTER_CALL_ALL 00h
+
+; change pagemap
+mov   ax, 0
+xor   bx, bx
+call  init_page_map  
+call  test_map_1700
+
+mov  si, di     ; save area 
+mov  ax, 04F01h   ; restore
+TEST_EMS_REGISTER_CALL_ALL 01h
+
+; test those pages.
+call  test_partial_pagemap  
+
+
+; TEST 20: test map 28 pagination
+PRINT_RUNNING_TEST 20
+
+; init memory...
+mov   ax, 32
+xor   bx, bx
+call  init_page_map  
+call  test_map_1700
+
+
+
+mov   ax, 05B03h
+TEST_EMS_REGISTER_CALL_NO_BX 00003h
+test  bx, bx
+je    no_alternate_register_sets
+
+push  bx
+
+mov   bl, 0FFh  ; probably dont have 255 sets right?
+mov   ax, 05B01h
+TEST_EMS_REGISTER_CALL_ALL 09D01h
+pop   bx
+
+mov   ax, 05B01h
+TEST_EMS_REGISTER_CALL_ALL 00001h ; page back
+
+push  bx
+
+
+mov   ax, 0  ; change pages in this set..
+xor   bx, bx
+call  init_page_map  
+call  test_map_1700
+
+; change back to original set
+xor   bx, bx
+mov   es, bx
+mov   di, bx
+mov   ax, 05B01h
+TEST_EMS_REGISTER_CALL_ALL 00001h
+push  cs
+pop   es
+
+
+
+mov   ax, 32
+mov   bx, 1
+call  init_page_map  
+call  test_map_1700
+
+
+
+pop   bx
+
+mov   ax, 05B04h
+TEST_EMS_REGISTER_CALL_ALL 00004h ; deallocate
+
+
+mov   ax, 05B04h
+TEST_EMS_REGISTER_CALL_ALL 09D04h ; re-deallocate
+
+
+jmp   continue_register_set_testing
+no_alternate_register_sets:
+
+
+
+
+mov   ax, 05B01h
+mov   bx, 1
+TEST_EMS_REGISTER_CALL_ALL 09C01h
+
+mov   bx, 1
+mov   ax, 05B04h
+TEST_EMS_REGISTER_CALL_ALL 09C04h
+
+continue_register_set_testing:
+mov   di, offset pagemap_1_func_15
+mov   si, di
+
+mov  ax, 04E00h
+TEST_EMS_REGISTER_CALL_ALL 0000h  ; previous state recorded in the spot
+
+mov   ax, 0
+xor   bx, bx
+call  init_page_map  
+call  test_map_1700  ; switch to 0
+
+; bx 0
+mov   ax, 05B01h
+TEST_EMS_REGISTER_CALL_ALL 00001h  ; write the values at the pointer. 
+
+; should change back to 32.
+mov   ax, 32
+mov   bx, 1
+call  init_page_map  
+call  test_map_1700
+
+mov   ax, 0
+xor   bx, bx
+call  init_page_map  
+call  test_map_1700  ; switch to 0
+
+
+mov   ax,  05B00h
+mov   bx, 1
+TEST_EMS_REGISTER_CALL_NO_BX 00000h ; does nothing.
+
+mov   ax, 0
+mov   bx, 1
+call  init_page_map  
+call  test_map_1700
+
+
+xor   bx, bx
+mov   ax, 05B00h
+TEST_EMS_REGISTER_CALL_NO_BX 00000h  ; store state
+
+mov   ax, 32
+mov   bx, 0
+call  init_page_map  
+call  test_map_1700
+
+
+mov  ax, 04E01h
+TEST_EMS_REGISTER_CALL_ALL 00001h  ; restore the func 28 state
+
+mov   ax, 0
+mov   bx, 1
+call  init_page_map  
+call  test_map_1700
+
 
 
 
@@ -1927,6 +1926,9 @@ call  check_conventional_copy ; check
 
 ; deallocate 
 
+DONE_WITH_TESTS:
+
+
 ; TEST 30: Deallocation
 PRINT_RUNNING_TEST 30
 
@@ -2005,6 +2007,14 @@ POPA_MACRO
 mov   ax, 04C00h
 int   021h
 
+
+DO_PAGE_FRAME_ONLY_TESTS:
+
+
+
+
+
+jmp   DONE_WITH_TESTS
 
 
 
