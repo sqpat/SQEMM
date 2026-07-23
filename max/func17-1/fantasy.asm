@@ -4,7 +4,8 @@ pop    ax
 PUSHA_MACRO
 
 
-  ; physical page number mode
+  ; segment mode
+
 
 
   mov   bp, dx
