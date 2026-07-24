@@ -2299,6 +2299,124 @@ call do_test_only_func_22
 
 
 
+; TEST 23: test function 23 alter and call
+PRINT_RUNNING_TEST 23
+;     FUNCTION 23   ALTER PAGE MAP & CALL
+
+; do tests similar to 22, but selfmodify returns into the functions.
+
+RET_OPCODE = 0C3h
+RET_FAR_OPCODE = 0CBh
+mov   word ptr ds:[func_22_modify_offset_PAGEFRAME], RET_FAR_OPCODE
+mov   word ptr ds:[func_22_modify_offset_2_PAGEFRAME], RET_FAR_OPCODE
+mov   word ptr ds:[func_22_modify_offset_3_PAGEFRAME], RET_FAR_OPCODE
+
+mov   si, OFFSET func_22_struct_1
+mov   word ptr ds:[si], offset func_22_function_1_PAGEFRAME
+mov   byte ptr ds:[si+4], 4
+mov   word ptr ds:[si+5], offset func_22_phys_struct_1_PAGEFRAME
+mov   word ptr ds:[si+2], cs
+mov   word ptr ds:[si+7], cs
+mov   byte ptr ds:[si+9], 0
+mov   word ptr ds:[si+10], offset func_22_phys_struct_1_PAGEFRAME
+mov   word ptr ds:[si+12], cs
+mov   word ptr ds:[si+14], 0
+mov   word ptr ds:[si+16], 0
+
+
+
+
+
+mov   ax, 05603h
+TEST_EMS_REGISTER_CALL_ALL 08F03h
+
+mov   dx, word ptr ds:[VARIABLE_dead_handle]
+mov   ax, 05600h
+TEST_EMS_REGISTER_CALL_ALL 08300h
+mov   ax, 05601h
+TEST_EMS_REGISTER_CALL_ALL 08301h
+
+
+mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
+
+mov   ax, 05600h ; 0 = physical page numbers...
+TEST_EMS_REGISTER_CALL_ALL 00000h
+
+
+
+
+; init pages
+mov   ax, 10
+xor   bx, bx
+call  init_page_map   ; init map state without remapping
+call  test_map_1700
+
+
+; save expected pages
+mov   di, offset func_22_phys_struct_3
+mov   word ptr ds:[di+0], 10
+mov   word ptr ds:[di+4], 11
+mov   word ptr ds:[di+8], 12
+mov   word ptr ds:[di+12], 13
+mov   word ptr ds:[di+2], 0
+mov   word ptr ds:[di+6], 1
+mov   word ptr ds:[di+10], 2
+mov   word ptr ds:[di+14], 3
+
+mov   word ptr ds:[di+16+0], 14
+mov   word ptr ds:[di+16+4], 15
+mov   word ptr ds:[di+16+8], 16
+mov   word ptr ds:[di+16+12], 17
+mov   word ptr ds:[di+16+2], 0
+mov   word ptr ds:[di+16+6], 1
+mov   word ptr ds:[di+16+10], 2
+mov   word ptr ds:[di+116+4], 3
+
+
+
+; change pages out.
+mov   ax, 14   ; 
+xor   bx, bx
+call  init_page_map   ; init map state without remapping
+call  test_map_1700
+
+
+; todo this is badly formed???
+
+mov   byte ptr ds:[si+4], 4
+mov   word ptr ds:[si+5], offset func_22_phys_struct_3  ; page it back before call
+mov   word ptr ds:[si], offset func_22_function_2_PAGEFRAME
+mov   byte ptr ds:[si+9], 4
+mov   word ptr ds:[si+10], offset func_22_phys_struct_3+16
+
+
+
+
+mov   ax, 05600h ; 0 = physical page numbers...
+TEST_EMS_REGISTER_CALL_ALL 00000h  ; restore pages.
+
+; should be restored
+mov   ax, 14
+mov   bx, 1 ; dont remap
+call  init_page_map   ; init map state without remapping
+call  test_map_1700  
+
+
+
+; store old pages for restore.
+
+
+mov   byte ptr ds:[si+4], 4
+mov   word ptr ds:[si+5], offset func_22_phys_struct_2_PAGEFRAME
+mov   word ptr ds:[si], offset func_22_function_3_PAGEFRAME
+
+
+
+mov   ax, 05601h ; 1 = segment page numbers...
+TEST_EMS_REGISTER_CALL_ALL 00001h
+
+
+
 
 
 
@@ -3275,9 +3393,8 @@ func_22_function_2:
     func_22_modify_offset_2_AFTER:
 
 func_22_function_3_PAGEFRAME:
-    push  es
-    push  ax
-    push  bx
+    
+    func_22_modify_offset_3_PAGEFRAME:
     jmp  done_with_function_3_PAGEFRAME 
 
 func_22_function_1_PAGEFRAME:
