@@ -183,7 +183,8 @@ skip_port_set:
 
     pop   cx
     loop  do_port_loop
-  ; error? could not dynamically determine 
+  
+  ; error, could not dynamically determine and was not specified
   
   mov  DX, OFFSET STRING_could_not_determine
   jmp  DRIVER_NOT_INSTALLED
@@ -194,7 +195,30 @@ skip_port_set:
   mov   word ptr ds:[found_page_frame], es
   pop   cx
 
-  ; todo: print found values!
+  push  cs
+  pop   es
+  
+
+  mov   DX, OFFSET STRING_dynamic_determine
+  mov   ah, 9  ; PRINT_STRING
+  int   021h
+
+
+  mov   ax, word ptr ds:[found_page_frame]
+  mov   di, OFFSET string_good_page_frame_param_EDIT_OFFSET
+  mov   dx, OFFSET string_good_page_frame_param
+  stc   ; hex print
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_dynamic_parameter
+  call  print_driver_param
+
+  mov   ax, word ptr ds:[found_port]
+
+  mov   di, OFFSET STRING_good_port_param_EDIT_OFFSET
+  mov   dx, OFFSET STRING_good_port_param
+  stc   ; hex print
+  call  print_driver_param
+
+
 
   have_port_and_page_frame:
   mov   ax, word ptr ds:[found_port]

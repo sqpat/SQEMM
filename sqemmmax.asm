@@ -3107,8 +3107,11 @@ STRING_bad_page_count_param db 0Dh, 0Ah,  'Bad Page Count Param in Driver Parame
 STRING_bad_page_offset_param db 0Dh, 0Ah, 'Bad Page Offset Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
 STRING_bad_port_param       db 0Dh, 0Ah,  'Bad Port Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
 STRING_could_not_determine  db 0Dh, 0Ah,  'Could not determine page frame or port! SQEMM was not loaded.', 0Dh, 0Ah,'$'
+STRING_dynamic_determine    db 0Dh, 0Ah,  'Dynamically determined parameters!', 0Dh, 0Ah,'$'
 STRING_parsed_parameter                     db            " (User Parameter)", 0Dh, 0Ah,'$'
 STRING_unparsed_parameter                   db            " (Default Parameter)", 0Dh, 0Ah,'$'
+STRING_chipset_parameter                    db            " (Chipset Parameter)", 0Dh, 0Ah,'$'
+STRING_dynamic_parameter                    db            " (Dynamic Parameter)", 0Dh, 0Ah,'$'
 
 STRING_good_port_param                      db            "Using Port:  "
 STRING_good_port_param_EDIT_OFFSET          db            "0208",'$'
@@ -3374,7 +3377,7 @@ les        di, es:[di + 012h]  ; todo whats this offset
 
 mov        al, "-"
 mov        word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_unparsed_parameter ; default not found
-
+SELFMODIFY_init_change_default_param_AFTER:
 search_for_next_param:
 repne      scasb      
 clc        ; return not found by default
