@@ -20,7 +20,6 @@
   lodsw
   xchg ax, cx
 
-
   
 
   jnz   func_16_sub_01
@@ -34,7 +33,9 @@ func_16_sub_00:
 ;             mappable_segment         DW  (?)  DUP  (?)
 ;          partial_page_map_struct     ENDS
 
+  mov  ax, cx
   stosw        ; count
+  jcxz func_16_00_no_pages
 
 
   xor   bx, bx  ; zero bh
@@ -54,12 +55,12 @@ func_16_sub_00_save_next_page_frame_register:
 
 
   loop  func_16_sub_00_save_next_page_frame_register
-
+  func_16_00_no_pages:
   pop   di
 func_16_sub_00_done_recording_registers:
 func_16_sub_01_done_recording_registers:
 
-
+func_16_01_no_pages:
 func_16_pop_and_return:
   pop   bx
   pop   si
@@ -92,6 +93,8 @@ SELFMODIFY_LOTECH_set_page_select_register_10:
   mov   dx, LOTECH_BASE_PAGE_REGISTER
 
 func_16_sub_01_save_next_page_frame_register:
+  jcxz func_16_01_no_pages
+
   lodsw
   mov   bl, al
   add   dl, bl
