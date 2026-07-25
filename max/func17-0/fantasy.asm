@@ -73,10 +73,17 @@ func_1700_skip_logical_check:
   
   ; exits if we fall thru loop with no error
 func_1700_exit:
-func_1700_pop_and_exit:
-POPA_MACRO
-xor        ah, ah
-  iret
+IF COMPISA GE COMPILE_186
+  POPA_MACRO
+  xor        ah, ah  ; al will be popped after all
+ELSE
+  xor        ah, ah
+  func_1701_pop_and_exit:
+  mov        byte ptr cs:[_temp_byte], ah
+  POPA_MACRO
+  mov        ah, byte ptr cs:[_temp_byte]
+ENDIF
+iret
 
 IF COMPISA GE COMPILE_186
 
