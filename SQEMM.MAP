@@ -1,7 +1,7 @@
 Open Watcom Linker Version 2.0 beta Sep  3 2024 02:05:05 (32-bit)
 Copyright (c) 2002-2024 The Open Watcom Contributors. All Rights Reserved.
 Portions Copyright (c) 1985-2002 Sybase, Inc. All Rights Reserved.
-Created on:       26/07/25 04:37:43
+Created on:       26/07/25 05:00:52
 Executable Image: sqemm.exe
 creating a DOS executable
 
@@ -13,7 +13,7 @@ creating a DOS executable
 Group                           Address              Size
 =====                           =======              ====
 
-DGROUP                          0000:0000            00002b3a
+DGROUP                          0000:0000            00002b6a
 
 
 
@@ -24,8 +24,8 @@ DGROUP                          0000:0000            00002b3a
 Segment                Class          Group          Address         Size
 =======                =====          =====          =======         ====
 
-_TEXT                  CODE           DGROUP         0000:0000       00002b3a
-_DATA                  DATA           DGROUP         02b3:000a       00000000
+_TEXT                  CODE           DGROUP         0000:0000       00002b6a
+_DATA                  DATA           DGROUP         02b6:000a       00000000
 
 
                         +----------------+
@@ -57,6 +57,6 @@ Warning! W1023: no starting address found, using 0000:0000
                         +-----------------------+
 
 Stack size:  09e8 (2536.)
-Memory size:  2b3a (11066.)
+Memory size:  2b6a (11114.)
 Entry point address: 0000:0000
-Link time: 00:00.00
+Link time: 00:00.55

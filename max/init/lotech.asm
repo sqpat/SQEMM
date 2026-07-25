@@ -27,7 +27,7 @@ found_page_frame:
 found_port:
   dw 0
 found_page_count:
-  dw 128   ; todo: determine programatically and default to 0 
+  dw 0
 
 
 set_page_frame:
@@ -108,20 +108,21 @@ skip_port_set:
   jnz  jmp_to_have_port_and_page_frame
 
   ; 1: decided on port and or loop
-  mov  dx, word ptr ds:[found_port]
+  xor  di, di
+  mov  dx, word ptr cs:[found_port]
   mov  cx, 1
   test dx, dx
   jnz  skip_port_loop
 
   mov  cx, 4
   mov  dx, LOTECH_BASE_PAGE_REGISTER - 4
-
+  
   skip_port_loop:
   do_port_loop:
     add   dx, 4
     push  cx
 
-    mov  bx, word ptr ds:[found_page_frame]    
+    mov  bx, word ptr cs:[found_page_frame]    
     mov  cx, 1
     test bx, bx
     jnz  skip_page_frame_loop
@@ -141,25 +142,25 @@ skip_port_set:
       xor   ax, ax
       out   dx, al  ; page 0. should make the page frame valid.
 
-      mov   es, bx
-      mov   al, byte ptr es:[0] ; store
-      mov   ah, byte ptr es:[0] ; store
+      mov   ds, bx
+      mov   al, byte ptr ds:[di] ; store
+      mov   ah, byte ptr ds:[di] ; store
       cmp   al, ah
       jne   bad_memory_skip_page_frame
       cli
       xor   al, 0FFh
-      mov   byte ptr es:[0], al
-      cmp   byte ptr es:[0], al
+      mov   byte ptr ds:[di], al
+      cmp   byte ptr ds:[di], al
       jne   bad_memory_skip_page_frame ; not writable?
-      mov   byte ptr es:[0], ah  ; restore
+      mov   byte ptr ds:[di], ah  ; restore
       ; ah still has old value...      
       mov   al, 1
       out   dx, al
 
-      mov   al, byte ptr es:[0] ; store
+      mov   al, byte ptr ds:[di] ; store
       inc   ah
-      mov   byte ptr es:[0], ah
-      cmp   byte ptr es:[0], ah
+      mov   byte ptr ds:[di], ah
+      cmp   byte ptr ds:[di], ah
       jne   bad_memory_skip_page_frame  
       ; 2nd page writable. but are they different? 
       xchg  ax, si
@@ -167,7 +168,7 @@ skip_port_set:
       out   dx, al ; page 0 again.
       xchg  ax, si
       dec   ah
-      cmp   byte ptr es:[0], ah
+      cmp   byte ptr ds:[di], ah
       je    found_port_and_page_frame
       ; 1st and 2nd page are the same after all.
 
@@ -185,18 +186,20 @@ skip_port_set:
     loop  do_port_loop
   
   ; error, could not dynamically determine and was not specified
-  
+  push  cs
+  pop   ds
+
   mov  DX, OFFSET STRING_could_not_determine
   jmp  DRIVER_NOT_INSTALLED
 
 
   found_port_and_page_frame:
-  mov   word ptr ds:[found_port], dx
-  mov   word ptr ds:[found_page_frame], es
   pop   cx
-
+  mov   word ptr cs:[found_page_frame], ds
   push  cs
-  pop   es
+  pop   ds
+  mov   word ptr ds:[found_port], dx
+
   
 
   mov   DX, OFFSET STRING_dynamic_determine
@@ -221,6 +224,52 @@ skip_port_set:
 
 
   have_port_and_page_frame:
+  xor   di, di
+  
+  cmp   word ptr ds:[found_page_count], di
+  jne   have_page_count
+
+  mov   dx, word ptr ds:[found_port]
+  mov   ds, word ptr ds:[found_page_frame]
+
+  xor   ax, ax
+  mov   cx, 255
+
+  loop_test_next_page_pageable:
+    out   dx, al
+    mov   bl, byte ptr ds:[di]
+    not   bl
+    mov   byte ptr ds:[di], bl
+    cmp   byte ptr ds:[di], bl
+    jne   found_last_pageable_page  ; easy because its not writeable, but what if its alisable?
+
+    mov   byte ptr ds:[di], al
+    ; but what about aliasing....
+    inc   ax
+    loop loop_test_next_page_pageable
+
+  ; fell thru. Okay...
+  xchg    ax, cx
+  out   dx, al  ; page 0
+  mov   al, byte ptr ds:[di]  ; we are presuming bits have been ignored. so maybe this is 040h, 080h... etc.
+
+
+  found_last_pageable_page:
+
+  push  cs
+  pop   ds
+  mov   word ptr ds:[found_page_count], ax
+
+
+  mov   di, OFFSET string_good_page_count_param_EDIT_OFFSET
+  mov   dx, OFFSET string_good_page_count_param
+  clc   ; int print
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_dynamic_parameter
+  mov   cx, 3
+  call  print_driver_param
+
+
+  have_page_count:
   mov   ax, word ptr ds:[found_port]
 
 
