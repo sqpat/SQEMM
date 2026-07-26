@@ -3,17 +3,22 @@ UTIL_get_page:
 
 ; return value at page index (ax) in (ax)
   push  dx
-  ror   ax, 1
-  ror   ax, 1
+
+  cwd   ; zero dx. get ah zero for free later.
+  SHIFT_MACRO ror ax 2
+
   SELFMODIFY_NEAT_set_page_select_register_7:
   add   ax, NEAT_PAGE_REGISTER_0
-  xchg  ax, dx
-
-  xor   ah, ah
-  in    al, dx
-
-  return_page_unmapped:
+  xchg  ax, dx  ; ax 0
+  in    al, dx  ; ah 0
   pop   dx
+  test  al, al
+  jns   return_page_unmapped ; bit 7 off = unmapped.
+
+  and   ax, 0FF7Fh ; turn off the mapped bit. 
+  ret
+  return_page_unmapped:
+  mov   ax, 0FFFFh
   ret
 
 
@@ -26,20 +31,25 @@ public UTIL_set_page
 ; write page (dx) to page index (ax)
 
 
-  xchg  ax, dx
-  ror   dx, 1
-  ror   dx, 1
+  SHIFT_MACRO ror ax 2
+
   SELFMODIFY_NEAT_set_page_select_register_8:
-  add dx, NEAT_PAGE_REGISTER_0
+  add   ax, NEAT_PAGE_REGISTER_0
+  xchg  ax, dx
+
+  inc   ax
+  jz    do_unmap_write ; FFFF writes as zero
+
+
 
   SELFMODIFY_NEAT_add_page_offset_and_enable_4:
-  add   ax, NEAT_PAGE_OFFSET_AMT
+  add   ax, NEAT_PAGE_OFFSET_AMT - 1  
 
+  do_unmap_write:
   out   dx, al   ; select EMS page
 
 
 
-  xchg  ax, dx
 
 
   ret
@@ -55,13 +65,13 @@ SELFMODIFY_NEAT_set_page_select_register_3:
   
   out   dx, al
 
-  add   dh, 040h
+  mov   dh, 042h
   out   dx, al
 
-  add   dh, 040h
+  mov   dh, 082h
   out   dx, al
 
-  add   dh, 040h
+  mov   dh, 0C2h
   out   dx, al
 
   pop   ax

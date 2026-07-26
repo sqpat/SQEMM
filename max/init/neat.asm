@@ -8,14 +8,14 @@ out NEAT_CHIPSET_CONFIG_REGISTER_READWRITE, al
   mov   dx, 0208h
   mov   ax, NEAT_PAGE_OFFSET_AMT
   out   dx, al   ; write 8 bit page num. 
-  add   dh, 040h
-  inc   al
+  mov   dh, 042h
+  inc   ax
   out   dx, al   ; write 8 bit page num. 
-  add   dh, 040h
-  inc   al
+  mov   dh, 082h
+  inc   ax
   out   dx, al   ; write 8 bit page num. 
-  add   dh, 040h
-  inc   al
+  mov   dh, 0C2h
+  inc   ax
   out   dx, al   ; write 8 bit page num. 
 
   ; page frame d000 for now

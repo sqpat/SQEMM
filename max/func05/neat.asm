@@ -8,13 +8,15 @@
   push ax  ; store al
   push dx  
  
+  cbw  ; zero ah
   SHIFT_MACRO ror ax 2
 
   SELFMODIFY_NEAT_set_page_select_register_4:
   add ax, NEAT_PAGE_REGISTER_0
 
   ; 0-4 becomes 0208h, 4208h, 8208h, c208h
-  xchg  ax, bx
+  xchg  ax, dx  ; dx gets port.
+  xchg  ax, bx  ; get page
 
 
   inc   ax    ; -1 check

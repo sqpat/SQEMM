@@ -1,7 +1,7 @@
 Open Watcom Linker Version 2.0 beta Sep  3 2024 02:05:05 (32-bit)
 Copyright (c) 2002-2024 The Open Watcom Contributors. All Rights Reserved.
 Portions Copyright (c) 1985-2002 Sybase, Inc. All Rights Reserved.
-Created on:       26/07/26 03:35:32
+Created on:       26/07/26 04:59:17
 Executable Image: sqemm.exe
 creating a DOS executable
 
@@ -13,7 +13,7 @@ creating a DOS executable
 Group                           Address              Size
 =====                           =======              ====
 
-DGROUP                          0000:0000            00002878
+DGROUP                          0000:0000            000028cc
 
 
 
@@ -24,8 +24,8 @@ DGROUP                          0000:0000            00002878
 Segment                Class          Group          Address         Size
 =======                =====          =====          =======         ====
 
-_TEXT                  CODE           DGROUP         0000:0000       00002878
-_DATA                  DATA           DGROUP         0287:0008       00000000
+_TEXT                  CODE           DGROUP         0000:0000       000028cc
+_DATA                  DATA           DGROUP         028c:000c       00000000
 
 
                         +----------------+
@@ -39,15 +39,15 @@ Address        Symbol
 =======        ======
 
 Module: sqemm.obj(sqemm.ASM)
-0000:0307*     _RESIDENT_VARIABLE_HANDLE_COUNT
-0000:0bb5*     UTIL_SET_PAGE
-0000:238c*     END_OF_DRIVER_LABEL
-0000:0ea0*     _RESIDENT_VARIABLE_HANDLE_LIST
-0000:0b07*     FUNCTION_15_SAVE_PAGE_MAP
-0000:02b0*     EMS_FUNCTION_045H
-0000:228c*     _RESIDENT_VARIABLE_PAGE_LIST
+0000:0332*     _RESIDENT_VARIABLE_HANDLE_COUNT
+0000:0c11*     UTIL_SET_PAGE
+0000:23e6*     END_OF_DRIVER_LABEL
+0000:0efa*     _RESIDENT_VARIABLE_HANDLE_LIST
+0000:0b30*     FUNCTION_15_SAVE_PAGE_MAP
+0000:02db*     EMS_FUNCTION_045H
+0000:22e6*     _RESIDENT_VARIABLE_PAGE_LIST
 0000:0014*     EMS_DRIVER_INIT
-0000:2682*     DRIVER_INIT
+0000:26dc*     DRIVER_INIT
 Warning! W1014: stack segment not found
 Warning! W1023: no starting address found, using 0000:0000
 
@@ -57,6 +57,6 @@ Warning! W1023: no starting address found, using 0000:0000
                         +-----------------------+
 
 Stack size:  09e8 (2536.)
-Memory size:  2878 (10360.)
+Memory size:  28cc (10444.)
 Entry point address: 0000:0000
-Link time: 00:00.00
+Link time: 00:00.55

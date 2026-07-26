@@ -9,15 +9,15 @@ SELFMODIFY_NEAT_set_page_select_register_6:
   in    al, dx
   stosw
   
-  add   dh, 040h
+  mov   dh, 042h
   in    al, dx
   stosw
 
-  add   dh, 040h
+  mov   dh, 082h
   in    al, dx
   stosw
 
-  add   dh, 040h
+  mov   dh, 0C2h
   in    al, dx
   stosw
 
@@ -43,13 +43,13 @@ SELFMODIFY_NEAT_set_page_select_register_5:
 
   lodsw
   out   dx, al
-  add   dh, 040h
+  mov   dh, 042h
   lodsw
   out   dx, al
-  add   dh, 040h
+  mov   dh, 082h
   lodsw
   out   dx, al
-  add   dh, 040h
+  mov   dh, 0C2h
   lodsw
   out   dx, al
   xor   ah, ah
