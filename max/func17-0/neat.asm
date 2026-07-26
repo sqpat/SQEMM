@@ -9,23 +9,25 @@
 
   ; next page in ax....
   lodsw
-  mov        dx, ax
+  xchg  ax, dx
   lodsw
   ; read two words - bx and ax
 
   ror   ax, 2
   ; 0-4 becomes 0208, 4208, 8208, c208
+  SELFMODIFY_NEAT_set_page_select_register_1:
   add   ax, NEAT_PAGE_REGISTER_0
 
   xchg  dx, ax
 
-  cmp   ax, 0FFFFh   ; -1 check
-  je    func17_00_handle_default_page
-
-  add   ax, NEAT_PAGE_OFFSET_AMT   ; turn on EMS ON bit
+  inc   ax    ; -1 check
+  jz    func17_00_handle_default_page
+  
+  SELFMODIFY_NEAT_set_page_offset_2:
+  add   ax, NEAT_PAGE_OFFSET_AMT - 1   ; turn on EMS ON bit
   out   dx, al   ; write 8 bit page num. 
 
-  loop       func1700_loop_next_page
+  loop  func1700_loop_next_page
   sti
 
   ; exit fall thru
@@ -37,7 +39,7 @@
 
   func17_00_handle_default_page:
   ; mapping to page -1
-  mov   ax, NEAT_CHIPSET_UNMAP_VALUE
+  ; just write zero
   out   dx, al   ; write 8 bit page num. 
   loop       func1700_loop_next_page
   sti
