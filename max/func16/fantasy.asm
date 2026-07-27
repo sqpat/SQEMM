@@ -1,7 +1,9 @@
 ; consider pusha/popa?
 ; cli/sti? not sure
-
-  push ax  ; restore into bx 
+  xchg ax, bx ; restore bx
+  pop  ax
+  push ax
+  push bx
 
   push cx
   push di
@@ -11,7 +13,7 @@ SELFMODIFY_FANTASY_add_page_frame_offset_10:
   mov   bl, 4
 
 
-  cmp   byte ptr cs:[_current_call_subfunction_value], 2
+  cmp   al, 2
   ja    func_16_bad_subfunction
   je    func_16_sub_02
   test  al, al
