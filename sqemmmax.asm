@@ -3120,6 +3120,8 @@ STRING_resident_driver_location_EDIT_OFFSET db            "0000:0000",'$'
 STRING_driver_exists db 0Dh, 0Ah, 'EMS Driver already loaded (chaining not supported).',0Dh, 0Ah, '$'
 STRING_driver_successfully_installed db 0Dh, 0Ah, 'SQEMM successfully initialized.', 0Ah, 0Dh, '$'
 STRING_driver_failed_installing db 0Dh, 0Ah, ' Driver not installed.', 0Ah,  '$'
+STRING_bad_page_frame_chipset db 0Dh, 0Ah,  'Bad Page Frame defined in Chipset Setting! SQEMM was not loaded.', 0Dh, 0Ah,'$'
+STRING_bad_port_chipset db 0Dh, 0Ah,  'Bad Port in Chipset Setting! SQEMM was not loaded.', 0Dh, 0Ah,'$'
 STRING_bad_page_frame_param db 0Dh, 0Ah,  'Bad Page Frame Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
 STRING_bad_page_count_param db 0Dh, 0Ah,  'Bad Page Count Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
 STRING_bad_page_offset_param db 0Dh, 0Ah, 'Bad Page Offset Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
@@ -3399,7 +3401,7 @@ les        di, es:[di + 012h]  ; todo whats this offset
 
 mov        al, "-"
 mov        word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_unparsed_parameter ; default not found
-SELFMODIFY_init_change_default_param_AFTER:
+
 search_for_next_param:
 repne      scasb      
 clc        ; return not found by default
@@ -3676,6 +3678,29 @@ IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
   db 0, 1,  2,  3 ; d000
   db 4, 5,  6,  7 ; e000
 ENDIF
+
+
+IF COMPILE_CHIPSET EQ NEAT_CHIPSET
+   _NEAT_PORT_LOOKUP:
+   db 008h
+   db 018h 
+   db 000h ; 00h = bad value
+   db 000h
+   db 000h
+   db 058h
+   db 068h
+   db 000h
+   db 000h
+   db 000h
+   db 0A8h
+   db 0B8h
+   db 000h
+   db 000h
+   db 0E8h
+   db 00h
+
+ENDIF
+
 
 COMMENT @
 trigger_debugger:

@@ -300,22 +300,22 @@ skip_port_set:
   out   dx, al   ; write 8 bit page num. 
 
 
-; todo parse
+
   mov   ax, word ptr ds:[found_page_frame]
   mov   word ptr ds:[_RESIDENT_VARIABLE_page_frame_segment+1], ax
 
   mov   al, ah
   mov   byte ptr ds:[chipset_page_lookup+0], al
-  mov   byte ptr ds:[mappable_phys_page_struct_page_frame+0], al
+  mov   byte ptr ds:[mappable_phys_page_struct_page_frame+1], al
   add   al, 4
   mov   byte ptr ds:[chipset_page_lookup+1], al
-  mov   byte ptr ds:[mappable_phys_page_struct_page_frame+4], al
+  mov   byte ptr ds:[mappable_phys_page_struct_page_frame+5], al
   add   al, 4
   mov   byte ptr ds:[chipset_page_lookup+2], al
-  mov   byte ptr ds:[mappable_phys_page_struct_page_frame+8], al
+  mov   byte ptr ds:[mappable_phys_page_struct_page_frame+9], al
   add   al, 4
   mov   byte ptr ds:[chipset_page_lookup+3], al
-  mov   byte ptr ds:[mappable_phys_page_struct_page_frame+12], al
+  mov   byte ptr ds:[mappable_phys_page_struct_page_frame+13], al
 
   mov   ax, word ptr ds:[found_page_count]
 
