@@ -5,8 +5,8 @@ UTIL_map_NEAT_read_page_full:
 
 ; return value at page index (ax) in (ax)
 ; read page ax
-  push  dx
   push  cx
+  push  dx
 
   cwd   ; zero dx. get ah zero for free later.
 
@@ -46,11 +46,15 @@ UTIL_map_NEAT_read_page_full:
   ret
 
 
-
+; clobber dx ok i think
 UTIL_set_page:
 public UTIL_set_page
 
+
+
 xchg  ax, dx
+; fall thru.
+
 UTIL_map_NEAT_write_page_full:
 
 
