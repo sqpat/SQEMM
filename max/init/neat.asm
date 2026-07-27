@@ -5,18 +5,19 @@ out NEAT_CHIPSET_CONFIG_REGISTER_SELECT, al
 mov al, 055h
 out NEAT_CHIPSET_CONFIG_REGISTER_READWRITE, al
 
-  mov   dx, 0208h
-  mov   ax, NEAT_PAGE_OFFSET_AMT
-  out   dx, al   ; write 8 bit page num. 
-  mov   dh, 042h
+
+  xor   ax, ax
+  cwd
+  call  UTIL_map_NEAT_write_page_full
   inc   ax
-  out   dx, al   ; write 8 bit page num. 
-  mov   dh, 082h
+  inc   dx
+  call  UTIL_map_NEAT_write_page_full
   inc   ax
-  out   dx, al   ; write 8 bit page num. 
-  mov   dh, 0C2h
+  inc   dx
+  call  UTIL_map_NEAT_write_page_full
   inc   ax
-  out   dx, al   ; write 8 bit page num. 
+  inc   dx
+  call  UTIL_map_NEAT_write_page_full
 
   ; page frame d000 for now
   mov        word ptr ds:[_RESIDENT_VARIABLE_page_frame_segment+1], 0D000h

@@ -12,7 +12,7 @@ PUSHA_MACRO
   js    func_1701_handle_not_found
   mov   bp, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bp + HANDLE_INFO.handle_first_page]
 
-  cli
+
 
 func_1701_loop_next_page:
   ; next page in ax....
@@ -46,8 +46,6 @@ func_1701_done_looping:
   shr   bx, 1  ; board physical page number
   mov   dx, bx
 
-  SELFMODIFY_NEAT_set_page_offset_3:
-  add   dx, NEAT_PAGE_OFFSET_AMT   ; turn on EMS ON bit
 
 func_1701_skip_logical_check:
 
@@ -58,15 +56,12 @@ func_1701_skip_logical_check:
   call COMMON_util_get_register_for_segment
 
 
-  SHIFT_MACRO ror  ax 2
-  SELFMODIFY_NEAT_set_page_select_register_2:
-  add   ax, NEAT_PAGE_REGISTER_0
   xchg  ax, dx ; put both where they need to be..
+  call  UTIL_map_NEAT_write_page_full
 
-  out   dx, al   ; write 8 bit page num. 
 
   loop       func_1701_loop_next_page
-  sti
+
 
 
   ; exit fall thru

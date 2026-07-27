@@ -15,14 +15,10 @@
   push dx
   push cx
   push si
-  push bx
+
 
   lodsw
   xchg ax, cx
-  SELFMODIFY_NEAT_set_page_select_register_10:
-  mov   dx, NEAT_PAGE_REGISTER_0
-
-  
 
   jnz   func_16_sub_01
 
@@ -40,21 +36,14 @@ func_16_sub_00:
   jcxz func_16_00_no_pages
 
 
-  xor   bx, bx  ; zero bh
+
 func_16_sub_00_save_next_page_frame_register:
   lodsw
   ; ax has segment... 
   call  COMMON_util_get_physical_register_for_segment
   stosw
-  SHIFT_MACRO  ror ax 2
-  add   dx, ax
-
-
-
-  in    al, dx
-  xor   ah, ah
+  call  UTIL_map_NEAT_read_page_full
   stosw
-  and   dh, 3Fh
 
 
 
@@ -66,7 +55,7 @@ func_16_sub_01_done_recording_registers:
 
 func_16_01_no_pages:
 func_16_pop_and_return:
-  pop   bx
+
   pop   si
   pop   cx
   pop   dx
@@ -98,12 +87,9 @@ func_16_sub_01_save_next_page_frame_register:
   jcxz func_16_01_no_pages
 
   lodsw
-  SHIFT_MACRO  ror ax 2
-  add   dx, ax
-
+  xchg  ax, dx  ; port
   lodsw
-  out   dx, al
-  and   dh, 3Fh
+  call  UTIL_map_NEAT_write_page_full
 
   loop  func_16_sub_01_save_next_page_frame_register
 jmp func_16_sub_01_done_recording_registers

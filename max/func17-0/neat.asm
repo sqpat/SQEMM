@@ -44,23 +44,17 @@ func_1700_done_looping:
   shr   bx, 1  ; board physical page number
   mov   dx, bx
 
-  SELFMODIFY_NEAT_set_page_offset_2:
-  add   dx, NEAT_PAGE_OFFSET_AMT   ; turn on EMS ON bit
 
 
 func_1700_skip_logical_check:
 ; dx has page to write.
   lodsw
-  SHIFT_MACRO ror  ax 2
-  SELFMODIFY_NEAT_set_page_select_register_1:
-  add   ax, NEAT_PAGE_REGISTER_0
-  xchg  ax, dx ; put both where they need to be..
   
-    
-  out   dx, al   ; write 8 bit page num. 
+  xchg  ax, dx
+  call  UTIL_map_NEAT_write_page_full
 
   loop       func_1700_loop_next_page
-  sti
+
 
 
   POPA_MACRO

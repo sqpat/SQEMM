@@ -1,30 +1,25 @@
 FUNCTION_15_GET_PAGE_MAP:
 
 
-  push  dx
-SELFMODIFY_NEAT_set_page_select_register_6:
-  mov   dx, NEAT_PAGE_REGISTER_0
 
-  xor   ah, ah
-  in    al, dx
+
+  xor   ax, ax
+  call  UTIL_map_NEAT_read_page_full
   stosw
   
-  mov   dh, 042h
-  in    al, dx
+  mov   ax, 1
+  call  UTIL_map_NEAT_read_page_full
   stosw
 
-  mov   dh, 082h
-  in    al, dx
+  mov   ax, 2
+  call  UTIL_map_NEAT_read_page_full
   stosw
 
-  mov   dh, 0C2h
-  in    al, dx
+  mov   ax, 3
+  call  UTIL_map_NEAT_read_page_full
   stosw
 
   sub   di, 8
-
-  pop   dx
-
 
 
   ret
@@ -38,22 +33,23 @@ public FUNCTION_15_SAVE_PAGE_MAP
   push  dx
 
 
-SELFMODIFY_NEAT_set_page_select_register_5:
-  mov   dx, NEAT_PAGE_REGISTER_0
+  xor   dx, dx   ; dx 0
+  lodsw
+  call  UTIL_map_NEAT_write_page_full
 
+  inc   dx
   lodsw
-  out   dx, al
-  mov   dh, 042h
+  call  UTIL_map_NEAT_write_page_full
+
+  inc   dx
   lodsw
-  out   dx, al
-  mov   dh, 082h
+  call  UTIL_map_NEAT_write_page_full
+
+  inc   dx
   lodsw
-  out   dx, al
-  mov   dh, 0C2h
-  lodsw
-  out   dx, al
-  xor   ah, ah
-  sub   si, 4
+  call  UTIL_map_NEAT_write_page_full
+
+  sub   si, 8
 
   pop   dx
   ret
