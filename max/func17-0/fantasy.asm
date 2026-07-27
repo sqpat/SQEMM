@@ -1,6 +1,18 @@
 PUSHA_MACRO   ; includes ax
 
 
+END_FUNC_17_ERROR MACRO
+
+  IF COMPISA GE COMPILE_186
+    POPA_MACRO
+    iret
+  ELSE
+    jmp func_1700_pop_and_exit
+  ENDIF
+
+ENDM
+
+
   ; physical page number mode
 
 
@@ -28,7 +40,7 @@ func_1700_loop_next_page:
 
   ; ax is plus one
 
-  mov   bx, bp  ; first page
+  mov   bx, bp  ; fir st page
   dec   ax
 
   jz  func_1700_done_looping
@@ -59,7 +71,7 @@ func_1700_skip_logical_check:
   jb    func_1700_0_pageframe_register
   ; normalize to register 0x4000 hw value
   add   al, (FANTASY_CHIPSET_CONVENTIONAL_PAGE_4000 - FANTASY_CHIPSET_CONVENTIONAL_PAGEFRAME_DELTA) 
-
+func_1700_continue_page_write:
   out FANTASY_PAGE_SELECT_REGISTER, al   ; select EMS page
  
   inc   bx    ; -1 check
@@ -76,44 +88,43 @@ func_1700_exit:
 IF COMPISA GE COMPILE_186
   POPA_MACRO
   xor        ah, ah  ; al will be popped after all
+iret
 ELSE
   xor        ah, ah
-  func_1701_pop_and_exit:
+  func_1700_pop_and_exit:
   mov        byte ptr cs:[_temp_byte], ah
   POPA_MACRO
   mov        ah, byte ptr cs:[_temp_byte]
+  iret
 ENDIF
-iret
 
 IF COMPISA GE COMPILE_186
 
 func_1700_logical_page_too_high:
-  POPA_MACRO
   mov   ah, 08Ah  ; One or more of the mapped logical pages is out of the range of logical pages allocated to the EMM handle.
-  iret
+  END_FUNC_17_ERROR
 func_1700_physical_page_too_high:
-  POPA_MACRO
+
   mov   ah, 08Bh  ; One or more of the physical pages is out of the range of mappable physical pages, or the log_to_phys_map_len exceeds the number of mappable pages in the system.
-  iret
+  END_FUNC_17_ERROR
 
 func_1700_handle_not_found:
-  POPA_MACRO
   mov   ah, 083h  ; The memory manager couldn't find the EMM handle your program specified.
-  iret
+  END_FUNC_17_ERROR
 
 ELSE
 
 
 func_1700_logical_page_too_high:
   mov   ah, 08Ah  ; One or more of the mapped logical pages is out of the range of logical pages allocated to the EMM handle.
-  jmp func_1700_pop_and_exit
+  END_FUNC_17_ERROR  
 func_1700_physical_page_too_high:
   mov   ah, 08Bh  ; One or more of the physical pages is out of the range of mappable physical pages, or the log_to_phys_map_len exceeds the number of mappable pages in the system.
-  jmp func_1700_pop_and_exit
+  END_FUNC_17_ERROR
 
 func_1700_handle_not_found:
   mov   ah, 083h  ; The memory manager couldn't find the EMM handle your program specified.
-  jmp func_1700_pop_and_exit
+  END_FUNC_17_ERROR
 
 ENDIF
 
@@ -121,23 +132,7 @@ func_1700_0_pageframe_register:
 
 SELFMODIFY_FANTASY_add_page_frame_offset_1:  
   add   al, 4 ; need to add 4 for d000 case for FANTASY...  c000, e000  not supported
-  out   FANTASY_PAGE_SELECT_REGISTER, al   ; select EMS page
-  inc   bx    ; -1 check
-  jz    func_1700_handle_default_page
-  lea   ax, [bx + FANTASY_PAGE_OFFSET_AMT - 1]   ; offset by default starting page
-  out   FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
-
-  loop       func_1700_loop_next_page
-  
-
-  ; exits if we fall thru loop with no error
-IF COMPISA GE COMPILE_186
-  POPA_MACRO
-  xor        ah, ah
-  iret
-ELSE
-  jmp func_1700_exit
-ENDIF
+  jmp   func_1700_continue_page_write
 
 
   func_1700_handle_default_page:

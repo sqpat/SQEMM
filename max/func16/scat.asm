@@ -1,7 +1,11 @@
 ; consider pusha/popa?
 ; cli/sti? not sure
 
-  push ax  ; restore into bx 
+  xchg ax, bx ; restore bx
+  pop  ax
+  push ax
+  push bx
+
   push dx
   push cx
   push di
@@ -13,7 +17,7 @@ SELFMODIFY_SCAT_set_page_frame_register_offset_5:
   mov   bl, 0 
 
 
-  cmp   byte ptr cs:[_current_call_subfunction_value], 2
+  cmp   al, 2
   ja    func_16_bad_subfunction
   je    func_16_sub_02
   test  al, al
