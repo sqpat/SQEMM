@@ -26,6 +26,7 @@
   mov   byte ptr ds:[SELFMODIFY_NEAT_set_page_select_register_4+1], al
   ; port set.
 
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_chipset_parameter
   mov   di, OFFSET STRING_good_port_param_EDIT_OFFSET
   mov   dx, OFFSET STRING_good_port_param
   stc   ; hex print
@@ -94,6 +95,7 @@ find_neat_page_offset:
   mov   ah, al
   xor   al, al
   
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_chipset_parameter
   stc   ; hex print
   mov   di, OFFSET string_good_page_frame_param_EDIT_OFFSET
   mov   dx, OFFSET string_good_page_frame_param
@@ -117,12 +119,36 @@ COMMENT @
 
 
 
+  mov  ax, NEAT_PAGE_OFFSET_AMT ; todo: get total system memory and subtract ems size.
+
+  mov  word ptr ds:[SELFMODIFY_NEAT_add_page_offset+1], ax
+  mov  word ptr ds:[SELFMODIFY_NEAT_sub_page_offset+1], ax
+
+
+
 
 ; todo determine size, offset, etc
 ; todo parse params.
 
+  mov   ax, NEAT_CHIPSET_EMS_SIZE_REGISTER ; zero ah
+  out  NEAT_CHIPSET_CONFIG_REGISTER_SELECT, al
+  in   al, NEAT_CHIPSET_CONFIG_REGISTER_READWRITE
+  and  al, 0E0h  ; bits 5-7
 
-  mov   word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count], MAX_PAGE_COUNT
-  mov   word ptr ds:[_RESIDENT_VARIABLE_total_EMS_page_count+1], MAX_PAGE_COUNT
+  ; bits 5-7 = number of megabytes of EMS. one megabyte is 64 pages. 
+
+  shl   ax, 1
+
+  mov   word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count], ax
+  mov   word ptr ds:[_RESIDENT_VARIABLE_total_EMS_page_count+1], ax
+
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_chipset_parameter
+  clc   ; hex print
+  mov   di, OFFSET STRING_good_page_count_param_EDIT_OFFSET
+  mov   dx, OFFSET STRING_good_page_count_param
+  mov   cx, 3
+  call  print_driver_param
+
+
   mov   byte ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_1+1], PAGE_FRAME_COUNT ; todo... should we decrease based on stuff like ROMS etc?
 

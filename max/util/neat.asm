@@ -1,5 +1,6 @@
 
-UTIL_get_page:
+UTIL_get_page: 
+public UTIL_get_page
 
 UTIL_map_NEAT_read_page_full:
 
@@ -11,7 +12,9 @@ UTIL_map_NEAT_read_page_full:
   cwd   ; zero dx. get ah zero for free later.
 
   mov  cl, 3
-  AND  CL, AL    ; use those bit before setting up page register
+  and  cl, al    ; use those bit before setting up page register
+  neg  cl
+  add  cl, 3     ; high bits are page 0, low bits page 3... inverse.
   shl  cl, 1     ; cl has shift count
 
   SHIFT_MACRO ror ax 2
@@ -77,6 +80,9 @@ UTIL_map_NEAT_write_page_full:
 
   MOV  CX, 0FF03h  ; mask bits..
   AND  CL, DL    ; use those bit before setting up page register
+  neg  cl
+  add  cl, 3     ; high bits are page 0, low bits page 3... inverse.
+
   shl  cl, 1     ; cl has shift count
 
   SHIFT_MACRO ror dx 2

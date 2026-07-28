@@ -1,4 +1,5 @@
 chipset_page_lookup:
+public chipset_page_lookup
 
   db 0D0h, 0D4h, 0D8h, 0DCh
 
@@ -10,7 +11,7 @@ chipset_page_lookup:
 
   ; you can hardcode the chipset's mappable page list here for call 5800
 mappable_phys_page_struct:
-
+public mappable_phys_page_struct_page_frame
 mappable_phys_page_struct_page_frame:
   dw 0D000h, 0000h, 0D400h, 0001h, 0D800h, 0002h, 0DC00h, 0003h
 
