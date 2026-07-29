@@ -3278,6 +3278,13 @@ ENDIF
 
 ;  memory tests
 
+mov   ah, "S" ; skip tests
+call  parse_driver_params
+
+jnc   dont_skip_tests
+
+jmp   skip_tests
+dont_skip_tests:
 
 mov   dx, OFFSET STRING_testing_memory
 mov   ah, 9  ; PRINT_STRING
@@ -3394,7 +3401,7 @@ mov   ah, 9  ; PRINT_STRING
 int   021h
 
 
-
+skip_tests:
 
 mov   ax, PAGE_FRAME_COUNT
 mov   byte ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_1+1], al ; todo... should we increase based on presence of other pages versus ROMS etc?
@@ -3425,6 +3432,9 @@ add   ax, 0400h
 mov   word ptr ds:[mappable_phys_page_struct_page_frame+8], ax
 add   ax, 0400h
 mov   word ptr ds:[mappable_phys_page_struct_page_frame+12], ax
+
+
+
 
 push  cs
 pop   es
