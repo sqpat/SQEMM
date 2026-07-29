@@ -1084,8 +1084,6 @@ PRINT_RUNNING_TEST 15
 mov   ax, 05801h
 TEST_EMS_REGISTER_CALL_NO_CX 00001h
 
-here:
-public here
 
 
 
@@ -2444,7 +2442,7 @@ COMMENT @
 @
 
 ; init a section of conventional memory.
-; todo... actually allocate from DOS? i guess we are being naught for now.
+; todo... actually allocate from DOS? i guess we are being naughty for now.
 
 call  init_conventional_data_for_PAGE_FRAME_tests
 
@@ -2501,7 +2499,7 @@ mov   ax, 33
 mov   dx, 02C00h
 call  test_four_pages_from_segment_dx
 
-mov   ax, 025h
+mov   ax, 37
 mov   dx, 03C00h
 
 mov   es, dx

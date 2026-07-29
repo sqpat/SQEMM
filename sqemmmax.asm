@@ -161,7 +161,7 @@ ALIGN 2
 
 ;  32-bit pointer to arguments to driver
 _RESIDENT_VARIABLE_request_header_pointer dd 00000000h 
-
+public _RESIDENT_VARIABLE_request_header_pointer
 
 
 
@@ -3393,6 +3393,7 @@ parse_driver_params:
 ; search for "-X" where X is ah
 ; return pointer in es:di
 ; return found == true in carry flag.
+cld ; this got set before... not sure where
 push       cx
 
 mov        cx, word ptr cs:[_INIT_PARAM_command_line_length] ; max param length

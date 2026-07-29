@@ -22,9 +22,7 @@
   je    set_port
   cmp   al, 9
   jb    set_port
-  cmp   al, 8
-  je    set_port
-  sub   al, 'A' - '0'
+  sub   al, 'A' - '0' - 10 ; A = 10, B = 11, etc.
   jb    bad_port_param
   cmp   al, 0Fh
   jbe   set_port
@@ -42,7 +40,7 @@ set_port:
   ; al is 0-F
   cbw
   xchg  ax, bx
-  cmp  byte ptr cs:[_NEAT_PORT_LOOKUP + bx], bh ; check for zero
+  cmp  byte ptr ds:[_NEAT_PORT_LOOKUP + bx], bh ; check for zero
   je   bad_port_param_chipset
   
   mov  al, NEAT_CHIPSET_EMS_CONFIG_REGISTER
@@ -52,7 +50,7 @@ set_port:
   or   al, bl
   out  NEAT_CHIPSET_CONFIG_REGISTER_READWRITE, al  
   
-  mov  al, byte ptr cs:[_NEAT_PORT_LOOKUP + bx] ; get this now
+  mov  al, byte ptr ds:[_NEAT_PORT_LOOKUP + bx] ; get this now
 
   mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_parsed_parameter
   jmp   got_port
@@ -67,7 +65,7 @@ get_port_from_chipset:
   in   al, NEAT_CHIPSET_CONFIG_REGISTER_READWRITE
   and  ax, 0Fh  ; zero ah... keep just 4 low bits
   xchg ax, bx
-  mov  al, byte ptr cs:[_NEAT_PORT_LOOKUP + bx]
+  mov  al, byte ptr ds:[_NEAT_PORT_LOOKUP + bx]
   test al, al
   jz   bad_port_param_chipset
   mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_chipset_parameter
@@ -227,63 +225,100 @@ COMMENT @
   call  UTIL_map_NEAT_write_page_full
 @
 
+  mov   ah, "C"  ; page count
+  call  parse_driver_params_get_int  ; no default. instead fetch from chipswt
+  jnc   no_page_count_param
+  cmp   ax, PAGE_COUNT_7_MB
+  ja    bad_page_count_param
+  mov  word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_parsed_parameter
 
-  mov  ax, NEAT_CHIPSET_MEMORY_SIZE_BANK01_REGISTER ; zero ah
-  out  NEAT_CHIPSET_CONFIG_REGISTER_SELECT, al
-  in   al, NEAT_CHIPSET_CONFIG_REGISTER_READWRITE
-  and  al, 0E0h  ; bits 5-7
-  mov  ah, al
+got_page_count:
 
-  mov  al, NEAT_CHIPSET_MEMORY_SIZE_BANK23_REGISTER
-  out  NEAT_CHIPSET_CONFIG_REGISTER_SELECT, al
-  in   al, NEAT_CHIPSET_CONFIG_REGISTER_READWRITE
-  and  al, 0E0h  ; bits 5-7
-
-  SHIFT_MACRO shr ax 5
-  sub  ax, 0303h
-  xor  bx, bx
-  mov  bl, al
-  mov  al, byte ptr ds:[bx]
-  mov  bl, ah
-  xor  ah, ah
-  mov  bl, byte ptr ds:[bx]
-  inc  ax
-  inc  bx
-  add  bx, ax
-  ; now bx has system memory in pages.
-
-
-  mov   ax, NEAT_CHIPSET_EMS_SIZE_REGISTER ; zero ah
-  out  NEAT_CHIPSET_CONFIG_REGISTER_SELECT, al
-  in   al, NEAT_CHIPSET_CONFIG_REGISTER_READWRITE
-  and  al, 0E0h  ; bits 5-7
-
-  ; bits 5-7 = number of megabytes of EMS. one megabyte is 64 pages. 
-
-  shl   ax, 1
-
-  sub   bx, ax 
-
-  ; todo use value from chipset parameter? seems buggy
-  mov  bx, NEAT_PAGE_OFFSET_AMT 
-
-  mov  word ptr ds:[SELFMODIFY_NEAT_add_page_offset+1], bx
-  mov  word ptr ds:[SELFMODIFY_NEAT_sub_page_offset+1], bx
-
-  
   mov   word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count], ax
   mov   word ptr ds:[_RESIDENT_VARIABLE_total_EMS_page_count+1], ax
 
-  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_chipset_parameter
-  clc   ; hex print
+
+  clc   ; int print
   mov   di, OFFSET STRING_good_page_count_param_EDIT_OFFSET
   mov   dx, OFFSET STRING_good_page_count_param
   mov   cx, 3
   call  print_driver_param
 
-  xchg  ax, bx
+
+
+
+
+; offset
+
+  ; todo why is this not working....
+  mov   ah, "O"  ; page offset
+  call  parse_driver_params_get_int  ; no default. instead fetch from chipswt
+
+  jnc   get_offset_from_chipset 
+
+  mov  word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_parsed_parameter
+  ; todo any checks?
+  jmp   got_offset
+
+no_page_count_param:
+  mov   ax, NEAT_CHIPSET_EMS_SIZE_REGISTER ; zero ah
+  out   NEAT_CHIPSET_CONFIG_REGISTER_SELECT, al
+  in    al, NEAT_CHIPSET_CONFIG_REGISTER_READWRITE
+  and   al, 0E0h  ; bits 5-7
+
+  ; bits 5-7 = number of megabytes of EMS. one megabyte is 64 pages. 
+
+  shl   ax, 1
   mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_chipset_parameter
-  clc   ; hex print
+  jmp   got_page_count
+
+bad_page_count_param:
+  mov  DX, OFFSET string_bad_page_count_param
+  jmp  DRIVER_NOT_INSTALLED
+
+
+
+get_offset_from_chipset:
+
+
+  mov  ax, NEAT_CHIPSET_MEMORY_SIZE_BANK01_REGISTER ; zero ah
+  out  NEAT_CHIPSET_CONFIG_REGISTER_SELECT, al
+  in   al, NEAT_CHIPSET_CONFIG_REGISTER_READWRITE
+  mov  ah, al
+
+  mov  al, NEAT_CHIPSET_MEMORY_SIZE_BANK23_REGISTER
+  out  NEAT_CHIPSET_CONFIG_REGISTER_SELECT, al
+  in   al, NEAT_CHIPSET_CONFIG_REGISTER_READWRITE
+  and  ax, 00E0E0h  ; bits 5-7
+
+  SHIFT_MACRO shr ax 5
+  sub  ax, 0303h
+
+
+  xor  bx, bx
+  mov  bl, al
+  mov  al, byte ptr ds:[bx+_NEAT_DRAM_BANK_LOOKUP]
+  mov  bl, ah
+  xor  ah, ah
+  mov  bl, byte ptr ds:[bx+_NEAT_DRAM_BANK_LOOKUP]
+  inc  ax
+  inc  bx
+  add  ax, bx
+  ; now bx has system memory in pages.
+
+  
+  sub   ax, word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count] ; subtract page count to get EMS start position.
+  ; do we have to add 4 for umb sanity...? i.e 7 MB setting
+  ; tested and it seems fine? because no xms/UMBs are allocated in 7mb setting?
+
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_chipset_parameter
+got_offset:
+
+  mov  word ptr ds:[SELFMODIFY_NEAT_add_page_offset+1], ax
+  mov  word ptr ds:[SELFMODIFY_NEAT_sub_page_offset+1], ax
+
+
+  clc   ; int print
   mov   di, OFFSET STRING_good_page_offset_param_EDIT_OFFSET
   mov   dx, OFFSET STRING_good_page_offset_param
   mov   cx, 3
