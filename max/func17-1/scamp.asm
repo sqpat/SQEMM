@@ -1,74 +1,176 @@
-  push cx
-  push bx
-  push si
+
+xchg   ax, bx
+pop    ax
+PUSHA_MACRO
 
 
-  ; physical page number mode
-  cli
-  func1701_loop_next_page:
+  ; segment mode
+
+
+
+  mov   bp, dx
+  SHIFT_MACRO shl bp 2  ;  SIZE HANDLE_INFO
+  mov   di, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bp + HANDLE_INFO.handle_num_pages]
+  test  di, di
+  js    func_1701_handle_not_found
+  mov   bp, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bp + HANDLE_INFO.handle_first_page]
+
+; bp has first page ptr.
+; di has num logical pages
+
+func_1701_loop_next_page:
   ; next page in ax....
-  lodsw
-  mov        bx, ax
-  lodsw
-  ; read two words - bx and ax
-  call COMMON_util_get_register_for_segment
 
-  cmp   ax, 12
+  lodsw   ; load logical page
+  mov        bx, ax  ; in case its unmap, bx goes forward as -1
+  inc        ax
+  js         func_1701_skip_logical_check
+  cmp        bx, di   ; bx is the same 
+  ja         func_1701_logical_page_too_high
+
+  ; get actual page bx for handle dx
+
+  ; ax is plus one.
+
+  mov   bx, bp  ; first page
+  dec   ax
+
+  jz  func_1701_done_looping
+
+func_1701_loop_next_logical_page:
+  mov   bx, word ptr cs:[bx + PAGE_INFO.page_info_next_page]
+  dec   ax
+  jnz   func_1701_loop_next_logical_page
+  
+func_1701_done_looping:
+
+  ; bx is now ptr to the actual page...
+  sub   bx, OFFSET _RESIDENT_VARIABLE_page_list
+  shr   bx, 1  ; board physical page number
+
+
+func_1701_skip_logical_check:
+
+  lodsw   ; grab physical page
+
+  call COMMON_util_get_register_for_segment
+    test       ax, ax
+    js         func_1701_physical_page_too_high
+    cmp        al, PAGE_FRAME_COUNT
+    jae        func_1701_physical_page_too_high
+
+  ; bx has logical page and ax has page register index now
+
+  cmp   al, SCAMP_CHIPSET_CONVENTIONAL_PAGEFRAME_DELTA ; after 4 is conventional backfill in max mode
   ; default, lets assume backfill
-  jb func_17_1_pageframe_register
+  jb    func_1701_0_pageframe_register
+  ; normalize to register 0x4000 hw value
+  add   al, (SCAMP_CHIPSET_CONVENTIONAL_PAGE_4000 - SCAMP_CHIPSET_CONVENTIONAL_PAGEFRAME_DELTA) 
 
   out SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
  
-  cmp   bx, 0FFFFh   ; -1 check
-  je    handle_default_page_with_add
+  inc  bx    ; -1 check
+  jz    func_1701_handle_default_page
   ; default is not the -1 case
-  mov   ax, bx
-  add   ax, SCAMP_PAGE_OFFSET_AMT   ; offset by default starting page
+  lea   ax, [bx + SCAMP_PAGE_OFFSET_AMT - 1]   ; offset by default starting page
   out   SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
 
 
-  loop       func1701_loop_next_page
-  sti
+  loop       func_1701_loop_next_page
+  
   ; exits if we fall thru loop with no error
-  xor        ax, ax
-  pop si
-  pop bx
-  pop cx
+  func_1701_exit:
+IF COMPISA GE COMPILE_186
+  POPA_MACRO
+  xor        ah, ah  ; al will be popped after all
+ELSE
+  xor        ah, ah
+  func_1701_pop_and_exit:
+  mov        byte ptr cs:[_temp_byte], ah
+  POPA_MACRO
+  mov        ah, byte ptr cs:[_temp_byte]
+ENDIF
+  iret
+
+IF COMPISA GE COMPILE_186
+
+
+func_1701_logical_page_too_high:
+  POPA_MACRO
+  mov   ah, 08Ah  ; One or more of the mapped logical pages is out of the range of logical pages allocated to the EMM handle.
   iret
 
 
-  func_17_1_pageframe_register:
+func_1701_handle_not_found:
+  POPA_MACRO
+  mov   ah, 083h  ; The memory manager couldn't find the EMM handle your program specified.
+  iret
+
+func_1701_physical_page_too_high:
+  POPA_MACRO
+  mov   ah, 08Bh  ; One or more of the physical pages is out of the range of mappable physical pages, or the log_to_phys_map_len exceeds the number of mappable pages in the system.
+  iret
+
+
+ELSE
+
+func_1701_logical_page_too_high:
+  mov   ah, 08Ah  ; One or more of the mapped logical pages is out of the range of logical pages allocated to the EMM handle.
+  jmp func_1701_pop_and_exit
+
+
+func_1701_handle_not_found:
+
+  mov   ah, 083h  ; The memory manager couldn't find the EMM handle your program specified.
+  jmp func_1701_pop_and_exit
+
+func_1701_physical_page_too_high:
+
+  mov   ah, 08Bh  ; One or more of the physical pages is out of the range of mappable physical pages, or the log_to_phys_map_len exceeds the number of mappable pages in the system.
+  jmp func_1701_pop_and_exit
   
-  add   ax, 4 ; need to add 4 for d000 case for scamp...  c000, e000  not supported
+
+ENDIF
+
+
+func_1701_0_pageframe_register:
+
+SELFMODIFY_SCAMP_add_page_frame_offset_5:  
+  add   al, 4 ; need to add 4 for d000 case for FANTASY...  c000, e000  not supported
   out   SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
-  cmp   bx, 0FFFFh   ; -1 check
-  je    func17_01_handle_default_page
-  mov   ax, bx
-  add   ax, SCAMP_PAGE_OFFSET_AMT   ; offset by default starting page
+  inc   bx    ; -1 check
+  jz    func_1701_handle_default_page
+  lea   ax, [bx + SCAMP_PAGE_OFFSET_AMT - 1]   ; offset by default starting page
   out   SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
 
-  loop       func1701_loop_next_page
-  sti
+  loop       func_1701_loop_next_page
+  
 
   ; exits if we fall thru loop with no error
-  xor        ax, ax
-  pop si
-  pop bx
-  pop cx
-  iret
+IF COMPISA GE COMPILE_186
 
-  handle_default_page_with_add:
-  add   ax, 4
-  
-  func17_01_handle_default_page:
+  POPA_MACRO
+  xor   ah, ah
+  iret
+ELSE
+  jmp func_1701_exit
+ENDIF
+
+func_1701_handle_default_page:
   ; mapping to page -1
+  xchg ax, bx
+  dec  ax
   out  SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
-  loop       func1701_loop_next_page
+  loop       func_1701_loop_next_page
+  
   ; fall thru if done..
-  sti
+IF COMPISA GE COMPILE_186
 
-  xor        ax, ax
-  pop si
-  pop bx
-  pop cx
+  POPA_MACRO
+  xor   ah, ah
   iret
+ELSE
+  jmp func_1701_exit
+ENDIF
+  _temp_byte:
+  db, 0

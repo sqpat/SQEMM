@@ -572,31 +572,31 @@ iret
 EMS_FUNCTION_047h:
 
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
-   INCLUDE small/func08\scamp.asm
+   INCLUDE min/func08\scamp.asm
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-   INCLUDE small/func08\fantasy.asm
+   INCLUDE min/func08\fantasy.asm
 ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-   INCLUDE small/func08\rodney.asm
+   INCLUDE min/func08\rodney.asm
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-   INCLUDE small/func08\scat.asm
+   INCLUDE min/func08\scat.asm
 ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-   INCLUDE small/func08\ht18.asm
+   INCLUDE min/func08\ht18.asm
 ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-   INCLUDE small/func08\ht12.asm
+   INCLUDE min/func08\ht12.asm
 ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-   INCLUDE small/func08\hedaka.asm
+   INCLUDE min/func08\hedaka.asm
 ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-   INCLUDE small/func08\lotech.asm
+   INCLUDE min/func08\lotech.asm
 ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-   INCLUDE small/func08\neat.asm
+   INCLUDE min/func08\neat.asm
 ELSEIF COMPILE_CHIPSET EQ NEAT_2MB_CHIPSET
-   INCLUDE small/func08\neat2mb.asm
+   INCLUDE min/func08\neat2mb.asm
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-   INCLUDE small/func08\intelab.asm
+   INCLUDE min/func08\intelab.asm
 ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-   INCLUDE small/func08\sarc.asm
+   INCLUDE min/func08\sarc.asm
 ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-   INCLUDE small/func08\standard.asm
+   INCLUDE min/func08\standard.asm
 ENDIF
 
  
@@ -606,31 +606,31 @@ ENDIF
 EMS_FUNCTION_048h:
 
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
-   INCLUDE small/func09\scamp.asm
+   INCLUDE min/func09\scamp.asm
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
-   INCLUDE small/func09\fantasy.asm
+   INCLUDE min/func09\fantasy.asm
 ELSEIF COMPILE_CHIPSET EQ RODNEY_EMS
-   INCLUDE small/func09\rodney.asm
+   INCLUDE min/func09\rodney.asm
 ELSEIF COMPILE_CHIPSET EQ SCAT_CHIPSET
-   INCLUDE small/func09\scat.asm
+   INCLUDE min/func09\scat.asm
 ELSEIF COMPILE_CHIPSET EQ HT18_CHIPSET
-   INCLUDE small/func09\ht18.asm
+   INCLUDE min/func09\ht18.asm
 ELSEIF COMPILE_CHIPSET EQ HT12_CHIPSET
-   INCLUDE small/func09\ht12.asm
+   INCLUDE min/func09\ht12.asm
 ELSEIF COMPILE_CHIPSET EQ HEDAKA_CHIPSET
-   INCLUDE small/func09\hedaka.asm
+   INCLUDE min/func09\hedaka.asm
 ELSEIF COMPILE_CHIPSET EQ LOTECH_BOARD
-   INCLUDE small/func09\lotech.asm
+   INCLUDE min/func09\lotech.asm
 ELSEIF COMPILE_CHIPSET EQ NEAT_CHIPSET
-   INCLUDE small/func09\neat.asm
+   INCLUDE min/func09\neat.asm
 ELSEIF COMPILE_CHIPSET EQ NEAT_2MB_CHIPSET
-   INCLUDE small/func09\neat2mb.asm
+   INCLUDE min/func09\neat2mb.asm
 ELSEIF COMPILE_CHIPSET EQ INTEL_ABOVEBOARD
-   INCLUDE small/func09\intelab.asm
+   INCLUDE min/func09\intelab.asm
 ELSEIF COMPILE_CHIPSET EQ SARC_RC2016A
-   INCLUDE small/func09\sarc.asm
+   INCLUDE min/func09\sarc.asm
 ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
-   INCLUDE small/func09\standard.asm
+   INCLUDE min/func09\standard.asm
 ENDIF
 
 

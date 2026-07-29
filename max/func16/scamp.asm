@@ -1,4 +1,119 @@
-; TODO NOT DONE, should be done
+; consider pusha/popa?
+; cli/sti? not sure
+  xchg ax, bx ; restore bx
+  pop  ax
+  push ax
+  push bx
 
-xchg       ax, bx
+  push cx
+  push di
+  push si
+  
+SELFMODIFY_SCAMP_add_page_frame_offset_10:
+  mov   bl, 4
+
+
+  cmp   al, 2
+  ja    func_16_bad_subfunction
+  je    func_16_sub_02
+  test  al, al
+  jnz   func_16_sub_01
+
+
+
+func_16_sub_00:
+
+; ds:si format
+; partial_page_map_struct     STRUC
+;             mappable_segment_count   DW  ?
+;             mappable_segment         DW  (?)  DUP  (?)
+;          partial_page_map_struct     ENDS
+
+
+  lodsw
+  stosw   ; count
+  xchg  ax, cx ; count
+
+func_16_sub_00_save_next_page_frame_register:
+  lodsw
+  ; ax has segment... 
+  call  COMMON_util_get_physical_register_for_segment
+  cmp   al, SCAMP_CHIPSET_CONVENTIONAL_PAGEFRAME_DELTA
+  jae   func_16_do_conventional_map
+  add   al, bl
+  func_16_do_conventional_map:
+  out   SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
+  stosw 
+
+
+  in    ax, SCAMP_PAGE_SET_REGISTER
+  stosw
+
+
+  loop  func_16_sub_00_save_next_page_frame_register
+func_16_sub_00_done_recording_registers:
+func_16_sub_01_done_recording_registers:
+  xchg  ax, cx  ; zero ax
+
+
+func_16_pop_and_return:
+  pop   si
+  pop   di
+  pop   cx
+
+  pop   bx ; restore from ax
+
+  pop        ax
+  xor        ah, ah
+
 iret
+
+
+func_16_sub_02:
+;          GET SIZE OF PARTIAL PAGE MAP SAVE ARRAY SUBFUNCTION
+  pop   si
+  pop   di
+  pop   cx
+  pop   bx ; restore from ax
+
+  pop        ax
+  xor        ah, ah
+  mov  al, bl ; num pages
+
+  SHIFT_MACRO shl  al 2 ; two words per entry.
+  add  al, 2  ; count
+  iret
+
+; fall thru
+
+
+
+
+func_16_sub_01:
+  lodsw
+  xchg  ax, cx  ; count
+func_16_sub_01_save_next_page_frame_register:
+  lodsw
+  out   SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
+
+  lodsw
+  out   SCAMP_PAGE_SET_REGISTER, ax
+
+  loop  func_16_sub_01_save_next_page_frame_register
+
+jmp func_16_sub_01_done_recording_registers
+
+
+
+func_16_bad_subfunction:
+  pop   si
+  pop   di
+  pop   cx
+
+  pop   bx ; restore from ax
+
+  pop   ax
+  mov   ah, 084h
+  iret 
+
+

@@ -1,7 +1,7 @@
 Open Watcom Linker Version 2.0 beta Sep  3 2024 02:05:05 (32-bit)
 Copyright (c) 2002-2024 The Open Watcom Contributors. All Rights Reserved.
 Portions Copyright (c) 1985-2002 Sybase, Inc. All Rights Reserved.
-Created on:       26/07/29 00:58:12
+Created on:       26/07/29 04:19:04
 Executable Image: sqemm.exe
 creating a DOS executable
 
@@ -13,7 +13,7 @@ creating a DOS executable
 Group                           Address              Size
 =====                           =======              ====
 
-DGROUP                          0000:0000            00003006
+DGROUP                          0000:0000            00003404
 
 
 
@@ -24,8 +24,8 @@ DGROUP                          0000:0000            00003006
 Segment                Class          Group          Address         Size
 =======                =====          =====          =======         ====
 
-_TEXT                  CODE           DGROUP         0000:0000       00003006
-_DATA                  DATA           DGROUP         0300:0006       00000000
+_TEXT                  CODE           DGROUP         0000:0000       00003403
+_DATA                  DATA           DGROUP         0340:0004       00000000
 
 
                         +----------------+
@@ -39,20 +39,15 @@ Address        Symbol
 =======        ======
 
 Module: sqemm.obj(sqemm.ASM)
-0000:004a*     CHIPSET_PAGE_LOOKUP
-0000:031c*     _RESIDENT_VARIABLE_HANDLE_COUNT
-0000:0bc9*     UTIL_GET_PAGE
-0000:0c00*     UTIL_SET_PAGE
-0000:268e*     END_OF_DRIVER_LABEL
-0000:006c*     _RESIDENT_VARIABLE_REQUEST_HEADER_POINTER
-0000:0f22*     _RESIDENT_VARIABLE_HANDLE_LIST
-0000:0b20*     FUNCTION_15_SAVE_PAGE_MAP
-0000:02c5*     EMS_FUNCTION_045H
-0000:230e*     _RESIDENT_VARIABLE_PAGE_LIST
-0000:004e*     MAPPABLE_PHYS_PAGE_STRUCT_PAGE_FRAME
+0000:040c*     _RESIDENT_VARIABLE_HANDLE_COUNT
+0000:2b88*     END_OF_DRIVER_LABEL
+0000:011c*     _RESIDENT_VARIABLE_REQUEST_HEADER_POINTER
+0000:101c*     _RESIDENT_VARIABLE_HANDLE_LIST
+0000:03b5*     EMS_FUNCTION_045H
+0000:2408*     _RESIDENT_VARIABLE_PAGE_LIST
 0000:0014*     EMS_DRIVER_INIT
-0000:2ac7*     DRIVER_INIT
-0000:2e26*     HERE
+0000:2fc1*     DRIVER_INIT
+0000:322c*     HERE
 Warning! W1014: stack segment not found
 Warning! W1023: no starting address found, using 0000:0000
 
@@ -62,6 +57,6 @@ Warning! W1023: no starting address found, using 0000:0000
                         +-----------------------+
 
 Stack size:  09e8 (2536.)
-Memory size:  3006 (12294.)
+Memory size:  3404 (13316.)
 Entry point address: 0000:0000
 Link time: 00:00.00
