@@ -3699,6 +3699,40 @@ IF COMPILE_CHIPSET EQ NEAT_CHIPSET
    db 0E8h
    db 00h
 
+_NEAT_DRAM_BANK_LOOKUP:
+
+  ; bit 5 = num banks
+  ; bit 6-7:   00 = nomem  01 = mixed () 640k, 1.64 if bit 5 on
+  ; bit 6-7:   10 = 1MB per bank   11 = 4MB per bank
+
+  ;          al  ah   ; num pages (subtract offset for ems pages)
+  ; 8 MB   = E0, E0   512
+  ; 5 MB   = E0, A0   320
+  ; 4.64MB = E0, 60   296
+  ; 2MB (B)= A0, A0   128
+  ; 1.64MB = A0, 60   104
+  ; 6 MB   = E0, C0   384
+  ; 3 MB   = A0, C0   192
+  ; 4 MB   = E0, 00   256
+  ; 1.5 MB = A0, 80   96
+  ; 1 MB   = A0, 00   64
+  ; 640KB  = 60, 00   40
+  ; 2 MB   = C0, 00   128
+  ; 512KB  = 80, 00   32
+  ; 0  KB  = 00, 00   0
+
+  ; so
+  ; 60 = 40
+  ; 80 = 32
+  ; a0 = 64
+  ; c0 = 128
+  ; e0 = 256
+  ; shift right 5 and subtract 3 to get 0 1 2 3 4 from 60 80 a0 c0 e0
+  
+db  40-1, 32-1, 64-1, 128-1, 256-1 ; add one back later. fit in less space and less register juggle.
+
+
+
 ENDIF
 
 

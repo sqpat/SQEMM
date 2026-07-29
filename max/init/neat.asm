@@ -35,6 +35,22 @@
 
 jmp  find_neat_page_offset; make some space for branches
 
+get_page_frame_from_chipset:
+; fetch page frame from chipset
+
+
+  mov  al, NEAT_CHIPSET_EMS_CONFIG_REGISTER
+  out  NEAT_CHIPSET_CONFIG_REGISTER_SELECT, al
+  in   al, NEAT_CHIPSET_CONFIG_REGISTER_READWRITE
+  and  ax, 0F0h
+  cmp  al, 080h
+  ja   bad_page_frame_param_chipset
+
+  SHIFT_MACRO shr al 2
+
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_chipset_parameter
+  jmp  got_page_frame
+
 bad_page_frame_param_chipset:
   ; bad page frame param! error?
   mov  DX, OFFSET STRING_bad_page_frame_chipset
@@ -63,21 +79,69 @@ find_neat_page_offset:
 ; init page frame to pages 0-3
 
 
+; determine page frame
+
+  mov   ah, "F" 
+  call  parse_driver_params
+
+  jnc   get_page_frame_from_chipset   ; param not found, use default
+
+  mov   ax, word ptr es:[di]
+  sub   al, 'C'
+  jb    bad_page_frame_param
+  cmp   al, 'E'-'C'
+  ja    bad_page_frame_param
+  xchg  al, ah
+  sub   al, '0'
+  je    set_page_frame
+  cmp   al, 4
+  je    set_page_frame
+  cmp   al, 8
+  je    set_page_frame
+  cmp   al, 'C' - '0'
+  mov   al, 12
+  jne   bad_page_frame_param
 
 
-; fetch page frame from chipset
+  set_page_frame:
+
+  ; ah is 0 1 or 2    (C D or E)
+  ; al is 0 4 8 or 12
+  cmp   ah, 2
+  jne   skip_e000_plus_check
+  test  al, al
+  jnz   bad_page_frame_param
+  skip_e000_plus_check:
+  mov   bx, ax ; backup
+  mov   dx, ax ; backup
+
+; program the chipset with this value
 
   mov  al, NEAT_CHIPSET_EMS_CONFIG_REGISTER
   out  NEAT_CHIPSET_CONFIG_REGISTER_SELECT, al
   in   al, NEAT_CHIPSET_CONFIG_REGISTER_READWRITE
-  and  ax, 0F0h
-  cmp  al, 080h
-  ja   bad_page_frame_param_chipset
+  and  al, 0Fh
 
-  SHIFT_MACRO shr al 2
-  add  al, 0C0h
+  xchg ax, bx ; restore backup, store IN value in bx.
   
+  SHIFT_MACRO shr   al, 2     ; 0 4 8 C to 1 2 3  (C D E)
+  SHIFT_MACRO shl   ah, 2     ; 0 1 2 to 0 4 8  (C D E)
+  or   al, ah
+  SHIFT_MACRO shl   al, 4
+  or   al, bl
+  out  NEAT_CHIPSET_CONFIG_REGISTER_READWRITE, al  ; programmed our EMS page frame. 
 
+
+  xchg  ax, dx ; restore again
+  SHIFT_MACRO shl   ah, 4  ; 0 1 2 to 00 10 20  (C D E)
+  or    al, ah
+
+  mov  word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_parsed_parameter
+
+
+got_page_frame:
+
+  add   al, 0C0h
   mov   byte ptr ds:[_RESIDENT_VARIABLE_page_frame_segment+2], al ; just write high byte.
   mov   byte ptr ds:[chipset_page_lookup+0], al
   mov   byte ptr ds:[mappable_phys_page_struct_page_frame+1], al
@@ -95,7 +159,6 @@ find_neat_page_offset:
   mov   ah, al
   xor   al, al
   
-  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_chipset_parameter
   stc   ; hex print
   mov   di, OFFSET string_good_page_frame_param_EDIT_OFFSET
   mov   dx, OFFSET string_good_page_frame_param
@@ -118,17 +181,30 @@ COMMENT @
 @
 
 
+  mov  ax, NEAT_CHIPSET_MEMORY_SIZE_BANK01_REGISTER ; zero ah
+  out  NEAT_CHIPSET_CONFIG_REGISTER_SELECT, al
+  in   al, NEAT_CHIPSET_CONFIG_REGISTER_READWRITE
+  and  al, 0E0h  ; bits 5-7
+  mov  ah, al
 
-  mov  ax, NEAT_PAGE_OFFSET_AMT ; todo: get total system memory and subtract ems size.
+  mov  al, NEAT_CHIPSET_MEMORY_SIZE_BANK23_REGISTER
+  out  NEAT_CHIPSET_CONFIG_REGISTER_SELECT, al
+  in   al, NEAT_CHIPSET_CONFIG_REGISTER_READWRITE
+  and  al, 0E0h  ; bits 5-7
 
-  mov  word ptr ds:[SELFMODIFY_NEAT_add_page_offset+1], ax
-  mov  word ptr ds:[SELFMODIFY_NEAT_sub_page_offset+1], ax
+  SHIFT_MACRO shr ax 5
+  sub  ax, 0303h
+  xor  bx, bx
+  mov  bl, al
+  mov  al, byte ptr ds:[bx]
+  mov  bl, ah
+  xor  ah, ah
+  mov  bl, byte ptr ds:[bx]
+  inc  ax
+  inc  bx
+  add  bx, ax
+  ; now bx has system memory in pages.
 
-
-
-
-; todo determine size, offset, etc
-; todo parse params.
 
   mov   ax, NEAT_CHIPSET_EMS_SIZE_REGISTER ; zero ah
   out  NEAT_CHIPSET_CONFIG_REGISTER_SELECT, al
@@ -139,6 +215,15 @@ COMMENT @
 
   shl   ax, 1
 
+  sub   bx, ax 
+
+  ; todo use value from chipset parameter? seems buggy
+  mov  bx, NEAT_PAGE_OFFSET_AMT 
+
+  mov  word ptr ds:[SELFMODIFY_NEAT_add_page_offset+1], bx
+  mov  word ptr ds:[SELFMODIFY_NEAT_sub_page_offset+1], bx
+
+  
   mov   word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count], ax
   mov   word ptr ds:[_RESIDENT_VARIABLE_total_EMS_page_count+1], ax
 
@@ -149,6 +234,14 @@ COMMENT @
   mov   cx, 3
   call  print_driver_param
 
+  xchg  ax, bx
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_chipset_parameter
+  clc   ; hex print
+  mov   di, OFFSET STRING_good_page_offset_param_EDIT_OFFSET
+  mov   dx, OFFSET STRING_good_page_offset_param
+  mov   cx, 3
+  call  print_driver_param
 
-  mov   byte ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_1+1], PAGE_FRAME_COUNT ; todo... should we decrease based on stuff like ROMS etc?
+
+  mov   byte ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_1+1], PAGE_FRAME_COUNT
 
