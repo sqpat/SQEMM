@@ -7,6 +7,59 @@
   out  NEAT_CHIPSET_CONFIG_REGISTER_READWRITE, al
 
 
+  mov   ah, "P"  ; port
+  call  parse_driver_params
+  jnc   get_port_from_chipset
+
+
+  mov   ax, word ptr es:[di]
+  cmp   al, "2" ; first char should be "2"
+  jne   bad_port_param
+  cmp   byte ptr es:[di+2], "8"
+  jne   bad_port_param
+  mov   al, ah
+  sub   al, '0'
+  je    set_port
+  cmp   al, 9
+  jb    set_port
+  cmp   al, 8
+  je    set_port
+  sub   al, 'A' - '0'
+  jb    bad_port_param
+  cmp   al, 0Fh
+  jbe   set_port
+
+
+bad_port_param:
+  mov  DX, OFFSET STRING_bad_port_param
+  jmp  DRIVER_NOT_INSTALLED
+bad_port_param_chipset:
+  ; bad page frame param! error?
+  mov  DX, OFFSET STRING_bad_port_chipset
+  jmp  DRIVER_NOT_INSTALLED
+
+set_port:
+  ; al is 0-F
+  cbw
+  xchg  ax, bx
+  cmp  byte ptr cs:[_NEAT_PORT_LOOKUP + bx], bh ; check for zero
+  je   bad_port_param_chipset
+  
+  mov  al, NEAT_CHIPSET_EMS_CONFIG_REGISTER
+  out  NEAT_CHIPSET_CONFIG_REGISTER_SELECT, al
+  in   al, NEAT_CHIPSET_CONFIG_REGISTER_READWRITE
+  and  al, 0F0h  ; zero ah... keep just 4 low bits
+  or   al, bl
+  out  NEAT_CHIPSET_CONFIG_REGISTER_READWRITE, al  
+  
+  mov  al, byte ptr cs:[_NEAT_PORT_LOOKUP + bx] ; get this now
+
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_parsed_parameter
+  jmp   got_port
+
+get_port_from_chipset:
+
+
 ; fetch port from chipset
 
   mov  al, NEAT_CHIPSET_EMS_CONFIG_REGISTER
@@ -17,8 +70,10 @@
   mov  al, byte ptr cs:[_NEAT_PORT_LOOKUP + bx]
   test al, al
   jz   bad_port_param_chipset
-  mov   ah, 2
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_chipset_parameter
 
+got_port:
+  mov   ah, 2
 ; high byte always 2. dont need to set...
   mov   byte ptr ds:[SELFMODIFY_NEAT_set_page_select_register_1+2], al
   mov   byte ptr ds:[SELFMODIFY_NEAT_set_page_select_register_2+2], al
@@ -26,7 +81,6 @@
   mov   byte ptr ds:[SELFMODIFY_NEAT_set_page_select_register_4+1], al
   ; port set.
 
-  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_chipset_parameter
   mov   di, OFFSET STRING_good_port_param_EDIT_OFFSET
   mov   dx, OFFSET STRING_good_port_param
   stc   ; hex print
@@ -59,14 +113,7 @@ bad_page_frame_param:
   ; bad page frame param! error?
   mov  DX, OFFSET string_bad_page_frame_param
   jmp  DRIVER_NOT_INSTALLED
-bad_port_param_chipset:
-  ; bad page frame param! error?
-  mov  DX, OFFSET STRING_bad_port_chipset
-  jmp  DRIVER_NOT_INSTALLED
-bad_port_param:
-  ; bad page frame param! error?
-  mov  DX, OFFSET string_bad_port_param
-  jmp  DRIVER_NOT_INSTALLED
+
 
 
 

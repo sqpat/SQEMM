@@ -78,7 +78,7 @@ jmp_to_have_port_and_page_frame:
 set_port:
   cbw
   add   ax, 0260h
-  mov   word ptr ds:[found_page_frame], ax  ; store for now
+  mov   word ptr ds:[found_port], ax  ; store for now
 
 
 
