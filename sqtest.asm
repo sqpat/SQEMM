@@ -1990,6 +1990,8 @@ TEST_EMS_REGISTER_CALL_ALL 0010h
 ; print results
 ; print results
 
+force_exit_jump_in:
+
     std
 
     mov  di, OFFSET string_ran_tests_decimal_1+3
@@ -2943,7 +2945,28 @@ PRINT_STRING string_paused
 pop  dx
 xor  ax, ax
 int  016h
+cmp  ax, 011Bh
+je   do_exit
 ret
+
+do_exit:
+PRINT_STRING force_exit
+
+mov   cx, 6
+mov   si, OFFSET VARIABLE_saved_handle_1
+
+dealloc_next_handle:
+    lodsw
+    xchg  ax, dx
+    mov   ax, 04800h
+    int   067h
+    mov   ax, 04500h
+    int   067h
+    loop  dealloc_next_handle
+
+jmp  force_exit_jump_in
+
+
 
 fill_in_page_with_ax:
 
@@ -3987,7 +4010,11 @@ db 0Dh, 0Ah, "NO CONVENTIONAL MEMORY PAGES DETECTED?  skipping.... $"
 
 string_paused:
 db 0Dh, 0Ah
-db "Currently paused - press a key to continue. $"
+db "Currently paused - press a key to continue, or ESC to stop tests. $"
+
+force_exit:
+db 0Dh, 0Ah
+db "FORCE EXITING - attempting to unload handles. $"
 
 scan_test_error:
 db 0Dh, 0Ah
