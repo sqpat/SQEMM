@@ -3500,9 +3500,9 @@ int        021h
 here:
 public  here
 
-mov   ah, "x" ; force failure
+mov   ah, "X" ; force failure
 call  parse_driver_params
-jnc   force_driver_failure
+jc    force_driver_failure
 
 
 
