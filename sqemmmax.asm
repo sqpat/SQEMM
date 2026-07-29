@@ -3123,7 +3123,9 @@ STRING_driver_memory_EDIT_OFFSET_TOTAL db "   0 KB$"
 
 
 STRING_testing_memory    db 0Dh, 0Ah, 'Testing Memory Page:    $'
-STRING_testing_memory_finished: db 0Dh, 0Ah, '$'
+STRING_testing_memory_finished: db "OK! ", 0Dh, 0Ah, '$'
+STRING_bad_frame      db 0Dh, 0Ah, "Page Frame "
+STRING_bad_frame_EDIT db "D000 failed pagination test!$"
 STRING_bad_memory    db 0Dh, 0Ah, 'Memory test failed!$'
 STRING_driver_exists db 0Dh, 0Ah, 'EMS Driver already loaded (chaining not supported).',0Dh, 0Ah, '$'
 STRING_driver_successfully_installed db 0Dh, 0Ah, 'SQEMM successfully initialized.', 0Ah, 0Dh, '$'
@@ -3276,8 +3278,6 @@ ENDIF
 
 ;  memory tests
 
-here:
-public here
 
 mov   dx, OFFSET STRING_testing_memory
 mov   ah, 9  ; PRINT_STRING
@@ -3311,25 +3311,89 @@ test_if_next_page_ok:
    inc   bx
    loop  test_if_next_page_ok
 
-jmp   memory_good
+memory_good:
+
+
+mov   ah, 03  ; INT 10,3 - Read Cursor Position and Size
+xor   bx, bx  ; video page i guess
+int   010h   
+
+inc   dx
+inc   dx
+
+mov   ah, 02  ; INT 10,2 - Set Cursor Position
+xor   bx, bx  ; video page i guess
+int   010h
+
+
+; now lets test all four pages...
+
+mov   cx, 4
+
+test_if_next_page_frame_ok:
+
+   
+   mov   ax, 4
+   sub   ax, cx  ; physical page
+   cwd  ; logical page 0
+   call  UTIL_set_page
+
+   mov   al, byte ptr ds:[di] ; store
+   mov   ah, byte ptr ds:[di] ; store
+   cmp   al, ah
+   jne   bad_frame_error
+
+   xor   al, 0FFh
+   mov   byte ptr ds:[di], al
+   cmp   byte ptr ds:[di], al
+   jne   bad_frame_error ; not writable?
+   mov   byte ptr ds:[di], ah  ; restore
+
+   mov   ax, 4
+   sub   ax, cx  ; physical page
+   cwd
+   dec   dx  ; unmap
+   call  UTIL_set_page
+
+
+   mov   ax, ds
+   add   ax, 0400h
+   mov   ds, ax
+
+   loop  test_if_next_page_frame_ok
+
+jmp   page_frame_good
+
 bad_memory_error:
    push  cs
    pop   ds
    mov   dx, OFFSET STRING_bad_memory
    jmp   DRIVER_NOT_INSTALLED
-memory_good:
+
+bad_frame_error:
+   mov   ax, ds
+   push  cs
+   pop   ds
+   mov   al, ah
+   and   ah, 0Fh
+   SHIFT_MACRO shr al 4
+   add   ax, (("A" - 0Ah) SHL 8) + "A" - 0Ah
+
+   mov   word ptr ds:[STRING_bad_frame_EDIT], ax
+   mov   dx, OFFSET STRING_bad_frame
+   jmp   DRIVER_NOT_INSTALLED
+
+
+
+page_frame_good:
+
 push  cs
 pop   ds
-
 mov   dx, OFFSET STRING_testing_memory_finished
 mov   ah, 9  ; PRINT_STRING
 int   021h
 
 
-;unmap
-mov   ax, -1
-xor   dx, dx
-call  UTIL_set_page
 
 
 mov   ax, PAGE_FRAME_COUNT
