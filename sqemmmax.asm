@@ -3124,6 +3124,7 @@ STRING_driver_memory_EDIT_OFFSET_TOTAL db "   0 KB$"
 
 STRING_testing_memory    db 0Dh, 0Ah, 'Testing Memory Page:    $'
 STRING_testing_memory_finished: db "OK! ", 0Dh, 0Ah, '$'
+STRING_forced_failure     db 0Dh, 0Ah, 'Driver forced to failure with -X parameter.$'
 STRING_bad_frame      db 0Dh, 0Ah, "Page Frame "
 STRING_bad_frame_EDIT db "D000 failed pagination test!$"
 STRING_bad_memory    db 0Dh, 0Ah, 'Memory test failed!$'
@@ -3496,6 +3497,13 @@ mov        dx, OFFSET STRING_resident_driver_size
 mov        ah, 9  ; PRINT_STRING
 int        021h
 
+here:
+public  here
+
+mov   ah, "x" ; force failure
+call  parse_driver_params
+jnc   force_driver_failure
+
 
 
 
@@ -3539,6 +3547,10 @@ mov   word ptr ds:[bx + 0eh], si  ; end of driver
 mov   word ptr ds:[bx + 010h], cs
 ;mov   word ptr ds:[bx + 017h], 00
 ret
+
+force_driver_failure:
+mov  dx, OFFSET string_forced_failure
+jmp  DRIVER_NOT_INSTALLED
 
 print_kb_ems_fourchar:
 
