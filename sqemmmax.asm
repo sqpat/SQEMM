@@ -3403,6 +3403,32 @@ int   021h
 
 skip_tests:
 
+
+mov   ah, "r" ; skip umb resident
+call  parse_driver_params
+
+mov   si, 0
+jc    page_frame_on
+
+dec   si
+
+page_frame_on:
+
+mov   cx, 4
+
+loop_default_page_frame:
+   mov  dx, si
+   mov  ax, 4
+   sub  ax, cx
+   call  UTIL_set_page
+
+   test si, si
+   js   skip_logical_increase
+   inc  si
+   skip_logical_increase:
+
+   loop loop_default_page_frame
+
 mov   ax, PAGE_FRAME_COUNT
 mov   byte ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_1+1], al ; todo... should we increase based on presence of other pages versus ROMS etc?
 
