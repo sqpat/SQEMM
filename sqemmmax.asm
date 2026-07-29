@@ -3122,9 +3122,12 @@ STRING_driver_memory_EDIT_EMS_TOTAL    db "   0 KB   Starting Position: "
 STRING_driver_memory_EDIT_OFFSET_TOTAL db "   0 KB$"
 
 
+STRING_testing_memory    db 0Dh, 0Ah, 'Testing Memory Page:    $'
+STRING_testing_memory_finished: db 0Dh, 0Ah, '$'
+STRING_bad_memory    db 0Dh, 0Ah, 'Memory test failed!$'
 STRING_driver_exists db 0Dh, 0Ah, 'EMS Driver already loaded (chaining not supported).',0Dh, 0Ah, '$'
 STRING_driver_successfully_installed db 0Dh, 0Ah, 'SQEMM successfully initialized.', 0Ah, 0Dh, '$'
-STRING_driver_failed_installing db 0Dh, 0Ah, ' Driver not installed.', 0Ah,  '$'
+STRING_driver_failed_installing db 0Dh, 0Ah, ' Driver not initialized.', 0Ah,  '$'
 STRING_bad_page_frame_chipset db 0Dh, 0Ah,  'Bad Page Frame defined in Chipset Setting! SQEMM was not loaded.', 0Dh, 0Ah,'$'
 STRING_bad_port_chipset db 0Dh, 0Ah,  'Bad Port in Chipset Setting! SQEMM was not loaded.', 0Dh, 0Ah,'$'
 STRING_bad_page_frame_param db 0Dh, 0Ah,  'Bad Page Frame Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
@@ -3187,37 +3190,41 @@ _INIT_PARAM_last_parsed_param:
 
 DRIVER_INIT:
 public DRIVER_INIT
-push       cs
-pop        ds
+push  cs
+pop   ds
 ; selfmodify to disable double init.
-mov        byte ptr ds:[SELFMODIFY_prevent_double_init+1], OFFSET RETURN_UNRECOGNIZED_COMMAND - SELFMODIFY_prevent_double_init_AFTER     ; overwrite pointer to this init function with pointer to "failed to install" (03fa5h)
-mov        dx, OFFSET STRING_main_header
+mov   byte ptr ds:[SELFMODIFY_prevent_double_init+1], OFFSET RETURN_UNRECOGNIZED_COMMAND - SELFMODIFY_prevent_double_init_AFTER     ; overwrite pointer to this init function with pointer to "failed to install" (03fa5h)
+mov   dx, OFFSET STRING_main_header
 
-mov        ah, 9  ; PRINT_STRING
-int        021h
+mov   ah, 9  ; PRINT_STRING
+int   021h
 
 ; get interrupt vector. check it's header/string
-mov        ax, 03567h
-int        021h
-mov        di, 0Ah
-mov        si, di
-mov        cx, 8
-rep        cmpsb
+mov   ax, 03567h
+int   021h
+mov   di, 0Ah
+mov   si, di
+mov   cx, 8
+rep   cmpsb
  
-jne        EMS_INTERRUPT_FREE
+jne   EMS_INTERRUPT_FREE
 ; an ems driver is already installed
 
-mov        dx, OFFSET STRING_driver_exists
+mov   dx, OFFSET STRING_driver_exists
 
 DRIVER_NOT_INSTALLED:
-mov        ah, 9  ; PRINT_STRING
-int        021h
+mov   ah, 9  ; PRINT_STRING
+int   021h
 
-lds        bx, [_RESIDENT_VARIABLE_request_header_pointer]
-mov        word ptr ds:[bx + 3], 0810ch
-mov        word ptr ds:[bx + 0eh], OFFSET end_of_driver_label
-mov        word ptr ds:[bx + 010h], cs
-;mov        word ptr ds:[bx + 017h], 00
+mov   dx, OFFSET STRING_driver_failed_installing
+mov   ah, 9  ; PRINT_STRING
+int   021h
+
+lds   bx, [_RESIDENT_VARIABLE_request_header_pointer]
+mov   word ptr ds:[bx + 3], 0810ch
+mov   word ptr ds:[bx + 0eh], OFFSET end_of_driver_label
+mov   word ptr ds:[bx + 010h], cs
+;mov   word ptr ds:[bx + 017h], 00
 ret
 
 EMS_INTERRUPT_FREE:
@@ -3266,42 +3273,101 @@ ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
    INCLUDE max/init\standard.asm
 ENDIF
 
-mov        ax, PAGE_FRAME_COUNT
-mov        byte ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_1+1], al ; todo... should we increase based on presence of other pages versus ROMS etc?
+
+;  memory tests
+
+here:
+public here
+
+mov   dx, OFFSET STRING_testing_memory
+mov   ah, 9  ; PRINT_STRING
+int   021h
+
+mov   cx, word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count]
+mov   ds, word ptr ds:[_RESIDENT_VARIABLE_page_frame_segment+1]
+
+xor   bx, bx
+; simple test of each page in frame 0
+test_if_next_page_ok:
+
+   mov   ax, bx
+   call  print_ax_at_cursor
+
+   mov   dx, bx ; logical
+   xor   ax, ax ; page 0
+   call  UTIL_set_page
+
+   mov   al, byte ptr ds:[di] ; store
+   mov   ah, byte ptr ds:[di] ; store
+   cmp   al, ah
+   jne   bad_memory_error
+
+   xor   al, 0FFh
+   mov   byte ptr ds:[di], al
+   cmp   byte ptr ds:[di], al
+   jne   bad_memory_error ; not writable?
+   mov   byte ptr ds:[di], ah  ; restore
+
+   inc   bx
+   loop  test_if_next_page_ok
+
+jmp   memory_good
+bad_memory_error:
+   push  cs
+   pop   ds
+   mov   dx, OFFSET STRING_bad_memory
+   jmp   DRIVER_NOT_INSTALLED
+memory_good:
+push  cs
+pop   ds
+
+mov   dx, OFFSET STRING_testing_memory_finished
+mov   ah, 9  ; PRINT_STRING
+int   021h
 
 
-mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_3+1], ax
-mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_4+1], ax
-shl        ax, 1
-mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_2+1], ax
-shl        ax, 1
-mov        word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_5+2], ax
+;unmap
+mov   ax, -1
+xor   dx, dx
+call  UTIL_set_page
 
-mov        si, word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count]
-shl        si, 1
-add        si, OFFSET  _RESIDENT_VARIABLE_page_list
-mov        word ptr ds:[si-2], -1    ; last offset.
+
+mov   ax, PAGE_FRAME_COUNT
+mov   byte ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_1+1], al ; todo... should we increase based on presence of other pages versus ROMS etc?
+
+
+mov   word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_3+1], ax
+mov   word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_4+1], ax
+shl   ax, 1
+mov   word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_2+1], ax
+shl   ax, 1
+mov   word ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_5+2], ax
+
+mov    si, word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count]
+shl    si, 1
+add    si, OFFSET  _RESIDENT_VARIABLE_page_list
+mov    word ptr ds:[si-2], -1    ; last offset.
 
 ; bx is end of driver.
 
 
 ; set page table to page frame.
 
-mov        ax, word ptr ds:[_RESIDENT_VARIABLE_page_frame_segment+1]
-mov        word ptr ds:[mappable_phys_page_struct_page_frame+0], ax
-add        ax, 0400h
-mov        word ptr ds:[mappable_phys_page_struct_page_frame+4], ax
-add        ax, 0400h
-mov        word ptr ds:[mappable_phys_page_struct_page_frame+8], ax
-add        ax, 0400h
-mov        word ptr ds:[mappable_phys_page_struct_page_frame+12], ax
+mov   ax, word ptr ds:[_RESIDENT_VARIABLE_page_frame_segment+1]
+mov   word ptr ds:[mappable_phys_page_struct_page_frame+0], ax
+add   ax, 0400h
+mov   word ptr ds:[mappable_phys_page_struct_page_frame+4], ax
+add   ax, 0400h
+mov   word ptr ds:[mappable_phys_page_struct_page_frame+8], ax
+add   ax, 0400h
+mov   word ptr ds:[mappable_phys_page_struct_page_frame+12], ax
 
-push       cs
-pop        es
+push  cs
+pop   es
 std
-mov        ax, si   ; end of driver 
-mov        bx, 10
-mov        di, OFFSET STRING_resident_driver_size_EDIT_OFFSET + 3
+mov   ax, si   ; end of driver 
+mov   bx, 10
+mov   di, OFFSET STRING_resident_driver_size_EDIT_OFFSET + 3
 
 print_next_size_digit:
   cwd
@@ -3623,6 +3689,61 @@ done_editing_string:
 
   ret
 
+
+print_ax_at_cursor:
+   push  bx
+   push  cx
+   push  dx
+   push  si
+   
+   push  ax
+   
+   mov   ah, 03  ; INT 10,3 - Read Cursor Position and Size
+   xor   bx, bx  ; video page i guess
+   int   010h   
+
+
+   mov   si, 10
+   pop   ax
+   push  dx    ; match A
+   
+   do_next_digit_print:
+      push  dx  ; match B
+      xor   dx, dx
+      div   si
+      xchg  ax, dx  ; get   remainder in ax
+      
+      xor   bx, bx  ; video page i guess
+      add   al, '0' ; ASCIIfy
+      mov   cx, 1
+      mov   ah, 0Ah; 
+      int   010h  ; INT 10,A - Write Character Only at Current Cursor Position
+
+      xchg  ax, dx ; ax gets div result again
+
+      pop   dx  ; match B cursor
+      dec   dx  ; minus one to position
+      push  ax  ; match C
+      mov   ah, 02  ; INT 10,2 - Set Cursor Position
+      xor   bx, bx  ; video page i guess
+      int   010h
+      pop   ax  ; match C restore div.
+
+      test  ax, ax
+      jnz   do_next_digit_print
+
+   
+   pop   dx  ; match A restore col position
+   mov   ah, 02  ; INT 10,2 - Set Cursor Position
+   xor   bx, bx  ; video page i guess
+   int   010h
+
+
+   pop   si
+   pop   dx
+   pop   cx
+   pop   bx
+   ret
 
 
 ;;; END GENERIC INIT CODE. This section is not resident after initialization
