@@ -3117,6 +3117,11 @@ STRING_resident_driver_size                 db            "EMS Driver Resident M
 STRING_resident_driver_size_EDIT_OFFSET     db            "      Bytes, Entrypoint:  "
 STRING_resident_driver_location_EDIT_OFFSET db            "0000:0000",'$'
 
+STRING_driver_memory db 0Dh, 0Ah, "EMS Memory: "
+STRING_driver_memory_EDIT_EMS_TOTAL    db "   0 KB   Starting Position: "
+STRING_driver_memory_EDIT_OFFSET_TOTAL db "   0 KB$"
+
+
 STRING_driver_exists db 0Dh, 0Ah, 'EMS Driver already loaded (chaining not supported).',0Dh, 0Ah, '$'
 STRING_driver_successfully_installed db 0Dh, 0Ah, 'SQEMM successfully initialized.', 0Ah, 0Dh, '$'
 STRING_driver_failed_installing db 0Dh, 0Ah, ' Driver not installed.', 0Ah,  '$'
@@ -3173,6 +3178,8 @@ ELSEIF COMPILE_CHIPSET EQ STANDARD_EMS_BOARD
   STRING_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Standard EMS Boards', 0Dh, 0Ah,'$'
 ENDIF
 
+_INIT_PARAM_OFFSET:
+dw 0
 _INIT_PARAM_command_line_length:
 dw 0
 _INIT_PARAM_last_parsed_param:
@@ -3337,22 +3344,103 @@ int        021h
 
 DRIVER_INSTALLED:
 
+mov   di, OFFSET STRING_driver_memory_EDIT_EMS_TOTAL
+mov   ax, word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count]
+call  print_kb_ems_fourchar
+
+mov   di, OFFSET STRING_driver_memory_EDIT_OFFSET_TOTAL
+mov   ax, word ptr ds:[_INIT_PARAM_OFFSET]
+call  print_kb_ems_fourchar
 
 
-mov        dx, OFFSET STRING_driver_successfully_installed
-mov        ah, 9  ; PRINT_STRING
-int        021h
+mov   dx, OFFSET STRING_driver_memory
+mov   ah, 9  ; PRINT_STRING
+int   021h
 
-lds        bx, dword ptr ds:[_RESIDENT_VARIABLE_request_header_pointer]
-mov        word ptr ds:[bx + 3], 0100h
+
+
+
+mov   dx, OFFSET STRING_driver_successfully_installed
+mov   ah, 9  ; PRINT_STRING
+int   021h
+
+lds   bx, dword ptr ds:[_RESIDENT_VARIABLE_request_header_pointer]
+mov   word ptr ds:[bx + 3], 0100h
 
 ; 0Eh: MS-DOS 5 set pointer to end of memory used by driver
 ; 10h: the segment for above
-mov        word ptr ds:[bx + 0eh], si  ; end of driver
-mov        word ptr ds:[bx + 010h], cs
-;mov        word ptr ds:[bx + 017h], 00
+mov   word ptr ds:[bx + 0eh], si  ; end of driver
+mov   word ptr ds:[bx + 010h], cs
+;mov   word ptr ds:[bx + 017h], 00
 ret
 
+print_kb_ems_fourchar:
+
+xor   dx, dx
+mov   cx, 6
+loop_shift_6:
+   shr   ax, 1
+   rcr   dl, 1
+   loop  loop_shift_6
+; ax:dl megabytes.
+SHIFT_MACRO shr   dl 2  
+
+test  ax, ax 
+jz    write_ems_kb
+
+write_ems_mb:
+   mov   word ptr ds:[di+5], "BM"
+   cmp   al, 10
+   jb    one_character_ems_mb
+   mov   dh, 10
+   div   dh
+   xor   dh, dh
+one_character_ems_mb:
+   xchg  al, ah
+   add   ax, ('0' SHL 8) + '0'
+   cmp   al, '0'
+   jne   do_print_ems_mb
+   mov   al, ' '
+   do_print_ems_mb:
+   stosw
+   mov   al, '.'
+   stosb
+   xchg  ax, dx
+   mov   dl, 10
+   mov   dh, 64
+   mul   dl
+   div   dh
+   add   al, '0'
+   stosb
+   ret
+
+
+write_ems_kb:
+   xchg ax, dx
+
+write_ems_kb_call:
+   ;mov   word ptr ds:[di+5], "BK"  ; there by default.
+   test ax, ax
+   jz   just_write_zero
+   add  di, 4
+   std
+   mov  cx, 4
+   mov  bx, 10
+   mov  dx, 16
+   mul  dx
+   loop_print_next_ems_kb:
+      xor  dx, dx
+      div       bx
+      xchg      ax, dx  ; get   remainder in ax
+      add       al, '0' ; ASCIIfy
+      stosb             ; print remainder from ax
+      xchg      ax, dx  ; get   quotient back in ax
+      test      ax, ax
+      jnz       loop_print_next_ems_kb
+
+   cld
+   just_write_zero:
+   ret
 
 
 ; idea was to capitalize, find end of command line

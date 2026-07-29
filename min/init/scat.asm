@@ -186,6 +186,7 @@ SELFMODIFY_SCAT_set_page_set_register_1:
   jmp  DRIVER_NOT_INSTALLED
 
   done_with_page_offset_bounds_check:
+  mov  word ptr ds:[_INIT_PARAM_OFFSET], ax
 
   push  ax
 

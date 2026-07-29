@@ -316,6 +316,7 @@ got_offset:
 
   mov  word ptr ds:[SELFMODIFY_NEAT_add_page_offset+1], ax
   mov  word ptr ds:[SELFMODIFY_NEAT_sub_page_offset+1], ax
+  mov  word ptr ds:[_INIT_PARAM_OFFSET], ax
 
 
   clc   ; int print

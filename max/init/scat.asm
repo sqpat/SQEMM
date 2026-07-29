@@ -213,6 +213,8 @@ SELFMODIFY_SCAT_set_page_set_register_1:
   ; add this back for conventional region
   add   word ptr ds:[_RESIDENT_VARIABLE_total_EMS_page_count+1], 24
 
+  mov  word ptr ds:[_INIT_PARAM_OFFSET], ax
+
   push  ax
 
   mov   di, OFFSET string_good_page_offset_param_EDIT_OFFSET
@@ -220,6 +222,7 @@ SELFMODIFY_SCAT_set_page_set_register_1:
   call  print_driver_param_4_char_int
 
   pop   ax
+
 
   or    ax, SCAT_PAGE_ENABLE_BIT
   
