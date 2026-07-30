@@ -244,20 +244,22 @@ enablebackfillloop:
   sub   ax, 3       ; inc included..
   loop enablebackfillloop
 
-
+  xor   bx, bx
+  mov   bl, byte ptr ds:[_RESIDENT_VARIABLE_page_frame_segment+2] ; get page frame.
+  sub   bl, 0C0h
+  mov   dx, bx
+  shr   bx, 1  ; word lookup.
+  mov   cx, bx
+  mov   bx, word ptr ds:[bx + _SCAMP_EMS_INIT_REGISTERS]
 
   mov   al, 0Bh
   out   SCAMP_CHIPSET_INDEX_REGISTER, al
-  mul   al  ; delay
-  ;mov   al, 0A0h   ; turn on ems 
-  mov   al, 0E0h   ; turn on ems, backfill
+  mov   al, bh   ; turn on ems, backfill, possibly enable some registers.
   out   SCAMP_CHIPSET_READWRITE_REGISTER, al
   
+
   mov   al, 0Ch
   out   SCAMP_CHIPSET_INDEX_REGISTER, al
-  mul   al  ; delay
-  mov   al, 0F0h  ; turn on d000 as page frame
+  xchg  ax, bx ; possibly enable some pages
   out   SCAMP_CHIPSET_READWRITE_REGISTER, al
-
-
 

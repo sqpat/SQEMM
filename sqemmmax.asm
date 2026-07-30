@@ -3521,13 +3521,6 @@ DRIVER_INSTALLED:
 
 mov   di, OFFSET STRING_driver_memory_EDIT_EMS_TOTAL
 mov   ax, word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count]
-push  es
-push  di
-mov   di, 08000h
-mov   es, di
-mov  es:[0], ax
-pop   di
-pop   es
 call  print_kb_ems_fourchar
 
 mov   di, OFFSET STRING_driver_memory_EDIT_OFFSET_TOTAL
@@ -4106,6 +4099,17 @@ _SCAMP_DRAM_BANK_LOOKUP:
    db  (12288 SHR 6) - 1
    db  00
 
+_SCAMP_EMS_INIT_REGISTERS:
+;     0xC  0XB
+  db 00Fh, 0E0h   ; C000
+  db 01Eh, 0E0h   ; C400
+  db 03Ch, 0E0h   ; C800
+  db 078h, 0E0h   ; CC00
+  db 0F0h, 0E0h   ; D000
+  db 0E0h, 0E1h   ; D400
+  db 0C0h, 0E3h   ; D800
+  db 080h, 0E7h   ; DC00
+  db 000h, 0EFh   ; E000
 
 
 
