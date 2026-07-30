@@ -3133,6 +3133,7 @@ STRING_driver_successfully_installed db 0Dh, 0Ah, 'SQEMM successfully initialize
 STRING_driver_failed_installing db 0Dh, 0Ah, ' Driver not initialized.', 0Ah,  '$'
 STRING_bad_page_frame_chipset db 0Dh, 0Ah,  'Bad Page Frame defined in Chipset Setting! SQEMM was not loaded.', 0Dh, 0Ah,'$'
 STRING_bad_port_chipset db 0Dh, 0Ah,  'Bad Port in Chipset Setting! SQEMM was not loaded.', 0Dh, 0Ah,'$'
+STRING_bad_memory_chipset    db 0Dh, 0Ah, 'Could not determine system nemory from chipset registers!$'
 STRING_bad_page_frame_param db 0Dh, 0Ah,  'Bad Page Frame Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
 STRING_bad_page_count_param db 0Dh, 0Ah,  'Bad Page Count Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
 STRING_bad_page_offset_param db 0Dh, 0Ah, 'Bad Page Offset Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
@@ -3520,6 +3521,13 @@ DRIVER_INSTALLED:
 
 mov   di, OFFSET STRING_driver_memory_EDIT_EMS_TOTAL
 mov   ax, word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count]
+push  es
+push  di
+mov   di, 08000h
+mov   es, di
+mov  es:[0], ax
+pop   di
+pop   es
 call  print_kb_ems_fourchar
 
 mov   di, OFFSET STRING_driver_memory_EDIT_OFFSET_TOTAL
@@ -4052,6 +4060,52 @@ _NEAT_DRAM_BANK_LOOKUP:
   ; shift right 5 and subtract 3 to get 0 1 2 3 4 from 60 80 a0 c0 e0
   
 db  40-1, 32-1, 64-1, 128-1, 256-1 ; add one back later. fit in less space and less register juggle.
+
+
+ENDIF
+
+
+
+IF COMPILE_CHIPSET EQ SCAMP_CHIPSET
+
+
+_SCAMP_DRAM_BANK_LOOKUP:
+
+
+  ; 0000  256Kx1 = 512KB
+  ; 0001  256Kx2 = 1.0MB
+  ; 0010  256Kx3 = 1.5MB
+  ; 0011  256Kx4 = 2.0MB
+  ; 0100    1Mx1 = 2.0MB
+  ; 0101    1Mx2 = 4.0MB
+  ; 0110    1Mx3 = 6.0MB
+  ; 0111    1Mx4 = 8.0MB
+  ; 1000    4Mx1 = 8.0MB
+  ; 1001    4Mx2 = 16.0MB
+
+  ; 1010  ???? ; not sure. some remap thing
+  ; 1011  ???? ; not sure. some remap thing
+  ; 1100  256Kx2, 1Mx1 = 3.0MB
+  ; 1101  256Kx2, 1Mx2 = 5.0MB
+  ; 1110  1Mx3,   4Mx1 = 12.0MB
+  ; 1111 ???? illegal?
+
+   db  ( 512  SHR 6) - 1
+   db  (1024  SHR 6) - 1
+   db  (1536  SHR 6) - 1
+   db  (2048  SHR 6) - 1
+   db  (2048  SHR 6) - 1
+   db  (4096  SHR 6) - 1
+   db  (6144  SHR 6) - 1
+   db  (8192  SHR 6) - 1
+   db  (16384 SHR 6) - 1  ; 256 -1
+   db  00 
+   db  00 
+   db  (3072  SHR 6) - 1
+   db  (5120  SHR 6) - 1
+   db  (12288 SHR 6) - 1
+   db  00
+
 
 
 

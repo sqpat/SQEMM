@@ -13,9 +13,10 @@
 SELFMODIFY_SCAMP_add_page_frame_offset_2:  
   add   al, 4 ; need to offset by proper chipset page frame to hardware amount
   out   SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
-  cmp   bx, 0FFFFh   ; -1 check
-  je    handle_default_page_44h_frame
-  lea   ax, [bx + SCAMP_PAGE_OFFSET_AMT]   ; offset by default starting page
+  inc   bx   ; -1 check
+  jz    handle_default_page_44h_frame
+SELFMODIFY_SCAMP_add_page_offset_1:  
+  lea   ax, [bx + 01000h - 1]   ; offset by default starting page
   out   SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
 
   pop        ax
@@ -30,10 +31,10 @@ SELFMODIFY_SCAMP_add_page_frame_offset_2:
 
   ; write ems port... select chipset register
   out   SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
-  cmp   bx, 0FFFFh   ; -1 check
-  je    handle_default_page_44h
-
-  lea   ax, [bx + SCAMP_PAGE_OFFSET_AMT]   ; offset by default starting page
+  inc   bx   ; -1 check
+  jz    handle_default_page_44h
+SELFMODIFY_SCAMP_add_page_offset_2:
+  lea   ax, [bx + 01000h - 1]   ; offset by default starting page
   out   SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
 
 
@@ -47,12 +48,13 @@ SELFMODIFY_SCAMP_add_page_frame_offset_2:
   iret
   
   handle_default_page_44h_frame:
-  add   ax, SCAMP_PAGE_FRAME_UNMAP_OFFSET_AMT - 4 ; we add 4 right after this..
+  SELFMODIFY_SCAMP_add_page_offset_minus4_1:
+  add   ax, 01000h - SCAMP_CONVENTIONAL_UNMAP_OFFSET_AMT ; we add 4 right after this..
 
   handle_default_page_44h:
   ; mapping to page -1
   ; add four to get the default page value for the page 
-  add   ax, 4
+  add   ax, SCAMP_CONVENTIONAL_UNMAP_OFFSET_AMT
   out   SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
 
   pop        ax

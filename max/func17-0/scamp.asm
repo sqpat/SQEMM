@@ -40,7 +40,7 @@ func_1700_loop_next_page:
 
   ; ax is plus one
 
-  mov   bx, bp  ; fir st page
+  mov   bx, bp  ; first page
   dec   ax
 
   jz  func_1700_done_looping
@@ -71,13 +71,14 @@ func_1700_skip_logical_check:
   jb    func_1700_0_pageframe_register
   ; normalize to register 0x4000 hw value
   add   al, (SCAMP_CHIPSET_CONVENTIONAL_PAGE_4000 - SCAMP_CHIPSET_CONVENTIONAL_PAGEFRAME_DELTA) 
-func_1700_continue_page_write:
   out SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
  
   inc   bx    ; -1 check
-  jz    func_1700_handle_default_page
+  jz    handle_default_page_1700_conventional
+func_1700_continue_page_write:
   ; default is not the -1 case
-  lea   ax, [bx + SCAMP_PAGE_OFFSET_AMT - 1]   ; offset by default starting page
+SELFMODIFY_SCAMP_add_page_offset_3:
+  lea   ax, [bx + 01000h - 1]   ; offset by default starting page
   out   SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
 
 
@@ -131,24 +132,19 @@ ENDIF
 func_1700_0_pageframe_register:
 
 SELFMODIFY_SCAMP_add_page_frame_offset_1:  
-  add   al, 4 ; need to add 4 for d000 case for FANTASY...  c000, e000  not supported
-  jmp   func_1700_continue_page_write
+  add   al, 4 ; add page frame logical to physical translate
+  out SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
+ 
+  inc   bx    ; -1 check
+  jnz   func_1700_continue_page_write
 
-
-func_1700_handle_default_page:
-  ; mapping to page -1
-
-  ; al is hardware reg value.
-  cmp   al, SCAMP_CHIPSET_CONVENTIONAL_PAGE_4000
-  jae   handle_default_page_1700_conventional
-  handle_default_page_1700_frame:
-  
 SELFMODIFY_SCAMP_add_page_frame_offset_13:  
-  sub   al, 4 
+  sub   al, 4  ;subtract page frame logical to physical translate
 
-  add   ax, SCAMP_PAGE_FRAME_UNMAP_OFFSET_AMT - SCAMP_CONVENTIONAL_UNMAP_OFFSET_AMT ; we add 4 right after this..
+SELFMODIFY_SCAMP_add_page_offset_minus4_2:
+  add   ax, 01000h - SCAMP_CONVENTIONAL_UNMAP_OFFSET_AMT ; add page offset minus 4 (we add 4 right after this..)
 
-  handle_default_page_1700_conventional:
+handle_default_page_1700_conventional:
   ; mapping to page -1
   ; add four to get the default page value for the page 
   add   ax, SCAMP_CONVENTIONAL_UNMAP_OFFSET_AMT

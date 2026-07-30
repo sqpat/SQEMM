@@ -24,7 +24,7 @@ func_1701_loop_next_page:
   lodsw   ; load logical page
   mov        bx, ax  ; in case its unmap, bx goes forward as -1
   inc        ax
-  js         func_1701_skip_logical_check
+  jz         func_1701_skip_logical_check
   cmp        bx, di   ; bx is the same 
   ja         func_1701_logical_page_too_high
 

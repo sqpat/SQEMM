@@ -2,10 +2,48 @@
   ; enable d000 register and backfill
 
 
-  ; todo offset and self modify!
-  mov   ax, SCAMP_PAGE_OFFSET_AMT
+  ; first lets get system memory (which may be needed in a few spots.)
+  out   0FBh, al  ; dummy write enable
+  mov   al, 2  ; SLOT POINTER
+  out   SCAMP_CHIPSET_INDEX_REGISTER, al
+  in    al, SCAMP_CHIPSET_READWRITE_REGISTER
 
-  mov  word ptr ds:[_INIT_PARAM_OFFSET], ax
+  xchg  ax, dx
+
+  mov   al, 3  ; RAMMAP
+  out   SCAMP_CHIPSET_INDEX_REGISTER, al
+  in    al, SCAMP_CHIPSET_READWRITE_REGISTER
+  mov   ah, al
+  and   al, 0Fh  ; MEMMAP0-MEMMAP3 ; al = A16-A23 of top of memory 
+
+  mov   bx, OFFSET _SCAMP_DRAM_BANK_LOOKUP
+  xlat  byte ptr ds:[bx]
+
+  xor   ah, ah
+  inc   ax     ; todo necessary...?
+  xor   dh, dh
+
+  
+  sub   ax, dx
+  jbe   scamp_memory_error  ; shouldnt happen? might if RAMMAP is a weird config.
+  ; dl = slot pointer (top of XMS/page offset in 64k blocks)
+  ; al = amount of ems memory (in 64k blocks)
+  ; bl = top of memory. technically 384k extra is available too.
+
+  SHIFT_MACRO shl dx 2   ; offset, 16k to 64k blocks
+  mov   word ptr ds:[chipset_page_offset], dx
+  mov   word ptr ds:[_INIT_PARAM_OFFSET], dx
+  SHIFT_MACRO shl ax 2   ; num ems pages
+  
+  ; test  ah, 010h         ; todo test for relocation?
+  ;add  ax, 24            ; lets not include 384k relocated ram.
+
+  mov  word ptr ds:[chipset_num_pages], ax
+
+
+
+
+
 
   
 
@@ -36,6 +74,16 @@
   ; bad page frame param! error?
   mov  DX, OFFSET string_bad_page_frame_param
   jmp  DRIVER_NOT_INSTALLED
+
+  scamp_memory_error:
+  mov  DX, OFFSET STRING_bad_memory_chipset
+  jmp  DRIVER_NOT_INSTALLED
+
+  chipset_page_offset:
+  dw SCAMP_PAGE_OFFSET_AMT
+  chipset_num_pages:
+  dw 0
+
 
   set_page_frame:
 
@@ -77,6 +125,47 @@
   mov   dx, OFFSET string_good_page_frame_param
   call  print_driver_param
 
+  mov   ah, "O" ; page offset
+  call  parse_driver_params_get_int  ; no default. instead fetch from chipset
+  
+  jc    found_chipset_offset_value
+
+; determine EMS amount on board.
+  mov   ax, word ptr ds:[chipset_page_offset]
+
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_chipset_parameter
+found_chipset_offset_value:
+
+  push  ax ; 44h
+  mov   word ptr ds:[SELFMODIFY_SCAMP_add_page_offset_6+1], ax
+  mov   word ptr ds:[SELFMODIFY_SCAMP_add_page_offset_7+1], ax
+  mov   word ptr ds:[SELFMODIFY_SCAMP_add_page_offset_8+1], ax
+
+  dec   ax  ; 44h - 1
+  mov   word ptr ds:[SELFMODIFY_SCAMP_add_page_offset_1+2], ax  ; minus ones
+  mov   word ptr ds:[SELFMODIFY_SCAMP_add_page_offset_2+2], ax
+  mov   word ptr ds:[SELFMODIFY_SCAMP_add_page_offset_3+2], ax
+  mov   word ptr ds:[SELFMODIFY_SCAMP_add_page_offset_4+2], ax
+
+  sub   ax, 3 ; 40h
+  mov   word ptr ds:[SELFMODIFY_SCAMP_add_page_offset_minus4_4+1], ax ; minus 4
+  mov   word ptr ds:[SELFMODIFY_SCAMP_add_page_offset_minus4_5+1], ax
+
+  dec   ax  ; 40h - 1
+  mov   word ptr ds:[SELFMODIFY_SCAMP_add_page_offset_minus4_6+1], ax
+
+  sub   ax, 3 ; 40h - SCAMP_CONVENTIONAL_UNMAP_OFFSET_AMT  (40h - 4)
+  mov   word ptr ds:[SELFMODIFY_SCAMP_add_page_offset_minus4_1+1], ax
+  mov   word ptr ds:[SELFMODIFY_SCAMP_add_page_offset_minus4_2+1], ax
+  mov   word ptr ds:[SELFMODIFY_SCAMP_add_page_offset_minus4_3+1], ax
+
+  
+  add   ax, 8 ; 44h
+
+  mov   di, OFFSET string_good_page_offset_param_EDIT_OFFSET
+  mov   dx, OFFSET string_good_page_offset_param
+  call  print_driver_param_4_char_int
+
 
 
   mov   ah, "C" ; page count
@@ -84,7 +173,9 @@
   
   jc    found_chipset_bounds_value
 
-  mov   ax, MAX_PAGE_COUNT
+; determine EMS amount on board.
+  mov   ax, word ptr ds:[chipset_num_pages]
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_chipset_parameter
 
 found_chipset_bounds_value:
 
@@ -94,21 +185,15 @@ found_chipset_bounds_value:
   mov  DX, OFFSET string_bad_page_count_param
   jmp  DRIVER_NOT_INSTALLED
 
-  page_count_bounds_ok:
+page_count_bounds_ok:
+  
+  pop   dx
+  ; ax is pages, dx is offset.
 
-  ; start with 4096KB (256 pages)
-  ; subtract 16 pages 256 KB for backfill system (not pageable but shadowable). 
-  ;  - NOT IN PAGE LIST
-  ; subtract 24 pages 344 KB for backfill pageable
-  ;  - IN OS PAGE LIST AT START
-  ; subtract 12 pages 192 KB for C000-EFFF region defaults  (todo dont waste this, repage and waste only 4)
-  ;  - NOT IN PAGE LIST (?)
-  ; left with 3264KB (204 pages)
-  ;  - In default pagelist.
 
   mov   word ptr ds:[_RESIDENT_VARIABLE_total_EMS_page_count+1], ax
-  sub   ax, SCAMP_PAGE_OFFSET_AMT ; unallocate the default registers
-  mov   word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count], ax
+  mov   word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count], ax ;  we don't subtract, because this chipset does not include backfill in its total memory count i guess.
+
 
 
   mov   di, OFFSET string_good_page_count_param_EDIT_OFFSET
@@ -116,18 +201,18 @@ found_chipset_bounds_value:
   call  print_driver_param_4_char_int
 
 
-mov   byte ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_1+1], PAGE_FRAME_COUNT ; todo... should we decrease based on stuff like ROMS etc?
+  mov   byte ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_1+1], PAGE_FRAME_COUNT ; todo... should we decrease based on stuff like ROMS etc?
 
 
 ; Program the registers now.
 
 
-out   0FBh, al  ; dummy write enable
 
   ; pre-enit these. they seem to crash (emulator at least) otherwise?
   mov   cx, 4
-  
-  loop_init_page_registers:
+  mov   dx, word ptr ds:[chipset_page_offset]
+
+loop_init_page_registers:
     SELFMODIFY_SCAMP_add_page_frame_offset_11:
     mov   al, 4
     add   al, 4
@@ -135,7 +220,7 @@ out   0FBh, al  ; dummy write enable
     out   SCAMP_PAGE_SELECT_REGISTER, al
     
     cbw
-    add   ax, SCAMP_PAGE_OFFSET_AMT
+    add   ax, dx
     out   SCAMP_PAGE_SET_REGISTER, ax
     loop  loop_init_page_registers
 
@@ -150,7 +235,7 @@ out   0FBh, al  ; dummy write enable
   ; ...
   ; 23 maps to 27
 
-  enablebackfillloop:
+enablebackfillloop:
   out   SCAMP_PAGE_SELECT_REGISTER, al
   add   ax, SCAMP_CONVENTIONAL_UNMAP_OFFSET_AMT
   xchg  ax, ax ; delay
@@ -162,17 +247,17 @@ out   0FBh, al  ; dummy write enable
 
 
   mov   al, 0Bh
-  out   0ECh, al
+  out   SCAMP_CHIPSET_INDEX_REGISTER, al
   mul   al  ; delay
   ;mov   al, 0A0h   ; turn on ems 
   mov   al, 0E0h   ; turn on ems, backfill
-  out   0EDh, al
+  out   SCAMP_CHIPSET_READWRITE_REGISTER, al
   
   mov   al, 0Ch
-  out   0ECh, al
+  out   SCAMP_CHIPSET_INDEX_REGISTER, al
   mul   al  ; delay
   mov   al, 0F0h  ; turn on d000 as page frame
-  out   0EDh, al
+  out   SCAMP_CHIPSET_READWRITE_REGISTER, al
 
 
 

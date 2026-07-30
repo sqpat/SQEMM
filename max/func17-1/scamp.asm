@@ -24,7 +24,7 @@ func_1701_loop_next_page:
   lodsw   ; load logical page
   mov        bx, ax  ; in case its unmap, bx goes forward as -1
   inc        ax
-  js         func_1701_skip_logical_check
+  jz         func_1701_skip_logical_check
   cmp        bx, di   ; bx is the same 
   ja         func_1701_logical_page_too_high
 
@@ -70,9 +70,11 @@ func_1701_skip_logical_check:
   out SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
  
   inc  bx    ; -1 check
-  jz    func_1701_handle_default_page
+  jz    handle_default_page_1701_conventional
   ; default is not the -1 case
-  lea   ax, [bx + SCAMP_PAGE_OFFSET_AMT - 1]   ; offset by default starting page
+func_1701_continue_page_write:
+SELFMODIFY_SCAMP_add_page_offset_4:
+  lea   ax, [bx + 01000h - 1]   ; offset by default starting page
   out   SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
 
 
@@ -136,39 +138,24 @@ ENDIF
 func_1701_0_pageframe_register:
 
 SELFMODIFY_SCAMP_add_page_frame_offset_5:  
-  add   al, 4 ; need to add 4 for d000 case for FANTASY...  c000, e000  not supported
-  out   SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
-  inc   bx    ; -1 check
-  jz    func_1701_handle_default_page
-  lea   ax, [bx + SCAMP_PAGE_OFFSET_AMT - 1]   ; offset by default starting page
-  out   SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
+  add   al, 4  ; add page frame logical to physical translate
+  out SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
+ 
+  inc  bx    ; -1 check
+  jnz  func_1701_continue_page_write
 
-  loop       func_1701_loop_next_page
-  
 
-  ; exits if we fall thru loop with no error
-IF COMPISA GE COMPILE_186
-
-  POPA_MACRO
-  xor   ah, ah
-  iret
-ELSE
-  jmp func_1701_exit
-ENDIF
-
-func_1701_handle_default_page:   
-  ; al is hardware reg value.
-  cmp   al, SCAMP_CHIPSET_CONVENTIONAL_PAGE_4000
-  jae   handle_default_page_1701_conventional
-  handle_default_page_1701_frame:
   
 SELFMODIFY_SCAMP_add_page_frame_offset_14:  
-  sub   al, 4 
+  sub   al, 4 ; subtract page frame physical to logical translate
+  ; al is now 0-4 again. 
 
 
-  add   ax, SCAMP_PAGE_FRAME_UNMAP_OFFSET_AMT - SCAMP_CONVENTIONAL_UNMAP_OFFSET_AMT ; we add 4 right after this..
 
-  handle_default_page_1701_conventional:
+SELFMODIFY_SCAMP_add_page_offset_minus4_3:
+  add   ax, 01000h - SCAMP_CONVENTIONAL_UNMAP_OFFSET_AMT ; add page offset minus 4 (we add 4 right after this..)
+
+handle_default_page_1701_conventional:
   ; mapping to page -1
   ; add four to get the default page value for the page 
   add   ax, SCAMP_CONVENTIONAL_UNMAP_OFFSET_AMT
