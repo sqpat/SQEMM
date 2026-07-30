@@ -12,7 +12,11 @@ UTIL_get_page:
 
   in    ax, SCAMP_PAGE_SET_REGISTER
   sub   ax, SCAMP_PAGE_OFFSET_AMT
+  jb    return_negative
 
+  ret
+  return_negative:
+  mov   ax, -1
   ret
 
   util_get_page_handle_page_frame:
@@ -23,6 +27,7 @@ SELFMODIFY_SCAMP_add_page_frame_offset_3:
   out   SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
   in    ax, SCAMP_PAGE_SET_REGISTER
   sub   ax, SCAMP_PAGE_OFFSET_AMT
+  jb    return_negative
 
 
   ret
@@ -33,9 +38,6 @@ UTIL_set_page_reverse_arg:
 UTIL_set_page:
 ; write page (dx) to page index (ax)
 
-
-
-
   cmp   al, SCAMP_CHIPSET_CONVENTIONAL_PAGEFRAME_DELTA
   jb    util_set_page_handle_page_frame
 
@@ -43,53 +45,71 @@ UTIL_set_page:
   add   al, (SCAMP_CHIPSET_CONVENTIONAL_PAGE_4000 - SCAMP_CHIPSET_CONVENTIONAL_PAGEFRAME_DELTA) 
 
   out   SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
-
+  inc   dx
+  jz    util_setpage_handle_default_conventional
+  util_set_page_not_unmap:
+  dec   dx
   mov   ax, dx
   add   ax, SCAMP_PAGE_OFFSET_AMT
   out   SCAMP_PAGE_SET_REGISTER, ax
   ret
-  util_set_page_handle_page_frame:
+util_set_page_handle_page_frame:
 
 SELFMODIFY_SCAMP_add_page_frame_offset_4:
   add   al, 4
   out   SCAMP_PAGE_SELECT_REGISTER, al   ; select EMS page
 
-  mov   ax, dx
-  add   ax, SCAMP_PAGE_OFFSET_AMT
+  inc   dx
+  jnz   util_set_page_not_unmap
+
+util_setpage_handle_default_page_frame:
+  dec   dx
+SELFMODIFY_SCAMP_add_page_frame_offset_12:
+  sub   al, 4
+  add   ax, SCAMP_PAGE_FRAME_UNMAP_OFFSET_AMT
   out   SCAMP_PAGE_SET_REGISTER, ax
   ret
+
+
+util_setpage_handle_default_conventional:
+  dec   dx
+  add   al, SCAMP_CONVENTIONAL_UNMAP_OFFSET_AMT
+  out   SCAMP_PAGE_SET_REGISTER, ax
+  ret
+
+
 
 
 UTIL_unmap_all_pages:
   push  cx
 
-  push  bx
+
   
-  mov   bx, -1
   mov   cx, 24
   mov   ax, 12
+
   
   UTIL_loop_unmap_next_page:
     out   SCAMP_PAGE_SELECT_REGISTER, al
-    inc   ax
-    xchg  ax, bx
+    add   al, SCAMP_CONVENTIONAL_UNMAP_OFFSET_AMT
     out   SCAMP_PAGE_SET_REGISTER, ax
-    xchg  ax, bx
+    sub   al, (SCAMP_CONVENTIONAL_UNMAP_OFFSET_AMT - 1)
     loop  UTIL_loop_unmap_next_page
 
   mov  cx, 4
 SELFMODIFY_SCAMP_add_page_frame_offset_6:
   mov  al, 4
 
+
   UTIL_loop_unmap_next_page_frame:
     out   SCAMP_PAGE_SELECT_REGISTER, al
-    inc   ax
-    xchg  ax, bx
+    add   ax, SCAMP_PAGE_FRAME_UNMAP_OFFSET_AMT
+
     out   SCAMP_PAGE_SET_REGISTER, ax
-    xchg  ax, bx
+    sub   ax, (SCAMP_PAGE_FRAME_UNMAP_OFFSET_AMT - 1)
+
     loop  UTIL_loop_unmap_next_page_frame
 
-  pop  bx
 
   pop  cx
   ret

@@ -58,6 +58,9 @@
   mov   byte ptr ds:[SELFMODIFY_SCAMP_add_page_frame_offset_9+1], bl 
   mov   byte ptr ds:[SELFMODIFY_SCAMP_add_page_frame_offset_10+1], bl 
   mov   byte ptr ds:[SELFMODIFY_SCAMP_add_page_frame_offset_11+1], bl 
+  mov   byte ptr ds:[SELFMODIFY_SCAMP_add_page_frame_offset_12+1], bl 
+  mov   byte ptr ds:[SELFMODIFY_SCAMP_add_page_frame_offset_13+1], bl 
+  mov   byte ptr ds:[SELFMODIFY_SCAMP_add_page_frame_offset_14+1], bl 
 
   SHIFT_MACRO   shl ah 4  ; 0 1 2 to 00 10 20  (C D E)
   or    al, ah
@@ -149,7 +152,7 @@ out   0FBh, al  ; dummy write enable
 
   enablebackfillloop:
   out   SCAMP_PAGE_SELECT_REGISTER, al
-  add   ax, 4
+  add   ax, SCAMP_CONVENTIONAL_UNMAP_OFFSET_AMT
   xchg  ax, ax ; delay
   xchg  ax, ax
   out   SCAMP_PAGE_SET_REGISTER, ax

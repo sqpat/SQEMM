@@ -135,12 +135,26 @@ SELFMODIFY_SCAMP_add_page_frame_offset_1:
   jmp   func_1700_continue_page_write
 
 
-  func_1700_handle_default_page:
+func_1700_handle_default_page:
   ; mapping to page -1
-  xchg ax, bx
-  dec  ax
-  out  SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
+
+  ; al is hardware reg value.
+  cmp   al, SCAMP_CHIPSET_CONVENTIONAL_PAGE_4000
+  jae   handle_default_page_1700_conventional
+  handle_default_page_1700_frame:
+  
+SELFMODIFY_SCAMP_add_page_frame_offset_13:  
+  sub   al, 4 
+
+  add   ax, SCAMP_PAGE_FRAME_UNMAP_OFFSET_AMT - SCAMP_CONVENTIONAL_UNMAP_OFFSET_AMT ; we add 4 right after this..
+
+  handle_default_page_1700_conventional:
+  ; mapping to page -1
+  ; add four to get the default page value for the page 
+  add   ax, SCAMP_CONVENTIONAL_UNMAP_OFFSET_AMT
+  out   SCAMP_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
   loop       func_1700_loop_next_page
+
   
   ; fall thru if done..
 
