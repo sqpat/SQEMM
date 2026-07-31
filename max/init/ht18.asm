@@ -39,11 +39,21 @@ use_256k_banks:
   dec   dx
   dec   dx
   out   dx, al
+
+; GC-103 check
+  in    al, dx
+  test  al, al
+  cmp   al, HT18_EXTENDED_BOUNDARY_CONFIG_REGISTER  ; todo NOT SURE IF THIS WORKS ON REAL HARDWARE, DEFINITELY DOESN'T WORK ON 86BOX. 
+  mov   ax, 68  ; default value for GC-103?
+  jne   use_default_fallback_offset_for_gc103
+; end GC-103 check
+
   inc   dx
   inc   dx
   in    al, dx   ; al = number of 64kb pages to extended boundary.
   shl   ax, 2    ; ax = number of 16kb pages to extended boundary.
 
+use_default_fallback_offset_for_gc103:
   sub  bx, ax    ; bx was total system memory
   mov  word ptr ds:[chipset_num_pages], bx
   mov  word ptr ds:[chipset_page_offset], ax
