@@ -1873,6 +1873,7 @@ pop   es
 
 ; TEST 25: Test unmap/-1 pages
 PRINT_RUNNING_TEST 25
+CONVENTIONAL_COPY_PAGE = 16
 
 ; page to some garbage
 mov   dx, word ptr ds:[VARIABLE_saved_handle_5]
@@ -1887,7 +1888,6 @@ call  init_page_map   ; init map state without remapping
 mov   ax, 05C23h
 TEST_EMS_REGISTER_CALL_ALL 00023h  ; prepare for warm boot
 
-CONVENTIONAL_COPY_PAGE = 16
 
 
 mov   word ptr ds:[si+0], 0  ; length

@@ -16,7 +16,7 @@
   sub   al, HT18_CHIPSET_CONVENTIONAL_PAGEFRAME_DELTA
   jae   func_05_do_conventional_map
   SELFMODIFY_HT18_add_page_frame_register_offset_1:
-  add   al, HT18_PAGE_C000_REGISTER_OFFSET ; convert 0-4 to page frame. adds back subtracted 04h too
+  add   al, HT18_PAGE_C000_REGISTER_OFFSET + HT18_CHIPSET_CONVENTIONAL_PAGEFRAME_DELTA ; convert 0-4 to page frame. adds back subtracted 04h too
   func_05_do_conventional_map:   ; conventional page should be good.
 
   out   dx, al   ; select EMS page

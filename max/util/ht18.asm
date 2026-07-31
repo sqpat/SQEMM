@@ -80,7 +80,7 @@ UTIL_unmap_all_pages:
   
   xor   bx, bx ;  HT18_CHIPSET_UNMAP_VALUE
   mov   cx, 24
-  mov   ax, 12
+  mov   ax, 0
   mov   dx, HT18_PAGE_SELECT_REGISTER
 
   UTIL_loop_unmap_next_page:
