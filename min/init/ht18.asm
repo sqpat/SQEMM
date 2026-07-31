@@ -1,6 +1,6 @@
 
 ; enable writes to registers...
-  mov al, HT18_EMS_CONFIG_REGISTER
+  mov al, HT18_MEMORY_CONFIG_REGISTER
   mov dx, HT18_CHIPSET_CONFIG_REGISTER_SELECT
   out dx, al
   mov dx, HT18_CHIPSET_CONFIG_REGISTER_READWRITE
