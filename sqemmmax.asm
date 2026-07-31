@@ -3760,7 +3760,7 @@ print_driver_param:
       stosb             ; print remainder from ax
       xchg      ax, dx  ; get   quotient back in ax
       loop   do_next_digit
-   clc
+   cld
    pop       dx
 jmp   done_editing_string
 

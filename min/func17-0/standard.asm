@@ -36,7 +36,7 @@
 
   func17_00_handle_default_page:
   ; mapping to page -1
-  mov   ax, STANDARD_BOARD_CHIPSET_UNMAP_VALUE
+  xor   ax, ax ; STANDARD_BOARD_UNMAP_VALUE
   out   dx, al   ; write 8 bit page num. 
   loop       func1700_loop_next_page
   sti

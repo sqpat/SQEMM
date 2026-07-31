@@ -1,39 +1,39 @@
 
-  ; page frame's pages are 258, 4258, 8258, c258. 
+; note: bx on stack
+
 
 
   
   ; al and bx are still the args
-
+  push ax  ; store al
   push dx  
  
-  ror ax, 2
+  cbw  ; zero ah
+  SHIFT_MACRO ror ax 2
+
+  SELFMODIFY_STANDARD_set_page_select_register_4:
   add ax, STANDARD_BOARD_PAGE_REGISTER_0
 
-  ; 0-4 becomes 258, 4258, 8258, c258
-  mov dx, ax
-  cli
-  cmp   bx, 0FFFFh   ; -1 check
-  je    handle_default_page_44h
+  ; 0-4 becomes 0208h, 4208h, 8208h, c208h
+  xchg  ax, dx  ; dx gets port.
+  xchg  ax, bx  ; get page
 
-  mov   ax, bx
-  add   ax, STANDARD_BOARD_PAGE_OFFSET_AMT   ; turn on EMS ON bit
+
+  inc   ax    ; -1 check
+  jz    handle_unmap_page_44h
+
+  add   al, STANDARD_BOARD_PAGE_ON_BIT - 1
+
+handle_unmap_page_44h:  ; ksut write zero.
+
   out   dx, al   ; write 8 bit page num. 
-  sti
 
   pop   dx
-  xor   ax, ax
+  pop   ax
+  pop   bx
+  xor   ah, ah
   iret
 
-  handle_default_page_44h:
-  ; mapping to page -1
-  mov   ax, STANDARD_BOARD_CHIPSET_UNMAP_VALUE ; "turn off ems for this page" value
-  out   dx, al   ; write 8 bit page num. 
-  sti
-  
-  pop   dx
-  
-  ;xor   ax, ax   ; set to 0 above
-  iret
 
+  
   

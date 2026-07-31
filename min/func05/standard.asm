@@ -26,7 +26,7 @@
 
   handle_default_page_44h:
   ; mapping to page -1
-  mov   ax, STANDARD_BOARD_CHIPSET_UNMAP_VALUE ; "turn off ems for this page" value
+  xor   ax, ax ; STANDARD_BOARD_UNMAP_VALUE
   out   dx, al   ; write 8 bit page num. 
   sti
   
