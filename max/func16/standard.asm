@@ -19,7 +19,7 @@
 
   lodsw
   xchg ax, cx
-  SELFMODIFY_STANDARD_set_page_select_register_10:
+  SELFMODIFY_STANDARD_set_page_select_register_9:
   mov   dx, STANDARD_BOARD_PAGE_REGISTER_0
 
   
