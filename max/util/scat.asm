@@ -27,13 +27,11 @@ SELFMODIFY_SCAT_add_page_frame_register_offset_9:
   ret
 
 
-UTIL_set_page_reverse_arg:
-; write page (ax) to page index (dx)
-   xchg  ax, dx
 UTIL_set_page:
 
 ; write page (dx) to page index (ax)
 
+  push  dx ; store
   push  dx ; store
 SELFMODIFY_SCAT_set_page_select_register_10:
   mov   dx, SCAT_PAGE_SELECT_REGISTER
@@ -54,6 +52,7 @@ SELFMODIFY_SCAT_add_page_frame_register_offset_10:
   SELFMODIFY_SCAT_add_page_offset_and_enable_4:
   add   ax, SCAT_PAGE_OFFSET_AMT
   out   dx, ax
+  pop   dx
   ret
 
 

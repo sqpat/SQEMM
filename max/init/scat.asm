@@ -24,8 +24,7 @@
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_9+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_10+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_11+1], al
-  add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_12+1], al
-  mov   ax, 0218h
+
 
   use_default_ports:
 
@@ -99,6 +98,7 @@
   or   al, ah  ; combine
 
   mov  byte ptr ds:[SELFMODIFY_SCAT_set_page_frame_register_offset_5+1], al
+  mov  byte ptr ds:[SELFMODIFY_SCAT_set_page_frame_register_offset_12+1], al
 
   add  al, SCAT_PAGE_C000_REGISTER_OFFSET
 
@@ -133,10 +133,7 @@ SELFMODIFY_SCAT_set_page_set_register_1:
   inc  ax 
   out  dx, ax ; map page 3 to 1MB + 3*16384
 
-  IFDEF DEBUG_MODE
-    sub   ax, 5
-    out dx, ax
-  ENDIF
+
 
 
   mov   ah, "C" ; page count
@@ -226,12 +223,12 @@ SELFMODIFY_SCAT_set_page_set_register_1:
 
   or    ax, SCAT_PAGE_ENABLE_BIT
   
-  mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_2+2], ax
   
   mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_4+1], ax
   mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_5+1], ax
 
   dec  ax
+  mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_2_minus_1+2], ax
   mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_1_minus_1+2], ax
   mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_3_minus_1+2], ax
 

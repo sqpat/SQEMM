@@ -26,8 +26,8 @@ SELFMODIFY_SCAT_set_page_set_register_2:
   cmp   bx, 0FFFFh   ; -1 check
   je    handle_default_page_44h
   
-  SELFMODIFY_SCAT_add_page_offset_and_enable_2:
-  lea   ax, [BX + SCAT_PAGE_OFFSET_AMT]   ; offset by default starting page
+  SELFMODIFY_SCAT_add_page_offset_and_enable_2_minus_1:
+  lea   ax, [BX + SCAT_PAGE_OFFSET_AMT - 1]   ; offset by default starting page
   out   dx, ax   ; write 16 bit page num. 
 
   
