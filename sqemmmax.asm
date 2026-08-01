@@ -3518,6 +3518,10 @@ mov        ax, 02567h
 int        021h
 
 DRIVER_INSTALLED:
+public DRIVER_INSTALLED
+
+push  cs
+pop   es
 
 mov   di, OFFSET STRING_driver_memory_EDIT_EMS_TOTAL
 mov   ax, word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count]
