@@ -8,20 +8,23 @@
 
 SCAMP_CHIPSET = 1
 SCAT_CHIPSET = 2
-HT18_CHIPSET = 3
-HT12_CHIPSET = 4
-HEDAKA_CHIPSET = 5
+HT18_CHIPSET = 3       ; todo needs alternate register sets
+HT12_CHIPSET = 4       ; todo not up to date
+HEDAKA_CHIPSET = 5     ; todo not up to date
 LOTECH_BOARD = 6
 NEAT_CHIPSET = 7
-INTEL_ABOVEBOARD = 8
-SARC_RC2016A = 9
+INTEL_ABOVEBOARD = 8   ; todo not up to date
+SARC_RC2016A = 9       ; todo not up to date
 STANDARD_EMS_BOARD = 10
-FANTASY_EMS = 11
-RODNEY_EMS = 12
-NEAT_2MB_CHIPSET = 13
+FANTASY_EMS = 11       ; todo needs offset
+RODNEY_EMS = 12        ; todo not up to date
+NEAT_2MB_CHIPSET = 13  ; todo kinda deprecated
+TOPCAT_CHIPSET = 14    ; todo not done
+WD76C10_CHIPSET = 14   ; todo not done
 
-DRIVER_VERSION_MIN   = 1  ; around 600-700 bytes, main functions implemented, single handle
-DRIVER_VERSION_MAX   = 3   ; several KB full 4.0 implementation.
+
+DRIVER_VERSION_MIN   = 1  ; around 600-700 bytes, main functions implemented, single handle, fast
+DRIVER_VERSION_MAX   = 2  ; several KB full 4.0 implementation.
 
 
 COMPILE_386  = 3
@@ -32,7 +35,7 @@ COMPILE_8086 = 0
 
 
 COMPILE_VERSION = DRIVER_VERSION_MAX
-COMPILE_CHIPSET = SCAMP_CHIPSET
+COMPILE_CHIPSET = WD76C10_CHIPSET
 
 RET_OPCODE = 0C3h
 XCHG_AX_CX_OPCODE = 091h
