@@ -1534,7 +1534,7 @@ add si, cx
 adc ax, 0  
 add si, dx
 adc ax, bp
-sub  si, 1
+sub  si, 1   ; because of direction flag quirks...
 sbb  ax, 0
 
 SHIFT_MACRO ror ax 4
@@ -1743,6 +1743,9 @@ func_24_prep_copy_pointers_backwards:   ; return copy amount in cx
 
  test  bl, bl
  jnz   func_24_skip_backwards_normalize_conventional_si
+ mov   ax, ds
+ test  ax, ax
+ jz    cant_dec_dssi
  ; we want ds:FFFx
  mov   ax, si
  or    ax, 0FFF0h ; create FFFn
@@ -1760,12 +1763,15 @@ func_24_prep_copy_pointers_backwards:   ; return copy amount in cx
  xor   ax, ax
  func_24_backwards_dssi_pointer_good:   
  mov   ds, ax  ; new ds:si set
-
+cant_dec_dssi:
 
 func_24_skip_backwards_normalize_conventional_si:
  test  bh, bh
  jnz   func_24_skip_backwards_normalize_conventional_di
- 
+ mov   ax, es
+ test  ax, ax
+ jz    cant_dec_esdi
+
  ; and es:FFFx
  mov   ax, di
  or    ax, 0FFF0h ; create FFFn
@@ -1785,7 +1791,7 @@ func_24_skip_backwards_normalize_conventional_si:
  func_24_backwards_esdi_pointer_good:   
 
  mov   es, ax  ; new es:di set
-
+cant_dec_esdi:
 
  func_24_skip_backwards_normalize_conventional_di:
  ; conventional adjustsments done. now check extened
@@ -2117,12 +2123,14 @@ func_24_do_overlap_check:
   jnz    func_24_jmp_to_skip_conventional_overlap_check
 
   mov    ax, ds
-  SHIFT_MACRO  rol ax 4
+  SHIFT_MACRO  rol ax 4  ; 0c4d -> c4d0
   mov    dx, ax
-  and    dx, 0FFF0h
-  and    ax, 0Fh
-  add    si, dx
-  adc    ax, 0
+  and    dx, 0FFF0h  ; c4d0
+  and    ax, 0Fh     ; 0
+  add    si, dx      ; d929
+  adc    ax, 0       ; 0
+
+; wait we havent added cx/bp????
 
   push   ax
 
@@ -2131,10 +2139,12 @@ func_24_do_overlap_check:
   mov    dx, ax
   and    dx, 0FFF0h
   and    ax, 0Fh
-  add    di, dx
+  add    di, dx      ; d92a
   adc    ax, 0
 
   
+
+
 func_24_compare_overlap:
   ; source dx:di
   ; dest ax:si
