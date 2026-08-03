@@ -5,6 +5,53 @@
   ;out   dx, ax  ; not sure if required
   out   dx, al  ; unlock chipset.
 
+  ; calculate chipset ems amount and boundary
+
+  mov  dx, 05872h
+  in   ax, dx  ; 4 high bits are enabled bsnk info.
+  rol  ax, 4
+  xchg ax, si  ; 4 low bits are enabled banks
+  mov  dx, 03872h
+  in   ax, dx
+  mov  dx, ax ; backup
+  xor  bx, bx ; total memory count
+  mov  cx, 4
+loop_next_dram_bank:
+  shr  si, 1
+  jnc  skip_disabled_bank
+  mov  ax, dx
+  and  ax, 3
+  ; 0 = 64k  ram (128k bank = 8 pages ems)
+  ; 1 = 256k ram (512k bank = 32 pages ems)
+  ; 2 = 1M   ram (2.0M bank = 128 pages ems)
+  ; 3 = 4Mk  ram (8.0M bank = 512 pages ems)
+
+  add  bx, 8-0  
+  dec  ax
+  js   done_adding_bank_memory
+  add  bx, 32-8
+  dec  ax
+  js   done_adding_bank_memory
+  add  bx, 128-32 
+  dec  ax
+  js   done_adding_bank_memory
+  add  bx, 512-128
+  
+skip_disabled_bank:
+done_adding_bank_memory:
+  shr  dx, 2
+  loop loop_next_dram_bank
+  
+  mov  dx, 06872h
+  in   ax, dx
+  and  ax, 07Fh  ; shift left 17 to get num 128k blocks. divide 16k to get num ems pages. net shift left 3
+  shl  ax, 3
+  mov  word ptr ds:[chipset_page_offset], ax
+  sub  bx, ax
+  mov  word ptr ds:[chipset_num_pages], bx
+
+  
+
   mov   ah, "F" 
   call  parse_driver_params
 
@@ -74,6 +121,67 @@ set_page_frame:
   mov   di, OFFSET string_good_page_frame_param_EDIT_OFFSET
   mov   dx, OFFSET string_good_page_frame_param
   call  print_driver_param
+
+
+
+  mov   ah, "C" ; page count
+  call  parse_driver_params_get_int  ; no default. instead fetch from chipswt
+  
+  jc    found_chipset_bounds_value
+
+  mov   ax, word ptr ds:[chipset_num_pages] ; previous calculated.
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_chipset_parameter
+
+  found_chipset_bounds_value:
+
+  test  ax, ax
+  jnz   memory_count_ok
+bad_memory_count_error:
+  mov  DX, OFFSET string_bad_page_count_param
+  jmp  DRIVER_NOT_INSTALLED
+memory_count_ok:
+  mov   word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count], ax ;  we don't subtract, because this chipset does not include backfill in its total memory count i guess.
+  mov   word ptr ds:[_RESIDENT_VARIABLE_total_EMS_page_count+1], ax
+
+
+
+  mov   di, OFFSET string_good_page_count_param_EDIT_OFFSET
+  mov   dx, OFFSET string_good_page_count_param
+  call  print_driver_param_4_char_int
+
+
+
+
+
+  mov   ah, "O"  ; page offset
+  call  parse_driver_params_get_int  ; no default. instead fetch from chipswt
+
+  jc    found_page_offset_bounds
+
+  mov   ax, word ptr ds:[chipset_page_offset] ; previously calculated.
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_chipset_parameter
+
+  found_page_offset_bounds:
+
+  ; ax has offset..
+
+  mov  word ptr ds:[_INIT_PARAM_OFFSET], ax
+
+  push  ax
+  mov   word ptr ds:[SELFMODIFY_WD76C10_add_page_offset_and_enable_5+1], ax
+  or    ax, WD76C10_PAGE_ENABLE_BIT
+  dec   ax
+  mov   word ptr ds:[SELFMODIFY_WD76C10_add_page_offset_1_minus_1+2], ax
+  mov   word ptr ds:[SELFMODIFY_WD76C10_add_page_offset_2_minus_1+2], ax
+  mov   word ptr ds:[SELFMODIFY_WD76C10_add_page_offset_3_minus_1+2], ax
+  mov   word ptr ds:[SELFMODIFY_WD76C10_add_page_offset_and_enable_4+1], ax
+  pop   ax
+
+  mov   di, OFFSET string_good_page_offset_param_EDIT_OFFSET
+  mov   dx, OFFSET string_good_page_offset_param
+  call  print_driver_param_4_char_int
+
+
 
 
 
@@ -193,24 +301,10 @@ SELFMODIFY_WD76C10_set_page_frame_register_offset_2:
   out  dx, ax
 
 
-  mov   ax, WD76C10_PAGE_OFFSET_AMT
-  mov  word ptr ds:[_INIT_PARAM_OFFSET], ax
-
-  mov   word ptr ds:[SELFMODIFY_WD76C10_add_page_offset_and_enable_5+1], ax
-  or    ax, WD76C10_PAGE_ENABLE_BIT
-  dec   ax
-  mov   word ptr ds:[SELFMODIFY_WD76C10_add_page_offset_1_minus_1+2], ax
-  mov   word ptr ds:[SELFMODIFY_WD76C10_add_page_offset_2_minus_1+2], ax
-  mov   word ptr ds:[SELFMODIFY_WD76C10_add_page_offset_3_minus_1+2], ax
-  mov   word ptr ds:[SELFMODIFY_WD76C10_add_page_offset_and_enable_4+1], ax
   
 
 
   
-  mov   ax, PAGE_COUNT_4_MB  ; MAX_PAGE_COUNT
-  mov        word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count], ax
-  mov        word ptr ds:[_RESIDENT_VARIABLE_total_EMS_page_count+1], ax
-  ;mov        word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count], MAX_PAGE_COUNT
-  ;mov        word ptr ds:[_RESIDENT_VARIABLE_total_EMS_page_count+1], MAX_PAGE_COUNT
+  
   mov        byte ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_1+1], PAGE_FRAME_COUNT
 
