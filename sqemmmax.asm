@@ -1502,7 +1502,7 @@ func_24_exchange_more_memory:
    func_24_exchange_more_bytes:
    lodsb
    xchg       al, byte ptr es:[di]
-   lock mov        byte ptr ds:[si-1], al
+   mov        byte ptr ds:[si-1], al
    inc        di
    loop       func_24_exchange_more_bytes
    pop        ax ; get length
@@ -2987,9 +2987,9 @@ COMMON_deallocate_pages:
    ; 3. handle last page poinst to old global/free first page
 
    xchg word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page], ax  ; -1
-   lock mov  bx, dx  ; bx gets ptr
+   mov  bx, dx  ; bx gets ptr
    xchg word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_head], ax  ; point to first page 
-   lock mov  word ptr cs:[bx + PAGE_INFO.page_info_next_page], ax
+   mov  word ptr cs:[bx + PAGE_INFO.page_info_next_page], ax
 
    skip_loop:
    deallocate_return:
