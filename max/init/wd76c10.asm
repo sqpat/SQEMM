@@ -74,10 +74,12 @@
   mov   ax, WD76C10_PAGE_OFFSET_AMT
   mov  word ptr ds:[_INIT_PARAM_OFFSET], ax
 
-  or    ax, WD76C10_PAGE_ENABLE_BIT
   mov   word ptr ds:[SELFMODIFY_WD76C10_add_page_offset_and_enable_5+1], ax
+  or    ax, WD76C10_PAGE_ENABLE_BIT
   dec   ax
+  mov   word ptr ds:[SELFMODIFY_WD76C10_add_page_offset_1_minus_1+2], ax
   mov   word ptr ds:[SELFMODIFY_WD76C10_add_page_offset_2_minus_1+2], ax
+  mov   word ptr ds:[SELFMODIFY_WD76C10_add_page_offset_3_minus_1+2], ax
   mov   word ptr ds:[SELFMODIFY_WD76C10_add_page_offset_and_enable_4+1], ax
   
 

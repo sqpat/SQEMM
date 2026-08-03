@@ -37,12 +37,14 @@ SELFMODIFY_WD76C10_add_page_offset_2_minus_1:
 
 
 
-  handle_default_page_44h:
+handle_default_page_44h:
   ; mapping to page -1
+  cmp   al, 8
+  jb    func_05_adjust_08000h
   cmp   al, 32
-  jb    write_ax
+  jb    func_05_write_ax
   xchg  ax, bx  ; zero
-  write_ax:
+  func_05_write_ax:
   out   dx, ax   ; write 16 bit page num. 
 
   
@@ -52,3 +54,12 @@ SELFMODIFY_WD76C10_add_page_offset_2_minus_1:
   xor   ah, ah
   iret
 
+func_05_adjust_08000h:
+  add   al, 32
+  out   dx, ax   ; write 16 bit page num. 
+  
+  pop   dx
+  pop   ax
+  pop   bx
+  xor   ah, ah
+  iret
