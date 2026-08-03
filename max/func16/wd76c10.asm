@@ -11,8 +11,7 @@
   push di
   push si
   
-SELFMODIFY_WD76C10_set_page_frame_register_offset_5:
-  mov   bx, 36
+
 
 
   cmp   al, 2
@@ -77,7 +76,7 @@ func_16_sub_02:
 
   pop   ax
   xor   ah, ah
-  mov  al, bl ; num pages
+  mov   al, bl ; num pages
 
   SHIFT_MACRO shl  al 2 ; two words per entry.
   add  al, 2  ; count

@@ -4151,6 +4151,23 @@ _SCAMP_EMS_INIT_REGISTERS:
 
 ENDIF
 
+IF COMPILE_CHIPSET EQ WD76C10_CHIPSET
+
+
+_WD76C10_PAGE_FRAME_LOOKUP:
+
+  ;  c000 (impossible)
+  db 32, 33, 34, 35 ; c000-cc00 (c000 impossibl)
+  db 36, 37, 38, 39 ; d000-dc00
+  db 32             ; e000
+
+
+
+
+ENDIF
+
+
+
 
 COMMENT @
 trigger_debugger:

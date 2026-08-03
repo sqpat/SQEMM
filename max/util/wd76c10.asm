@@ -112,7 +112,7 @@ util_ready_next_default_8000_A000:
     loop  util_ready_next_default_8000_A000
 
   mov   cx, 4
-SELFMODIFY_WD76C10_set_page_select_register_12:
+SELFMODIFY_WD76C10_set_page_frame_register_offset_1:
   mov  bx, WD76C10_PAGE_C000_REGISTER_OFFSET
 
 
@@ -124,6 +124,10 @@ SELFMODIFY_WD76C10_set_page_select_register_12:
     xor   ax, ax
     out   dx, ax
     inc   bx
+    cmp   bl, 40
+    jne   util_do_unmap_loop
+    mov   bl, 32
+    util_do_unmap_loop:
     loop  util_ready_next_default_page_frame
 
 

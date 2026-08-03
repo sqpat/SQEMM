@@ -1,7 +1,7 @@
 FUNCTION_15_GET_PAGE_MAP:
   push  dx
 
-SELFMODIFY_WD76C10_add_page_frame_register_offset_4:
+SELFMODIFY_WD76C10_set_page_frame_register_offset_4:
   mov   bx, WD76C10_PAGE_C000_REGISTER_OFFSET
 
   mov   cx, 4  ; page frame count
@@ -18,6 +18,12 @@ func_15_sub_00_save_next_page_frame_register:
   inc   bx
   cmp   bx, 8
   je    func_1500_adjust_bx_skip_2000_pages
+  cmp   bl, 40
+  jne   func_1500_util_do_unmap_loop
+  mov   bl, 32
+func_1500_util_do_unmap_loop:
+
+
   loop  func_15_sub_00_save_next_page_frame_register
 cmp bl, 32 ; catch 2nd loop thru
 je  func_15_sub_00_done_recording_registers
@@ -48,7 +54,7 @@ FUNCTION_15_SAVE_PAGE_MAP:
 push  dx
 
 
-SELFMODIFY_WD76C10_add_page_frame_register_offset_6:
+SELFMODIFY_WD76C10_set_page_frame_register_offset_3:
   mov   bx, WD76C10_PAGE_C000_REGISTER_OFFSET
   mov   cx, 4 ; page frame count
 
@@ -67,6 +73,10 @@ func_15_sub_01_save_next_page_frame_register:
   inc   bx
   cmp   bx, 8
   je    func_1501_adjust_bx_skip_2000_pages
+  cmp   bl, 40
+  jne   func_1501_util_do_unmap_loop
+  mov   bl, 32
+func_1501_util_do_unmap_loop:
 
   loop  func_15_sub_01_save_next_page_frame_register
 cmp bl, 32

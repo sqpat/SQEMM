@@ -12,8 +12,6 @@
   push si
   
   mov   dx, HT18_PAGE_SELECT_REGISTER
-SELFMODIFY_HT18_set_page_frame_register_offset_5:
-  mov   bl, 0 
 
 
   cmp   al, 2
@@ -41,9 +39,7 @@ func_16_sub_00_save_next_page_frame_register:
   lodsw
   ; ax has segment... 
   call  COMMON_util_get_physical_register_for_segment
-  ;cmp   al, HT18_CHIPSET_CONVENTIONAL_PAGEFRAME_DELTA
-  ;jae   func_16_do_conventional_map
-  ;add   al, bl
+
   func_16_do_conventional_map:
   out   dx, al   ; select EMS page
   stosw 

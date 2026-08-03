@@ -8,7 +8,8 @@ chipset_page_lookup:
   db 050h, 054h, 058h, 05Ch
   db 060h, 064h, 068h, 06Ch
   db 070h, 074h, 078h, 07Ch
-  db 0C0h, 0C4h, 0C8h, 0CCh ; todo modify to Ex if necessary.
+chipset_page_frame_lookup:
+  db 0C0h, 0C4h, 0C8h, 0CCh ; possibly self modified
   db 0D0h, 0D4h, 0D8h, 0DCh
     ; you can hardcode the chipset's mappable page list here for call 5800
 
@@ -16,7 +17,7 @@ chipset_page_lookup:
 WF76C10_api_to_physical_page_lookup:
 
 ; page frame
-  db 36, 37, 38, 39 ; page frame. self modify!
+  db 36, 37, 38, 39 ; page frame. possibly self modified
 
   db 16, 17, 18, 19 ; 4000
   db 20, 21, 22, 23 ; 5000
