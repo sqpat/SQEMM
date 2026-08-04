@@ -1,34 +1,12 @@
 
 
-  mov   ah, "F" 
-  call  parse_driver_params
-
-  ; chipset has no real default or set param, so use D000 by default if none defined.
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_parsed_parameter
+  mov   ax, word ptr ds:[_INIT_PARAM_PAGEFRAME_ARG]
+  test  ax, ax
+  jnz   use_parsed_page_frame
   mov   ax, 0100h            ; corresponds to 0D000h
-  jnc   set_page_frame   ; param not found, use default
-
-  mov   ax, word ptr es:[di]
-  sub   al, 'C'
-  jb    bad_page_frame_param
-  cmp   al, 'E'-'C'
-  ja    bad_page_frame_param
-  xchg  al, ah
-  sub   al, '0'
-  je    set_page_frame
-  cmp   al, 4
-  je    set_page_frame
-  cmp   al, 8
-  je    set_page_frame
-  cmp   al, 'C' - '0'
-  mov   al, 12
-  je    set_page_frame
-
-  bad_page_frame_param:
-  ; bad page frame param! error?
-  mov  DX, OFFSET string_bad_page_frame_param
-  jmp  DRIVER_NOT_INSTALLED
-
-  set_page_frame:
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_default_parameter
+use_parsed_page_frame:
 
   ; ah is 0 1 or 2    (C D or E)
   ; al is 0 4 8 or 12
@@ -66,14 +44,53 @@
 
 
 
-  mov   ah, "C" ; page count
-  call  parse_driver_params_get_int  ; no default. instead fetch from chipswt
-  
-  jc    found_chipset_bounds_value
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_parsed_parameter
+
+  mov   ax, word ptr ds:[_INIT_PARAM_OFFSET_ARG]
+  test  ax, ax
+  jnz   use_parsed_offset
+
+  mov   ax, FANTASY_PAGE_OFFSET_AMT
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_default_parameter
+
+use_parsed_offset:
+
+  mov   word ptr ds:[_INIT_PARAM_OFFSET], ax
+
+  mov   word ptr ds:[SELFMODIFY_FANTASY_set_page_offset_6+1], ax
+  mov   word ptr ds:[SELFMODIFY_FANTASY_set_page_offset_7+1], ax
+  mov   word ptr ds:[SELFMODIFY_FANTASY_set_page_offset_8+1], ax
+  mov   word ptr ds:[SELFMODIFY_FANTASY_set_page_offset_9+1], ax
+  dec   ax
+  mov   word ptr ds:[SELFMODIFY_FANTASY_set_page_offset_1+2], ax
+  mov   word ptr ds:[SELFMODIFY_FANTASY_set_page_offset_2+2], ax
+  mov   word ptr ds:[SELFMODIFY_FANTASY_set_page_offset_3+2], ax
+  mov   word ptr ds:[SELFMODIFY_FANTASY_set_page_offset_4+2], ax
+  mov   word ptr ds:[SELFMODIFY_FANTASY_set_page_offset_5+2], ax
+  inc   ax
+
+
+
+
+
+
+
+  mov   di, OFFSET string_good_page_offset_param_EDIT_OFFSET
+  mov   dx, OFFSET string_good_page_offset_param
+  call  print_driver_param_4_char_int
+
+
+
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_parsed_parameter
+
+  mov   ax, word ptr ds:[_INIT_PARAM_PAGECOUNT_ARG]
+  test  ax, ax
+  jnz   use_parsed_pagecount
 
   mov   ax, MAX_PAGE_COUNT
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_default_parameter
 
-found_chipset_bounds_value:
+use_parsed_pagecount:
 
   cmp   ax, MAX_PAGE_COUNT
   jbe   page_count_bounds_ok
@@ -94,7 +111,7 @@ found_chipset_bounds_value:
   ;  - In default pagelist.
 
   mov   word ptr ds:[_RESIDENT_VARIABLE_total_EMS_page_count+1], ax
-  sub   ax, FANTASY_PAGE_OFFSET_AMT ; unallocate the default registers
+  sub   ax, word ptr ds:[_INIT_PARAM_OFFSET] ; unallocate the default registers
   mov   word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count], ax
 
 
@@ -105,13 +122,13 @@ found_chipset_bounds_value:
 
 mov   byte ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_1+1], PAGE_FRAME_COUNT ; todo... should we decrease based on stuff like ROMS etc?
 
+  mov   bx, 0FFFFh
 
-
+COMMENT @
   ; set first four page registers for d000
   mov   cx, 4
   mov   al, byte ptr ds:[SELFMODIFY_FANTASY_add_page_frame_offset_1+1]
   cbw
-  mov   bx, 0FFFFh
 
 
   enablepageloop:
@@ -123,7 +140,9 @@ mov   byte ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_1+1], PAGE_FRAME_COUN
   loop enablepageloop
 
 
+
   ; NOTE: If we enable backfill, we must initialize page registers for backfill region
+  ; todo is this true? or do -1??
   ;  4-28 to be 4-28
 
   mov   ax, 0Ch
@@ -143,6 +162,7 @@ mov   byte ptr ds:[_RESIDENT_VARIABLE_pageable_frame_count_1+1], PAGE_FRAME_COUN
   xchg  ax, bx
   inc   ax
   loop enablebackfillloop
+  @
 
 
 

@@ -1,3 +1,6 @@
+
+
+
   ; enable EMS
 
   mov  al, NEAT_CHIPSET_DRAM_CONFIG_REGISTER
@@ -107,10 +110,6 @@ bad_page_frame_param_chipset:
   ; bad page frame param! error?
   mov  DX, OFFSET STRING_bad_page_frame_chipset
   jmp  DRIVER_NOT_INSTALLED
-bad_page_frame_param:
-  ; bad page frame param! error?
-  mov  DX, OFFSET string_bad_page_frame_param
-  jmp  DRIVER_NOT_INSTALLED
 
 
 
@@ -126,36 +125,23 @@ find_neat_page_offset:
 
 ; determine page frame
 
-  mov   ah, "F" 
-  call  parse_driver_params
-
-  jnc   get_page_frame_from_chipset   ; param not found, use default
-
-  mov   ax, word ptr es:[di]
-  sub   al, 'C'
-  jb    bad_page_frame_param
-  cmp   al, 'E'-'C'
-  ja    bad_page_frame_param
-  xchg  al, ah
-  sub   al, '0'
-  je    set_page_frame
-  cmp   al, 4
-  je    set_page_frame
-  cmp   al, 8
-  je    set_page_frame
-  cmp   al, 'C' - '0'
-  mov   al, 12
-  jne   bad_page_frame_param
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_parsed_parameter
+  mov   ax, word ptr ds:[_INIT_PARAM_PAGEFRAME_ARG]
+  test  ax, ax
+  jnz   use_parsed_page_frame
+  mov   ax, 0100h            ; corresponds to 0D000h
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_default_parameter
 
 
-  set_page_frame:
+use_parsed_page_frame:
+
 
   ; ah is 0 1 or 2    (C D or E)
   ; al is 0 4 8 or 12
   cmp   ah, 2
   jne   skip_e000_plus_check
   test  al, al
-  jnz   bad_page_frame_param
+  jnz   bad_page_frame_param_chipset
   skip_e000_plus_check:
   mov   bx, ax ; backup
   mov   dx, ax ; backup
@@ -209,30 +195,28 @@ got_page_frame:
   mov   dx, OFFSET string_good_page_frame_param
   call  print_driver_param
 
-COMMENT @
-; are we really supposed to pre-allocate? dont think so...
-  xor   ax, ax
-  cwd
-  call  UTIL_map_NEAT_write_page_full
-  inc   ax
-  inc   dx
-  call  UTIL_map_NEAT_write_page_full
-  inc   ax
-  inc   dx
-  call  UTIL_map_NEAT_write_page_full
-  inc   ax
-  inc   dx
-  call  UTIL_map_NEAT_write_page_full
-@
 
-  mov   ah, "C"  ; page count
-  call  parse_driver_params_get_int  ; no default. instead fetch from chipswt
-  jnc   no_page_count_param
+
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_parsed_parameter
+
+  mov   ax, word ptr ds:[_INIT_PARAM_PAGECOUNT_ARG]
+  test  ax, ax
+  jnz   use_parsed_pagecount
+
+no_page_count_param:
+  mov   ax, NEAT_CHIPSET_EMS_SIZE_REGISTER ; zero ah
+  out   NEAT_CHIPSET_CONFIG_REGISTER_SELECT, al
+  in    al, NEAT_CHIPSET_CONFIG_REGISTER_READWRITE
+  and   al, 0E0h  ; bits 5-7
+
+  ; bits 5-7 = number of megabytes of EMS. one megabyte is 64 pages. 
+
+  shl   ax, 1
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_chipset_parameter
+
+use_parsed_pagecount:
   cmp   ax, PAGE_COUNT_7_MB
   ja    bad_page_count_param
-  mov  word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_parsed_parameter
-
-got_page_count:
 
   mov   word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count], ax
   mov   word ptr ds:[_RESIDENT_VARIABLE_total_EMS_page_count+1], ax
@@ -248,33 +232,21 @@ got_page_count:
 
 
 
-; offset
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_parsed_parameter
 
-  ; todo why is this not working....
-  mov   ah, "O"  ; page offset
-  call  parse_driver_params_get_int  ; no default. instead fetch from chipswt
+  mov   ax, word ptr ds:[_INIT_PARAM_OFFSET_ARG]
+  test  ax, ax
+  jnz   use_parsed_offset
 
-  jnc   get_offset_from_chipset 
-
-  mov  word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_parsed_parameter
-  ; todo any checks?
-  jmp   got_offset
-
-no_page_count_param:
-  mov   ax, NEAT_CHIPSET_EMS_SIZE_REGISTER ; zero ah
-  out   NEAT_CHIPSET_CONFIG_REGISTER_SELECT, al
-  in    al, NEAT_CHIPSET_CONFIG_REGISTER_READWRITE
-  and   al, 0E0h  ; bits 5-7
-
-  ; bits 5-7 = number of megabytes of EMS. one megabyte is 64 pages. 
-
-  shl   ax, 1
   mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_chipset_parameter
-  jmp   got_page_count
+  jmp    get_offset_from_chipset
+
 
 bad_page_count_param:
   mov  DX, OFFSET string_bad_page_count_param
   jmp  DRIVER_NOT_INSTALLED
+
+
 
 
 
@@ -313,6 +285,8 @@ get_offset_from_chipset:
 
   mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_chipset_parameter
 got_offset:
+use_parsed_offset:
+
 
   mov  word ptr ds:[SELFMODIFY_NEAT_add_page_offset+1], ax
   mov  word ptr ds:[SELFMODIFY_NEAT_sub_page_offset+1], ax

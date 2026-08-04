@@ -15,7 +15,6 @@ SELFMODIFY_SCAT_set_page_select_register_7:
   mov   dx, SCAT_PAGE_SELECT_REGISTER
 
 
-
   cmp   al, 2
   ja    func_16_bad_subfunction
   je    func_16_sub_02
@@ -80,7 +79,7 @@ func_16_sub_02:
 
   pop   ax
   xor   ah, ah
-  mov  al, bl ; num pages
+  mov   al, bl ; num pages
 
   SHIFT_MACRO shl  al 2 ; two words per entry.
   add  al, 2  ; count

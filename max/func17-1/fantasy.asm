@@ -72,7 +72,8 @@ func_1701_skip_logical_check:
   inc  bx    ; -1 check
   jz    func_1701_handle_default_page
   ; default is not the -1 case
-  lea   ax, [bx + FANTASY_PAGE_OFFSET_AMT - 1]   ; offset by default starting page
+SELFMODIFY_FANTASY_set_page_offset_4:
+  lea   ax, [bx + 01000h - 1]   ; offset by default starting page
   out   FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
 
 
@@ -140,7 +141,8 @@ SELFMODIFY_FANTASY_add_page_frame_offset_5:
   out   FANTASY_PAGE_SELECT_REGISTER, al   ; select EMS page
   inc   bx    ; -1 check
   jz    func_1701_handle_default_page
-  lea   ax, [bx + FANTASY_PAGE_OFFSET_AMT - 1]   ; offset by default starting page
+SELFMODIFY_FANTASY_set_page_offset_5:
+  lea   ax, [bx + 01000h - 1]   ; offset by default starting page
   out   FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
 
   loop       func_1701_loop_next_page

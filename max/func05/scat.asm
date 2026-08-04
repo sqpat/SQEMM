@@ -23,10 +23,10 @@ SELFMODIFY_SCAT_set_page_select_register_2:
   out   dx, al   ; select EMS page
 SELFMODIFY_SCAT_set_page_set_register_2:
   mov   dx, SCAT_PAGE_SET_REGISTER
-  cmp   bx, 0FFFFh   ; -1 check
-  je    handle_default_page_44h
+  inc   bx
+  jz    handle_default_page_44h
   
-  SELFMODIFY_SCAT_add_page_offset_and_enable_2_minus_1:
+SELFMODIFY_SCAT_add_page_offset_and_enable_2_minus_1:
   lea   ax, [BX + SCAT_PAGE_OFFSET_AMT - 1]   ; offset by default starting page
   out   dx, ax   ; write 16 bit page num. 
 
@@ -41,7 +41,7 @@ SELFMODIFY_SCAT_set_page_set_register_2:
 
   handle_default_page_44h:
   ; mapping to page -1
-  mov   ax, SCAT_CHIPSET_UNMAP_VALUE ; "turn off ems for this page" value
+  xchg  ax, bx   ; get 0
   out   dx, ax   ; write 16 bit page num. 
 
   

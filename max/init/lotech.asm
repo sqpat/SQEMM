@@ -2,25 +2,17 @@
 
 ; determine page frame
 
-  mov   ah, "F" 
-  call  parse_driver_params
 
-  ; chipset has no real default or set param, so use D000 by default if none defined.
+mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_parsed_parameter
+  mov   ax, word ptr ds:[_INIT_PARAM_PAGEFRAME_ARG]
+  test  ax, ax
+  jnz   use_parsed_page_frame
 
-  jnc   skip_page_frame_set   ; param not found, use default
 
-  mov   ax, word ptr es:[di]
-  cmp   ah, '0'
-  jne   bad_page_frame_param  ; must be c000 d000 e000 f000, 2nd char must be 0.
-  sub   al, 'C'
-  jb    bad_page_frame_param
-  cmp   al, 'F'-'C'
-  jbe   set_page_frame
+  jmp   skip_page_frame_set
 
-bad_page_frame_param:
-  ; bad page frame param! error?
-  mov  DX, OFFSET string_bad_page_frame_param
-  jmp  DRIVER_NOT_INSTALLED
+
+
 
 found_page_frame:
   dw 0
@@ -29,8 +21,11 @@ found_port:
 found_page_count:
   dw 0
 
+use_parsed_page_frame:
 
-set_page_frame:
+  test  al, al
+  jnz   bad_page_frame_param
+  mov   al, ah
 ; al is 0-3
   add   al, 0Ch  ; now C-F
   cbw   ; ah 0
@@ -46,6 +41,7 @@ set_page_frame:
 
 skip_page_frame_set:
 
+; todo externalize port parse.
   mov   ah, "P"  ; port
   call  parse_driver_params
   jnc   skip_port_set
@@ -86,12 +82,17 @@ skip_port_set:
 
 
 
-  mov   ah, "C" ; page count
-  call  parse_driver_params_get_int  ; no default. instead fetch from chipswt
-  jnc   no_page_count_param
+
+
+
+  mov   ax, word ptr ds:[_INIT_PARAM_PAGECOUNT_ARG]
+  test  ax, ax
+  jz    no_page_count_param
+
   cmp   ax, 256
   ja    bad_page_count_param
   mov   word ptr ds:[found_page_count], ax  ; store for now
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_parsed_parameter
 
   mov   di, OFFSET string_good_page_count_param_EDIT_OFFSET
   mov   dx, OFFSET string_good_page_count_param
@@ -103,10 +104,12 @@ skip_port_set:
   ; ok - we have tried to parse the 3 params.
   ; but if the absense of any, lets try and determine the default.
 
-  mov  ax, word ptr ds:[found_port]
-  or   ax, word ptr ds:[found_page_frame]
-  jnz  jmp_to_have_port_and_page_frame
-
+  xor  ax, ax
+  cmp  ax, word ptr ds:[found_port]
+  je   calculate_port_and_page_frame
+  cmp  ax, word ptr ds:[found_page_frame]
+  jne  jmp_to_have_port_and_page_frame
+  calculate_port_and_page_frame:
   ; 1: decided on port and or loop
   xor  di, di
   mov  dx, word ptr cs:[found_port]
@@ -117,9 +120,9 @@ skip_port_set:
   mov  cx, 4
   mov  dx, LOTECH_BASE_PAGE_REGISTER - 4
   
-  skip_port_loop:
   do_port_loop:
     add   dx, 4
+  skip_port_loop:
     push  cx
 
     mov  bx, word ptr cs:[found_page_frame]    
@@ -132,12 +135,12 @@ skip_port_set:
 
 
 
-    skip_page_frame_loop:
     do_page_frame_loop:
       add   bh, 010h
       jnc   page_frame_valid
       mov   bh, 0C0h
-      page_frame_valid:
+    page_frame_valid:
+    skip_page_frame_loop:
 
       xor   ax, ax
       out   dx, al  ; page 0. should make the page frame valid.
@@ -198,6 +201,18 @@ skip_port_set:
   mov   word ptr cs:[found_page_frame], ds
   push  cs
   pop   ds
+  cmp   word ptr ds:[found_port], dx
+  je    skip_set_port
+  push  dx
+  mov   ax, dx
+
+  mov   di, OFFSET STRING_good_port_param_EDIT_OFFSET
+  mov   dx, OFFSET STRING_good_port_param
+  stc   ; hex print
+  call  print_driver_param
+  pop   dx
+  
+  skip_set_port:
   mov   word ptr ds:[found_port], dx
 
   

@@ -9,10 +9,9 @@
   ; use port 218/21A not 208/20A
   mov   al, 010h
 
-  add   byte ptr ds:[SELFMODIFY_SCAT_set_page_set_register_1+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_set_register_2+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_set_register_3+1], al
-  add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_1+1], al
+
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_2+1], al
   add   byte ptr ds:[SELFMODIFY_SCAT_set_page_select_register_3+1], al
 
@@ -33,36 +32,28 @@
   mov   dx, OFFSET string_good_port_param
   call  print_driver_param
 
+  call  get_SCAT_chipset_bounds_value
+  mov   word ptr ds:[chipset_page_offset], ax
 
-  mov   ah, "F" 
-  call  parse_driver_params
+  ;mov   si, ax
 
-  ; chipset has no real default or set param, so use D000 by default if none defined.
+  call  get_SCAT_chipset_total_memory_pages
+  mov   word ptr ds:[chipset_total_memory_pages], ax
+
+  sub   ax, word ptr ds:[chipset_page_offset]
+  mov   word ptr ds:[chipset_num_pages], ax
+
+
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_parsed_parameter
+  mov   ax, word ptr ds:[_INIT_PARAM_PAGEFRAME_ARG]
+  test  ax, ax
+  jnz   use_parsed_page_frame
   mov   ax, 0100h            ; corresponds to 0D000h
-  jnc   set_page_frame   ; param not found, use default
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_default_parameter
 
-  mov   ax, word ptr es:[di]
-  sub   al, 'C'
-  jb    bad_page_frame_param
-  cmp   al, 'E'-'C'
-  ja    bad_page_frame_param
-  xchg  al, ah
-  sub   al, '0'
-  je    set_page_frame
-  cmp   al, 4
-  je    set_page_frame
-  cmp   al, 8
-  je    set_page_frame
-  cmp   al, 'C' - '0'
-  mov   al, 12
-  je    set_page_frame
 
-  bad_page_frame_param:
-  ; bad page frame param! error?
-  mov  DX, OFFSET string_bad_page_frame_param
-  jmp  DRIVER_NOT_INSTALLED
+use_parsed_page_frame:
 
-  set_page_frame:
 
   ; ah is 0 1 or 2    (C D or E)
   ; al is 0 4 8 or 12
@@ -97,8 +88,6 @@
   shl  ah, 2   ; 0 1 2 to 0 4 8  (C D 0)
   or   al, ah  ; combine
 
-  mov  byte ptr ds:[SELFMODIFY_SCAT_set_page_frame_register_offset_5+1], al
-  mov  byte ptr ds:[SELFMODIFY_SCAT_set_page_frame_register_offset_12+1], al
 
   add  al, SCAT_PAGE_C000_REGISTER_OFFSET
 
@@ -114,62 +103,34 @@
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_8+1], al
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_9+1], al
   mov  byte ptr ds:[SELFMODIFY_SCAT_add_page_frame_register_offset_10+1], al
-  sub  al, (SCAT_CHIPSET_CONVENTIONAL_PAGEFRAME_DELTA)
-
-  or   al, SCAT_CHIPSET_AUTOINCREMENT_FLAG
-
-SELFMODIFY_SCAT_set_page_select_register_1:
-  mov  dx, SCAT_PAGE_SELECT_REGISTER
-  out  dx, al
-
-SELFMODIFY_SCAT_set_page_set_register_1:
-  mov  dx, SCAT_PAGE_SET_REGISTER 
-  mov  ax, 08040h  ; 080h flag to enable ems. 40h to map to page at 1 MB (64 * 16384)   ; todo proper offset not 40h!
-  out  dx, ax ; map page 0 to 1MB + 0*16384
-  inc  ax 
-  out  dx, ax ; map page 1 to 1MB + 1*16384
-  inc  ax 
-  out  dx, ax ; map page 2 to 1MB + 2*16384
-  inc  ax 
-  out  dx, ax ; map page 3 to 1MB + 3*16384
 
 
 
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_parsed_parameter
+  mov   ax, word ptr ds:[_INIT_PARAM_PAGECOUNT_ARG]
+  test  ax, ax
+  jnz   use_parsed_pagecount_skip_page_offset_check
 
-  mov   ah, "C" ; page count
-  call  parse_driver_params_get_int  ; no default. instead fetch from chipswt
-  
-  jc    found_chipset_bounds_value
+  mov   ax, word ptr ds:[chipset_num_pages]
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_chipset_parameter
 
-  call  get_SCAT_chipset_bounds_value
-
-  xchg  ax, dx
-
-  call  get_SCAT_chipset_total_memory_pages
-  sub   ax, dx
-
-  found_chipset_bounds_value:
-
-  xchg  ax, dx
-  call  get_SCAT_chipset_bounds_value
-  add   ax, dx
-  xchg  ax, cx   ; cx = bounds + page count
-  call  get_SCAT_chipset_total_memory_pages
-
-  
+use_parsed_pagecount:
 
 
-  cmp   cx, ax
-  xchg  ax, dx
+  mov   dx, word ptr ds:[chipset_page_offset]
+  add   dx, ax
+
+  cmp   dx, word ptr ds:[chipset_total_memory_pages]
   jbe   page_count_bounds_ok
 
   mov  DX, OFFSET string_bad_page_count_param
   jmp  DRIVER_NOT_INSTALLED
 
-  page_count_bounds_ok:
+use_parsed_pagecount_skip_page_offset_check:
+page_count_bounds_ok:
 
 ; for now set to max. then parse offset and subtract.
-  mov   word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count], ax ;  we don't subtract, because this chipset does not include backfill in its total memory count i guess.
+  mov   word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count], ax
   mov   word ptr ds:[_RESIDENT_VARIABLE_total_EMS_page_count+1], ax
 
 
@@ -178,21 +139,48 @@ SELFMODIFY_SCAT_set_page_set_register_1:
   mov   dx, OFFSET string_good_page_count_param
   call  print_driver_param_4_char_int
 
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_parsed_parameter
+  mov   ax, word ptr ds:[_INIT_PARAM_OFFSET_ARG]
+  test  ax, ax
+  jnz   use_parsed_offset
+
+  mov   ax, word ptr ds:[chipset_page_offset]
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_chipset_parameter
+
+use_parsed_offset:
+
+  mov  word ptr ds:[_INIT_PARAM_OFFSET], ax
+
+  push  ax
+
+  mov   di, OFFSET string_good_page_offset_param_EDIT_OFFSET
+  mov   dx, OFFSET string_good_page_offset_param
+  call  print_driver_param_4_char_int
+
+  pop   ax
 
 
-  mov   ah, "O"  ; page offset
-  call  parse_driver_params_get_int  ; no default. instead fetch from chipswt
+  mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_5+1], ax
+  or   ax, SCAT_PAGE_ENABLE_BIT
+  
+  
+  mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_4+1], ax
 
-  jc    found_page_offset_bounds
+  dec  ax
+  mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_2_minus_1+2], ax
+  mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_1_minus_1+2], ax
+  mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_3_minus_1+2], ax
 
+COMMENT @
 
-  call  get_SCAT_chipset_bounds_value
-  found_page_offset_bounds:
-
+; not needed...?
+  inc   ax
+  and   ax, (NOT SCAT_PAGE_ENABLE_BIT)
   ; ax has offset..
 
   xchg  ax, dx
-  call  get_SCAT_chipset_total_memory_pages
+  mov   ax, word ptr ds:[chipset_total_memory_pages]
+
 
   mov   cx, dx
   add   cx, word ptr ds:[_RESIDENT_VARIABLE_total_EMS_page_count+1] ; cx = ems page count + offset
@@ -210,25 +198,5 @@ SELFMODIFY_SCAT_set_page_set_register_1:
   ; add this back for conventional region
   add   word ptr ds:[_RESIDENT_VARIABLE_total_EMS_page_count+1], 24
 
-  mov  word ptr ds:[_INIT_PARAM_OFFSET], ax
 
-  push  ax
-
-  mov   di, OFFSET string_good_page_offset_param_EDIT_OFFSET
-  mov   dx, OFFSET string_good_page_offset_param
-  call  print_driver_param_4_char_int
-
-  pop   ax
-
-
-  or    ax, SCAT_PAGE_ENABLE_BIT
-  
-  
-  mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_4+1], ax
-  mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_5+1], ax
-
-  dec  ax
-  mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_2_minus_1+2], ax
-  mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_1_minus_1+2], ax
-  mov  word ptr ds:[SELFMODIFY_SCAT_add_page_offset_and_enable_3_minus_1+2], ax
-
+@

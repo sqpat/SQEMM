@@ -45,6 +45,7 @@ func_1700_done_looping:
 
 
 func_1700_skip_logical_check:
+  ; bx is physical page (or -1)
   lodsw   ; grab physical page
 
 SELFMODIFY_SCAT_set_page_select_register_3:
@@ -62,8 +63,8 @@ SELFMODIFY_SCAT_set_page_set_register_3:
   mov   dx, SCAT_PAGE_SET_REGISTER
   inc   bx    ; -1 check
   jz    func_1700_handle_default_page
-  SELFMODIFY_SCAT_add_page_offset_and_enable_1_minus_1:
-  lea   ax, [BX + SCAT_PAGE_OFFSET_AMT]   ; offset by default starting page
+SELFMODIFY_SCAT_add_page_offset_and_enable_1_minus_1:
+  lea   ax, [BX + SCAT_PAGE_OFFSET_AMT - 1]   ; offset by default starting page
 
   out   dx, ax   ; write 16 bit page num. 
 
@@ -73,7 +74,7 @@ SELFMODIFY_SCAT_set_page_set_register_3:
 
   ; exit fall thru
   POPA_MACRO
-  xor ah, ah  ; success
+  xor ax, ax  ; success
   iret
 
 func_1700_logical_page_too_high:
@@ -92,7 +93,7 @@ func_1700_handle_not_found:
 
   func_1700_handle_default_page:
   ; mapping to page -1
-  mov   ax, SCAT_CHIPSET_UNMAP_VALUE
+  xchg  ax, bx   ; get zero
   out   dx, ax   ; write 16 bit page num. 
   loop  func_1700_loop_next_page
 
@@ -100,5 +101,5 @@ func_1700_handle_not_found:
 
   ; exit fall thru
   POPA_MACRO
-  xor ah, ah  ; success
+  xor ax, ax  ; success
   iret

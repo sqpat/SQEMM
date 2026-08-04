@@ -32,7 +32,6 @@
 
   SHIFT_MACRO shl dx 2   ; offset, 16k to 64k blocks
   mov   word ptr ds:[chipset_page_offset], dx
-  mov   word ptr ds:[_INIT_PARAM_OFFSET], dx
   SHIFT_MACRO shl ax 2   ; num ems pages
   
   ; test  ah, 010h         ; todo test for relocation?
@@ -40,52 +39,20 @@
 
   mov  word ptr ds:[chipset_num_pages], ax
 
-
-
-
-
-
-  
-
-  mov   ah, "F" 
-  call  parse_driver_params
-
-  ; chipset has no real default or set param, so use D000 by default if none defined.
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_parsed_parameter
+  mov   ax, word ptr ds:[_INIT_PARAM_PAGEFRAME_ARG]
+  test  ax, ax
+  jnz   use_parsed_page_frame
   mov   ax, 0100h            ; corresponds to 0D000h
-  jnc   set_page_frame   ; param not found, use default
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_default_parameter
+  jmp   use_parsed_page_frame
 
-  mov   ax, word ptr es:[di]
-  sub   al, 'C'
-  jb    bad_page_frame_param
-  cmp   al, 'E'-'C'
-  ja    bad_page_frame_param
-  xchg  al, ah
-  sub   al, '0'
-  je    set_page_frame
-  cmp   al, 4
-  je    set_page_frame
-  cmp   al, 8
-  je    set_page_frame
-  cmp   al, 'C' - '0'
-  mov   al, 12
-  je    set_page_frame
-
-  bad_page_frame_param:
-  ; bad page frame param! error?
-  mov  DX, OFFSET string_bad_page_frame_param
-  jmp  DRIVER_NOT_INSTALLED
-
-  scamp_memory_error:
+scamp_memory_error:  ; make room for this here with jmp above
   mov  DX, OFFSET STRING_bad_memory_chipset
   jmp  DRIVER_NOT_INSTALLED
+  
 
-  chipset_page_offset:
-  dw SCAMP_PAGE_OFFSET_AMT
-  chipset_num_pages:
-  dw 0
-
-
-  set_page_frame:
+use_parsed_page_frame:
 
   ; ah is 0 1 or 2    (C D or E)
   ; al is 0 4 8 or 12
@@ -125,16 +92,20 @@
   mov   dx, OFFSET string_good_page_frame_param
   call  print_driver_param
 
-  mov   ah, "O" ; page offset
-  call  parse_driver_params_get_int  ; no default. instead fetch from chipset
-  
-  jc    found_chipset_offset_value
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_parsed_parameter
 
-; determine EMS amount on board.
+  mov   ax, word ptr ds:[_INIT_PARAM_OFFSET_ARG]
+  test  ax, ax
+  jnz   use_parsed_offset
+
   mov   ax, word ptr ds:[chipset_page_offset]
-
   mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_chipset_parameter
-found_chipset_offset_value:
+
+use_parsed_offset:
+
+  mov   word ptr ds:[_INIT_PARAM_OFFSET], ax
+
+
 
   push  ax ; 44h
   mov   word ptr ds:[SELFMODIFY_SCAMP_add_page_offset_6+1], ax
@@ -168,16 +139,17 @@ found_chipset_offset_value:
 
 
 
-  mov   ah, "C" ; page count
-  call  parse_driver_params_get_int  ; no default. instead fetch from chipswt
-  
-  jc    found_chipset_bounds_value
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_parsed_parameter
 
-; determine EMS amount on board.
+  mov   ax, word ptr ds:[_INIT_PARAM_PAGECOUNT_ARG]
+  test  ax, ax
+  jnz   use_parsed_pagecount
+
   mov   ax, word ptr ds:[chipset_num_pages]
   mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_chipset_parameter
 
-found_chipset_bounds_value:
+use_parsed_pagecount:
+
 
   cmp   ax, MAX_PAGE_COUNT
   jbe   page_count_bounds_ok
@@ -210,7 +182,7 @@ page_count_bounds_ok:
 
   ; pre-enit these. they seem to crash (emulator at least) otherwise?
   mov   cx, 4
-  mov   dx, word ptr ds:[chipset_page_offset]
+  mov   dx, word ptr ds:[_INIT_PARAM_OFFSET]
 
 loop_init_page_registers:
     SELFMODIFY_SCAMP_add_page_frame_offset_11:

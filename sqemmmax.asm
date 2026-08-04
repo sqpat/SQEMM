@@ -3167,9 +3167,9 @@ STRING_bad_page_count_param db 0Dh, 0Ah,  'Bad Page Count Param in Driver Parame
 STRING_bad_page_offset_param db 0Dh, 0Ah, 'Bad Page Offset Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
 STRING_bad_port_param       db 0Dh, 0Ah,  'Bad Port Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
 STRING_could_not_determine  db 0Dh, 0Ah,  'Could not determine page frame or port! SQEMM was not loaded.', 0Dh, 0Ah,'$'
-STRING_dynamic_determine    db 0Dh, 0Ah,  'Dynamically determined parameters!', 0Dh, 0Ah,'$'
+STRING_dynamic_determine    db 0Dh, 0Ah,  'Insufficient parameters. Dynamically determining parameters!', 0Dh, 0Ah,'$'
 STRING_parsed_parameter                     db            " (User Parameter)", 0Dh, 0Ah,'$'
-STRING_unparsed_parameter                   db            " (Default Parameter)", 0Dh, 0Ah,'$'
+STRING_default_parameter                    db            " (Default Parameter)", 0Dh, 0Ah,'$'
 STRING_chipset_parameter                    db            " (Chipset Parameter)", 0Dh, 0Ah,'$'
 STRING_dynamic_parameter                    db            " (Dynamic Parameter)", 0Dh, 0Ah,'$'
 
@@ -3215,6 +3215,22 @@ ELSEIF COMPILE_CHIPSET EQ WD76C10_CHIPSET
   STRING_main_header db 0Dh, 0Ah, 'SQEMM v 0.8 for Western Digital WD76C10 Chipset', 0Dh, 0Ah,'$'
 ENDIF
 
+ALIGN 2
+
+_INIT_PARAM_PAGEFRAME_ARG:
+dw 0  ; todo defaults?
+_INIT_PARAM_OFFSET_ARG:
+dw 0  ; todo defaults?
+_INIT_PARAM_PAGECOUNT_ARG:
+dw 0  ; todo defaults?
+_INIT_PARAM_HANDLE_ARG:
+dw 32
+chipset_total_memory_pages:
+dw 0
+chipset_page_offset:
+dw CHIPSET_DEFAULT_OFFSET
+chipset_num_pages:
+dw 0
 _INIT_PARAM_OFFSET:
 dw 0
 _INIT_PARAM_command_line_length:
@@ -3275,6 +3291,57 @@ jnc   quiet_mode_off
 mov   byte ptr ds:[print_driver_param], RET_OPCODE
 
 quiet_mode_off:
+
+; parse soem common parameters and store them to prevent duplicate code...
+
+   mov   ah, "F" 
+   call  parse_driver_params
+
+   jnc   skip_page_frame_parse   ; param not found, use default
+
+   mov   ax, word ptr es:[di]
+   sub   al, 'C'
+   jb    bad_page_frame_param
+   cmp   al, 'E'-'C'
+   ja    bad_page_frame_param
+   xchg  al, ah
+   sub   al, '0'
+   je    set_page_frame
+   cmp   al, 4
+   je    set_page_frame
+   cmp   al, 8
+   je    set_page_frame
+   cmp   al, 'C' - '0'
+   mov   al, 12
+   je    set_page_frame
+
+bad_page_frame_param:
+   ; bad page frame param! error?
+   mov  DX, OFFSET string_bad_page_frame_param
+   jmp  DRIVER_NOT_INSTALLED
+
+set_page_frame:
+   mov   word ptr ds:[_INIT_PARAM_PAGEFRAME_ARG], ax
+
+skip_page_frame_parse:
+
+  mov   ah, "O" ; page offset
+  call  parse_driver_params_get_int  ; no default. instead fetch from chipset
+  
+  jnc   skip_offset_parse
+
+  mov   word ptr ds:[_INIT_PARAM_OFFSET_ARG], ax
+
+skip_offset_parse:
+
+  mov   ah, "C" ; page count
+  call  parse_driver_params_get_int  ; no default. instead fetch from chipset
+  
+  jnc   skip_pagecount_offset_parse
+
+  mov   word ptr ds:[_INIT_PARAM_PAGECOUNT_ARG], ax
+
+skip_pagecount_offset_parse:
 
 
 
@@ -3704,7 +3771,7 @@ les        di, dword ptr cs:[_RESIDENT_VARIABLE_request_header_pointer]
 les        di, es:[di + 012h]  ; todo whats this offset
 
 mov        al, "-"
-mov        word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_unparsed_parameter ; default not found
+mov        word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_default_parameter ; default not found
 
 search_for_next_param:
 repne      scasb      
@@ -3939,7 +4006,7 @@ IF COMPILE_CHIPSET EQ SCAT_CHIPSET
 
   mov   al, SCAT_EXTENDED_BOUNDARY_REGISTER   ; 
   out   SCAT_CHIPSET_CONFIG_REGISTER_SELECT, al
-  in    al, SCAT_CHIPSET_CONFIG_REGISTER_READWRITE
+  in    al, SCAT_CHIPSET_CONFIG_REGISTER_READWRITE 
   and   ax, 15
   shl   ax, 1
   xchg  ax, bx

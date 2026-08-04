@@ -1,35 +1,16 @@
 
 
 
-mov   ah, "F" 
-  call  parse_driver_params
-
-  ; chipset has no real default or set param, so use D000 by default if none defined.
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_parsed_parameter
+  mov   ax, word ptr ds:[_INIT_PARAM_PAGEFRAME_ARG]
+  test  ax, ax
+  jnz   use_parsed_page_frame
   mov   ax, 0100h            ; corresponds to 0D000h
-  jnc   set_page_frame   ; param not found, use default
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_default_parameter
 
-  mov   ax, word ptr es:[di]
-  sub   al, 'C'
-  jb    bad_page_frame_param
-  cmp   al, 'E'-'C'
-  ja    bad_page_frame_param
-  xchg  al, ah
-  sub   al, '0'
-  je    set_page_frame
-  cmp   al, 4
-  je    set_page_frame
-  cmp   al, 8
-  je    set_page_frame
-  cmp   al, 'C' - '0'
-  mov   al, 12
-  je    set_page_frame
 
-  bad_page_frame_param:
-  ; bad page frame param! error?
-  mov  DX, OFFSET string_bad_page_frame_param
-  jmp  DRIVER_NOT_INSTALLED
+use_parsed_page_frame:
 
-  set_page_frame:
 
   ; ah is 0 1 or 2    (C D or E)
   ; al is 0 4 8 or 12

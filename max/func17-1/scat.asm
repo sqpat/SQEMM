@@ -95,7 +95,7 @@ func_1701_handle_not_found:
 
   func_1701_handle_default_page:
   ; mapping to page -1
-  mov   ax, SCAT_CHIPSET_UNMAP_VALUE
+  xchg  ax, bx   ; get 0
   out   dx, ax   ; write 16 bit page num. 
   loop  func_1701_loop_next_page
 

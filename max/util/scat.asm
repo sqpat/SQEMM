@@ -1,6 +1,6 @@
 
 UTIL_get_page:
-
+public UTIL_get_page
 ; return value at page index (ax) in (ax)
   push  dx
 SELFMODIFY_SCAT_set_page_select_register_9:
@@ -10,7 +10,7 @@ SELFMODIFY_SCAT_set_page_select_register_9:
   jae   util_get_page_handle_conventional
 
 SELFMODIFY_SCAT_add_page_frame_register_offset_9:
-  add   al, SCAT_PAGE_C000_REGISTER_OFFSET  ; includes 00Ch
+  add   al, SCAT_PAGE_C000_REGISTER_OFFSET 
 
   util_get_page_handle_conventional:
 
@@ -19,7 +19,7 @@ SELFMODIFY_SCAT_add_page_frame_register_offset_9:
   dec   dx
   dec   dx
   in    ax, dx
-  SELFMODIFY_SCAT_add_page_offset_and_enable_5:
+SELFMODIFY_SCAT_add_page_offset_and_enable_5:
   sub   ax, SCAT_PAGE_OFFSET_AMT
   and   ax, 07FFFh ; turn off page ON bit
 
@@ -49,7 +49,7 @@ SELFMODIFY_SCAT_add_page_frame_register_offset_10:
 
   dec   dx
   dec   dx
-  SELFMODIFY_SCAT_add_page_offset_and_enable_4:
+SELFMODIFY_SCAT_add_page_offset_and_enable_4:
   add   ax, SCAT_PAGE_OFFSET_AMT
   out   dx, ax
   pop   dx
@@ -63,23 +63,22 @@ UTIL_unmap_all_pages:
   push  dx
   push  bx
   
-  mov   bx, SCAT_CHIPSET_UNMAP_VALUE
+  xor   bx, bx
   mov   cx, 24
   mov   ax, 12
 SELFMODIFY_SCAT_set_page_select_register_5:
   mov   dx, SCAT_PAGE_SELECT_REGISTER
 
   UTIL_loop_unmap_next_page:
-   
+    mov   ax, cx
+    dec   ax
     out   dx, al
     dec   dx
     dec   dx
-    inc   ax
-    xchg  ax, bx
+    xor   ax, ax
     out   dx, ax
     inc   dx
     inc   dx
-    xchg  ax, bx
     loop  UTIL_loop_unmap_next_page
 
   mov  cx, 4

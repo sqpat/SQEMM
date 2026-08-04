@@ -11,7 +11,8 @@ UTIL_get_page:
   out   FANTASY_PAGE_SELECT_REGISTER, al   ; select EMS page
 
   in    ax, FANTASY_PAGE_SET_REGISTER
-  sub   ax, FANTASY_PAGE_OFFSET_AMT
+SELFMODIFY_FANTASY_set_page_offset_6:
+  sub   ax, 01000h
 
   ret
 
@@ -22,7 +23,8 @@ SELFMODIFY_FANTASY_add_page_frame_offset_3:
 
   out   FANTASY_PAGE_SELECT_REGISTER, al   ; select EMS page
   in    ax, FANTASY_PAGE_SET_REGISTER
-  sub   ax, FANTASY_PAGE_OFFSET_AMT
+SELFMODIFY_FANTASY_set_page_offset_7:
+  sub   ax, 01000h
 
 
   ret
@@ -45,7 +47,8 @@ UTIL_set_page:
   out   FANTASY_PAGE_SELECT_REGISTER, al   ; select EMS page
 
   mov   ax, dx
-  add   ax, FANTASY_PAGE_OFFSET_AMT
+SELFMODIFY_FANTASY_set_page_offset_8:
+  add   ax, 01000h
   out   FANTASY_PAGE_SET_REGISTER, ax
   ret
   util_set_page_handle_page_frame:
@@ -55,7 +58,8 @@ SELFMODIFY_FANTASY_add_page_frame_offset_4:
   out   FANTASY_PAGE_SELECT_REGISTER, al   ; select EMS page
 
   mov   ax, dx
-  add   ax, FANTASY_PAGE_OFFSET_AMT
+SELFMODIFY_FANTASY_set_page_offset_9:
+  add   ax, 01000h
   out   FANTASY_PAGE_SET_REGISTER, ax
   ret
 

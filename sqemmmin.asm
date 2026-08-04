@@ -683,7 +683,7 @@ string_bad_page_count_param db 0Dh, 0Ah,  'Bad Page Count Param in Driver Parame
 string_bad_page_offset_param db 0Dh, 0Ah, 'Bad Page Offset Param in Driver Parameters! SQEMM was not loaded.', 0Dh, 0Ah,'$'
 
 string_parsed_parameter                     db            " (User Parameter)", 0Dh, 0Ah,'$'
-string_unparsed_parameter                   db            " (Default Parameter)", 0Dh, 0Ah,'$'
+STRING_default_parameter                    db            " (Default Parameter)", 0Dh, 0Ah,'$'
 
 string_good_port_param                      db            "Using Port:  "
 string_good_port_param_EDIT_OFFSET          db            "0208",'$'
@@ -946,7 +946,7 @@ les        di, dword ptr cs:[_RESIDENT_VARIABLE_request_header_pointer]
 les        di, es:[di + 012h]  ; todo whats this offset
 
 mov        al, "-"
-mov        word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET string_unparsed_parameter ; default not found
+mov        word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_default_parameter ; default not found
 
 search_for_next_param:
 repne      scasb      

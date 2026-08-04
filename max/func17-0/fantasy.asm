@@ -77,7 +77,8 @@ func_1700_continue_page_write:
   inc   bx    ; -1 check
   jz    func_1700_handle_default_page
   ; default is not the -1 case
-  lea   ax, [bx + FANTASY_PAGE_OFFSET_AMT - 1]   ; offset by default starting page
+SELFMODIFY_FANTASY_set_page_offset_3:
+  lea   ax, [bx + 01000h - 1]   ; offset by default starting page
   out   FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
 
 

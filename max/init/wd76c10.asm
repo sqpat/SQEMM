@@ -52,57 +52,25 @@ done_adding_bank_memory:
 
   
 
-  mov   ah, "F" 
-  call  parse_driver_params
 
-  ; chipset has no real default or set param, so use D000 by default if none defined.
+
+mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_parsed_parameter
+  mov   ax, word ptr ds:[_INIT_PARAM_PAGEFRAME_ARG]
+  test  ax, ax
+  jnz   use_parsed_page_frame
   mov   ax, 0100h            ; corresponds to 0D000h
-  jnc   set_page_frame   ; param not found, use default
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_default_parameter
 
-  mov   ax, word ptr es:[di]
-  sub   al, 'C'
-  jb    bad_page_frame_param
-  cmp   al, 'E'-'C'
-  ja    bad_page_frame_param
-  xchg  al, ah
-  sub   al, '0'
-  je    set_page_frame
-  cmp   al, 4
-  je    set_page_frame
-  cmp   al, 8
-  je    set_page_frame
-  cmp   al, 'C' - '0'
-  mov   al, 12
-  je    set_page_frame
+use_parsed_page_frame:
 
-bad_page_frame_param:
-  ; bad page frame param! error?
-  mov  DX, OFFSET string_bad_page_frame_param
-  jmp  DRIVER_NOT_INSTALLED
-
-inc_and_cap_al:
-  inc   ax
-  cmp   al, 40
-  jb    just_ret
-  mov   al, 32
-just_ret:
-  ret
-
-  chipset_page_offset:
-  dw 0
-  chipset_num_pages:
-  dw 0
-
-
-set_page_frame:
 
   test  ax, ax
-  jz    bad_page_frame_param  ; cant be c000
+  jz    bad_page_frame_param_chipset  ; cant be c000
 
   cmp   ah, 2
   jne   good_page_frame
   test  al, al
-  jnz   bad_page_frame_param ; e000 only.
+  jnz   bad_page_frame_param_chipset ; e000 only.
   good_page_frame:
 
   ; ah is 0 1    (C D)
@@ -124,21 +92,38 @@ set_page_frame:
 
 
 
-  mov   ah, "C" ; page count
-  call  parse_driver_params_get_int  ; no default. instead fetch from chipswt
-  
-  jc    found_chipset_bounds_value
+mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_parsed_parameter
 
-  mov   ax, word ptr ds:[chipset_num_pages] ; previous calculated.
+  mov   ax, word ptr ds:[_INIT_PARAM_PAGECOUNT_ARG]
+  test  ax, ax
+  jnz   use_parsed_pagecount
+
+  mov   ax, word ptr ds:[chipset_num_pages]
   mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_chipset_parameter
 
-  found_chipset_bounds_value:
+use_parsed_pagecount:
 
   test  ax, ax
   jnz   memory_count_ok
 bad_memory_count_error:
   mov  DX, OFFSET string_bad_page_count_param
   jmp  DRIVER_NOT_INSTALLED
+
+bad_page_frame_param_chipset:
+
+; bad page frame param! error?
+  mov  DX, OFFSET string_bad_page_frame_param
+  jmp  DRIVER_NOT_INSTALLED
+
+inc_and_cap_al:
+  inc   ax
+  cmp   al, 40
+  jb    just_ret
+  mov   al, 32
+just_ret:
+  ret
+
+
 memory_count_ok:
   mov   word ptr ds:[_RESIDENT_VARIABLE_unallocated_page_count], ax ;  we don't subtract, because this chipset does not include backfill in its total memory count i guess.
   mov   word ptr ds:[_RESIDENT_VARIABLE_total_EMS_page_count+1], ax
@@ -153,19 +138,19 @@ memory_count_ok:
 
 
 
-  mov   ah, "O"  ; page offset
-  call  parse_driver_params_get_int  ; no default. instead fetch from chipswt
+  mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_parsed_parameter
 
-  jc    found_page_offset_bounds
+  mov   ax, word ptr ds:[_INIT_PARAM_OFFSET_ARG]
+  test  ax, ax
+  jnz   use_parsed_offset
 
-  mov   ax, word ptr ds:[chipset_page_offset] ; previously calculated.
+  mov   ax, word ptr ds:[chipset_page_offset]
   mov   word ptr ds:[_INIT_PARAM_last_parsed_param], OFFSET STRING_chipset_parameter
 
-  found_page_offset_bounds:
+use_parsed_offset:
 
-  ; ax has offset..
+  mov   word ptr ds:[_INIT_PARAM_OFFSET], ax
 
-  mov  word ptr ds:[_INIT_PARAM_OFFSET], ax
 
   push  ax
   mov   word ptr ds:[SELFMODIFY_WD76C10_add_page_offset_and_enable_5+1], ax

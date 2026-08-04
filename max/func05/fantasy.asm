@@ -13,14 +13,15 @@
 SELFMODIFY_FANTASY_add_page_frame_offset_2:  
   add   al, 4 ; need to offset by proper chipset page frame to hardward amount
   out   FANTASY_PAGE_SELECT_REGISTER, al   ; select EMS page
-  cmp   bx, 0FFFFh   ; -1 check
-  je    handle_default_page_44h
-  lea   ax, [bx + FANTASY_PAGE_OFFSET_AMT]   ; offset by default starting page
+  inc   bx   ; -1 check
+  jz    handle_default_page_44h
+SELFMODIFY_FANTASY_set_page_offset_1:
+  lea   ax, [bx + 01000h - 1]   ; offset by default starting page
   out   FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
 
-  pop        ax
-  pop        bx
-  xor        ah, ah
+  pop   ax
+  pop   bx
+  xor   ah, ah
 
   iret
 
@@ -30,31 +31,32 @@ SELFMODIFY_FANTASY_add_page_frame_offset_2:
 
   ; write ems port... select chipset register
   out   FANTASY_PAGE_SELECT_REGISTER, al   ; select EMS page
-  cmp   bx, 0FFFFh   ; -1 check
+  inc   bx   ; -1 check
   je    handle_default_page_44h
-
-  lea   ax, [bx + FANTASY_PAGE_OFFSET_AMT]   ; offset by default starting page
+SELFMODIFY_FANTASY_set_page_offset_2:
+  lea   ax, [bx + 01000h - 1]   ; offset by default starting page
   out   FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
 
 
 
   RETURN_RESULT_00:
 
-  pop        ax
-  pop        bx
-  xor        ah, ah
+  pop   ax
+  pop   bx
+  xor   ah, ah
 
   iret
   
   handle_default_page_44h:
   ; mapping to page -1
   ; add four to get the default page value for the page 
-  mov   ax, bx
+  xchg  ax, bx
+  dec   ax
   out   FANTASY_PAGE_SET_REGISTER, ax   ; write 16 bit page num. 
 
-  pop        ax
-  pop        bx
-  xor        ah, ah
+  pop   ax
+  pop   bx
+  xor   ah, ah
 
   iret
 
