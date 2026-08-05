@@ -3304,8 +3304,8 @@ STRING_bad_frame      db 0Dh, 0Ah, "Page Frame "
 STRING_bad_frame_EDIT db "D000 failed pagination test!$"
 STRING_bad_memory    db 0Dh, 0Ah, 'Memory test failed!$'
 STRING_driver_exists db 0Dh, 0Ah, 'EMS Driver already loaded (chaining not supported).',0Dh, 0Ah, '$'
-STRING_driver_successfully_installed db 0Dh, 0Ah, 'SQEMM successfully initialized.', 0Ah, 0Dh, '$'
-STRING_driver_failed_installing db 0Dh, 0Ah, ' Driver not initialized.', 0Ah,  '$'
+STRING_driver_successfully_installed db 0Dh, 0Ah, 'SQEMM successfully initialized.', 0Dh, 0Ah, '$'
+STRING_driver_failed_installing db 0Dh, 0Ah, ' Driver not initialized.', 0Dh, 0Ah, '$'
 STRING_bad_page_frame_chipset db 0Dh, 0Ah,  'Bad Page Frame defined in Chipset Setting! SQEMM was not loaded.', 0Dh, 0Ah,'$'
 STRING_bad_port_chipset db 0Dh, 0Ah,  'Bad Port in Chipset Setting! SQEMM was not loaded.', 0Dh, 0Ah,'$'
 STRING_bad_memory_chipset    db 0Dh, 0Ah, 'Could not determine system nemory from chipset registers!$'
@@ -4281,28 +4281,31 @@ print_ax_at_cursor:
 IF COMPILE_CHIPSET EQ SCAT_CHIPSET
   scat_chipset_offset_lookup_table:
   dw  0,    64,  80,  96
-  dw  128, 256, 384, 512
-  dw  640, 768, 896,   0
-  dw    0,   0,   0,   0
+  dw  128, 192, 256, 384, 
+  dw  512, 640, 768, 896,
+  dw  960, 0,   0,   0
 
+; NOTE! bios differ from the spec.. So we must use bios numbers
+  ; SPEC NUMBERS      BIOS NUMBERS
 
-  ; 0000 No Boundary
-  ; 0001 1MB
-  ; 0010 1.25MB
-  ; 0011 1.5MB
-  ; 0100 2MB
-  ; 0101 4MB
-  ; 0110 6MB
-  ; 0111 8MB
-  ; 1000 10MB
-  ; 1001 12MB
-  ; 1010 14MB
-  ; 1011 No Boundary
-  ; 1100 No Boundary
-  ; 1101 No Boundary
-  ; 1110 No Boundary
+  ; 0000 No Boundary    No Boundary
+  ; 0001 1MB            1MB      
+  ; 0010 1.25MB         1.25MB
+  ; 0011 1.5MB          1.5MB
+  ; 0100 2MB            2MB
+  ; 0101 4MB            3MB
+  ; 0110 6MB            4MB
+  ; 0111 8MB            6MB
+  ; 1000 10MB           8MB
+  ; 1001 12MB           10MB
+  ; 1010 14MB           12MB
+  ; 1011 No Boundary    14MB
+  ; 1100 No Boundary    15MB
+  ; 1101 No Boundary    No Boundary
+  ; 1110 No Boundary    No Boundary
   ; 1111 ???? (spec doesnt say)
 
+ ; NOTE: I have also seen BIOS with 13, 14.5, and 14.75 options added. I suppose this is not a very safe field to rely on.
 
   get_SCAT_chipset_bounds_value:
 

@@ -8,7 +8,7 @@
 
 SCAMP_CHIPSET = 1
 SCAT_CHIPSET = 2
-HT18_CHIPSET = 3       ; todo needs alternate register sets
+HT18_CHIPSET = 3       ; todo needs alternate register sets. Maybe split out GC103
 HT12_CHIPSET = 4       ; todo not up to date
 HEDAKA_CHIPSET = 5     ; todo not up to date
 LOTECH_BOARD = 6
@@ -19,8 +19,8 @@ STANDARD_EMS_BOARD = 10
 FANTASY_EMS = 11       ; todo needs offset
 RODNEY_EMS = 12        ; todo not up to date
 NEAT_2MB_CHIPSET = 13  ; todo kinda deprecated
-TOPCAT_CHIPSET = 14    ; todo not done
-WD76C10_CHIPSET = 14   ; todo not done
+TOPCAT_CHIPSET = 14    ; todo needs alternate register sets
+WD76C10_CHIPSET = 15
 
 
 DRIVER_VERSION_MIN   = 1  ; around 600-700 bytes, main functions implemented, single handle, fast
@@ -35,12 +35,12 @@ COMPILE_8086 = 0
 
 
 COMPILE_VERSION = DRIVER_VERSION_MAX
-COMPILE_CHIPSET = FANTASY_EMS
+COMPILE_CHIPSET = SCAT_CHIPSET
 
 RET_OPCODE = 0C3h
 XCHG_AX_CX_OPCODE = 091h
 
-MAX_HANDLE_COUNT = 255  ; TODO whats the right number?
+MAX_HANDLE_COUNT = 255
 
 DEFAULT_ACCESS_KEY_HIGH = 01717h
 DEFAULT_ACCESS_KEY_LOW  = 07171h
