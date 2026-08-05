@@ -725,6 +725,7 @@ inc        word ptr cs:[_RESIDENT_VARIABLE_handle_count]
 mov        bx, dx
 push       ax
 SHIFT_MACRO shl bx 3
+SELFMODIFY_HANLDENAME_LIST_LOCATION_01:
 add        bx, OFFSET _RESIDENT_VARIABLE_handlename_list
 xor        ax, ax
 mov        word ptr cs:[bx], ax    ; zero handle name
@@ -794,8 +795,10 @@ cmp        word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle
 
 je         func_06_no_emm_handle_found
 shl        bx, 1
+SELFMODIFY_HANLDESTACK_LIST_LOCATION_01:
 cmp        word ptr cs:[_RESIDENT_VARIABLE_handle_page_stack + bx], -1
 jne        func_06_stack_exists
+SELFMODIFY_HANLDENAME_LIST_LOCATION_02:
 add        bx, OFFSET _RESIDENT_VARIABLE_handlename_list
 xor        ax, ax
 mov        word ptr cs:[bx], ax   ; zero handle name
@@ -900,6 +903,7 @@ EMS_FUNCTION_047h:
   push  bx
   xchg ax, bx
   SHIFT_MACRO shl bx 3  ; 8 bytes per handle 
+SELFMODIFY_HANLDESTACK_LIST_LOCATION_02:
   add  bx, OFFSET _RESIDENT_VARIABLE_handle_page_stack
 
 
@@ -970,6 +974,7 @@ EMS_FUNCTION_048h:
   push  si
   xchg  ax, si
   SHIFT_MACRO shl si 3  ; 8 bytes per handle 
+SELFMODIFY_HANLDESTACK_LIST_LOCATION_03:
   add  si, OFFSET _RESIDENT_VARIABLE_handle_page_stack
 
 
@@ -2389,6 +2394,7 @@ EMS_FUNCTION_04Dh:
 push  di
 xor   ax, ax ; count
 push  cx
+SELFMODIFY_set_handle_count_1:
 mov   cx, MAX_HANDLE_COUNT
 
 SELFMODIFY_HANDLE_LOCATION_19:
@@ -2750,6 +2756,7 @@ mov   ax, word ptr cs:[_RESIDENT_VARIABLE_handle_list + si + HANDLE_INFO.handle_
 cmp   ax, -1
 je    func_20_bad_handle
 shl   si, 1
+SELFMODIFY_HANLDENAME_LIST_LOCATION_03:
 add   si, OFFSET _RESIDENT_VARIABLE_handlename_list
 cmp   byte ptr cs:[_current_call_subfunction_value], 1
 je    func_5301
@@ -2785,7 +2792,9 @@ lodsw
 
 ; the string is dx:bp:bx:ax. search for a dupe
 
+SELFMODIFY_HANLDENAME_LIST_LOCATION_04:
 mov   si, OFFSET _RESIDENT_VARIABLE_handlename_list
+SELFMODIFY_set_handle_count_2:
 mov   cx, MAX_HANDLE_COUNT
 func_20_loop_check_for_dupe_name:
    cmp cs:[si+0], dx
@@ -2850,6 +2859,7 @@ jb   do_func_21_00
 je   do_func_21_01
 cmp  al, 2
 jne  func_21_bad_subfunction
+SELFMODIFY_set_handle_count_3:
 mov  bx, MAX_HANDLE_COUNT
 iret
 do_func_21_01:
@@ -2873,7 +2883,9 @@ jz    func_21_null_name
 
 ; the string is dx:bp:bx:ax. search for a dupe
 
+SELFMODIFY_HANLDENAME_LIST_LOCATION_05:
 mov   si, OFFSET _RESIDENT_VARIABLE_handlename_list
+SELFMODIFY_set_handle_count_4:
 mov   cx, MAX_HANDLE_COUNT
 func_21_loop_check_for_dupe_name:
    cmp cs:[si+0], dx
@@ -2889,6 +2901,7 @@ func_21_loop_check_for_dupe_name:
    POPA_MACRO ; ax restored
    mov dx, es
    neg dx
+SELFMODIFY_set_handle_count_5:
    add dx, MAX_HANDLE_COUNT
    pop es
 
@@ -2917,12 +2930,14 @@ push  di
 push  cs
 pop   ds
 
+SELFMODIFY_set_handle_count_6:
 mov   cx, MAX_HANDLE_COUNT
 xor   ax, ax
 cwd
 dec   dx  ; dx = -1
 SELFMODIFY_HANDLE_LOCATION_21:
 mov   bx, OFFSET _RESIDENT_VARIABLE_handle_list
+SELFMODIFY_HANLDENAME_LIST_LOCATION_06:
 mov   si, OFFSET _RESIDENT_VARIABLE_handlename_list
 mov   bp, 8
 
@@ -3189,13 +3204,36 @@ IFDEF MAX_CONTEXT_COUNT
 ENDIF
 
 ALIGN 2
-; global handle (first allocation)
-
-
 _RESIDENT_VARIABLE_unallocated_page_count:  ; free pages is handle 0 free pages
    dw MAX_PAGE_COUNT  ; num pages for handle. -1 means unallocated.
 _RESIDENT_VARIABLE_unallocated_page_head:
    dw OFFSET _RESIDENT_VARIABLE_conventional_page_list ; ptr to first page. Can be -1 if the above is 0 for ems 4.0 driver
+
+
+; todo resize this as well
+
+
+
+_RESIDENT_VARIABLE_conventional_page_list:
+public _RESIDENT_VARIABLE_page_list
+_RESIDENT_VARIABLE_page_list:
+
+CURRENT_NEXT_POINTER = _RESIDENT_VARIABLE_page_list
+
+
+REPT (MAX_PAGE_COUNT - 1)
+   CURRENT_NEXT_POINTER = CURRENT_NEXT_POINTER + (SIZE PAGE_INFO)
+   dw  CURRENT_NEXT_POINTER
+ENDM
+dw  -1   ; last entry
+
+
+end_of_pages_label:
+
+; global handle (first allocation)
+ALIGN 2
+
+
 
 _RESIDENT_VARIABLE_handle_list:
 ; handle 0 is the OS handle and owns 
@@ -3225,38 +3263,6 @@ _RESIDENT_VARIABLE_handle_page_stack:
 REPT MAX_HANDLE_COUNT
   dw -1, -1, -1, -1
 ENDM
-
-
-
-_RESIDENT_VARIABLE_conventional_page_list:
-public _RESIDENT_VARIABLE_page_list
-_RESIDENT_VARIABLE_page_list:
-
-CURRENT_NEXT_POINTER = _RESIDENT_VARIABLE_page_list
-
-COMMENT @
-CURRENT_NEXT_POINTER = _RESIDENT_VARIABLE_conventi
-onal_page_list
-
-IF DEFAULT_CONVENTIONAL_PAGE_COUNT GE 1
-
-   REPT (DEFAULT_CONVENTIONAL_PAGE_COUNT - 1)
-      CURRENT_NEXT_POINTER = CURRENT_NEXT_POINTER + (SIZE PAGE_INFO)
-      dw  CURRENT_NEXT_POINTER
-   ENDM
-   dw  -1   ; last entry
-   CURRENT_NEXT_POINTER = CURRENT_NEXT_POINTER + (SIZE PAGE_INFO)
-
-ENDIF
-@
-
-
-REPT (MAX_PAGE_COUNT - 1)
-   CURRENT_NEXT_POINTER = CURRENT_NEXT_POINTER + (SIZE PAGE_INFO)
-   dw  CURRENT_NEXT_POINTER
-ENDM
-dw  -1   ; last entry
-
 
 
 
@@ -3314,14 +3320,16 @@ STRING_default_parameter                    db            " (Default Parameter)"
 STRING_chipset_parameter                    db            " (Chipset Parameter)", 0Dh, 0Ah,'$'
 STRING_dynamic_parameter                    db            " (Dynamic Parameter)", 0Dh, 0Ah,'$'
 
-STRING_good_port_param                      db            "Using Port:  "
+STRING_good_port_param                      db            "Using Port:   "
 STRING_good_port_param_EDIT_OFFSET          db            "0208",'$'
-STRING_good_page_frame_param                db            "Page Frame:  "
+STRING_good_page_frame_param                db            "Page Frame:   "
 STRING_good_page_frame_param_EDIT_OFFSET    db            "D000",'$'
-STRING_good_page_count_param                db            "Page Count:  "
+STRING_good_page_count_param                db            "Page Count:   "
 STRING_good_page_count_param_EDIT_OFFSET    db            "0256",'$'
-STRING_good_page_offset_param               db            "Page Offset: "
+STRING_good_page_offset_param               db            "Page Offset:  "
 STRING_good_page_offset_param_EDIT_OFFSET   db            "0128",'$'
+STRING_good_handle_param                    db            "Handle Count: "
+STRING_good_handle_param_EDIT_OFFSET        db            "0255",'$'
 
 
 
@@ -3432,8 +3440,37 @@ jnc   quiet_mode_off
 mov   byte ptr ds:[print_driver_param], RET_OPCODE
 
 quiet_mode_off:
+public quiet_mode_off
 
-; parse soem common parameters and store them to prevent duplicate code...
+; parse some common parameters and store them to prevent duplicate code...
+
+
+mov   ah, "H" ; handle count
+mov   dx, MAX_HANDLE_COUNT  ; default
+call  parse_driver_params_get_int
+
+jnc   handle_count_max
+
+
+mov   word ptr ds:[use_handle_count+1], ax
+
+mov   word ptr ds:[SELFMODIFY_set_handle_count_1+1], ax
+mov   word ptr ds:[SELFMODIFY_set_handle_count_2+1], ax
+mov   word ptr ds:[SELFMODIFY_set_handle_count_3+1], ax
+mov   word ptr ds:[SELFMODIFY_set_handle_count_4+1], ax
+mov   word ptr ds:[SELFMODIFY_set_handle_count_5+2], ax
+mov   word ptr ds:[SELFMODIFY_set_handle_count_6+1], ax
+
+
+
+handle_count_max:
+
+
+  mov   di, OFFSET STRING_good_handle_param_EDIT_OFFSET
+  mov   dx, OFFSET STRING_good_handle_param
+  call  print_driver_param_4_char_int
+
+
 
    mov   ah, "F" 
    call  parse_driver_params
@@ -3706,53 +3743,45 @@ mov   word ptr ds:[mappable_phys_page_struct_page_frame+12], ax
 
 push  cs
 pop   es
-std
-mov   ax, si   ; end of driver 
-mov   bx, 10
-mov   di, OFFSET STRING_resident_driver_size_EDIT_OFFSET + 3
 
-print_next_size_digit:
-  cwd
-  div       bx
-  xchg      ax, dx  ; get   remainder in ax
-  add       al, '0' ; ASCIIfy
-  stosb             ; print remainder from ax
-  xchg      ax, dx  ; get   quotient back in ax
-  test      ax, ax
-  jnz       print_next_size_digit
+; move handles list to the  to the new end of the driver
 
-cld
+; si has current end of driver
 
-; hijack this to use do_print_driver_param_hex as function now
-mov        byte ptr ds:[done_editing_string], RET_OPCODE
+mov   ax, si
+and   ax, 1
+add   si, ax  ; even align. necessary?
 
-mov        ax, cs
-mov        di, OFFSET STRING_resident_driver_location_EDIT_OFFSET
+use_handle_count:
+   mov   cx, MAX_HANDLE_COUNT
 
-call       do_print_driver_param_hex
-inc        di   ; skip colon
-mov        ax, OFFSET MAIN_EMS_INTERRUPT_VECTOR
-call       do_print_driver_param_hex
+   mov   bx, cx ; backup
 
-mov        dx, OFFSET STRING_resident_driver_size
-mov        ah, 9  ; PRINT_STRING
-int        021h
+   shl   cx, 1   ; 2 words per handle
 
-here:
-public  here
+   mov   di, si  ; copy destination
+   xchg  ax, si  ; ax gets current start of handle list.
 
-mov   ah, "X" ; force failure
-call  parse_driver_params
-jnc   finish_driver_setup
 
-force_driver_failure:
-mov  dx, OFFSET string_forced_failure
-jmp  DRIVER_NOT_INSTALLED
 
-finish_driver_setup:
+   mov   si, OFFSET _RESIDENT_VARIABLE_handle_list ; copy source.
+   cmp   si, di
+   jne   move_handle_list
+   mov   si, OFFSET _RESIDENT_VARIABLE_handle_list_END
+   jmp   skip_move_handle_list   ; didnt move
+move_handle_list:
+   rep   movsw
+
+   mov   si, di  ; new end of driver in si
+
+
+
+
+
+; set up handles struct.
 
 ; remap handles
-mov  ax, OFFSET _RESIDENT_VARIABLE_handle_list
+; ax is start of handle list.
 mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_02+3], ax
 mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_04+3], ax
 mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_05+3], ax
@@ -3797,8 +3826,90 @@ inc  ax
 inc  ax  ; SIZE HANDLE_INFO)
 mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_30+1], ax  
 
-mov  ax, OFFSET _RESIDENT_VARIABLE_handle_list_END
-mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_31+2], ax
+
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_31+2], di  ; new _RESIDENT_VARIABLE_handle_list_END
+
+
+; now handle names!
+
+mov  ax, si
+mov  di, si
+mov  si, OFFSET _RESIDENT_VARIABLE_handlename_list
+mov  cx, bx
+SHIFT_MACRO shl cx 2   ; 4 words, 8 bytes per handle name
+rep  movsw
+
+mov   si, di  ; new end of driver in si
+
+mov  word ptr ds:[SELFMODIFY_HANLDENAME_LIST_LOCATION_01+2], ax
+mov  word ptr ds:[SELFMODIFY_HANLDENAME_LIST_LOCATION_02+2], ax
+mov  word ptr ds:[SELFMODIFY_HANLDENAME_LIST_LOCATION_03+2], ax
+mov  word ptr ds:[SELFMODIFY_HANLDENAME_LIST_LOCATION_04+1], ax
+mov  word ptr ds:[SELFMODIFY_HANLDENAME_LIST_LOCATION_05+1], ax
+mov  word ptr ds:[SELFMODIFY_HANLDENAME_LIST_LOCATION_06+1], ax
+
+; now handle stacks!
+
+mov  ax, si
+mov  di, si
+mov  si, OFFSET _RESIDENT_VARIABLE_handle_page_stack
+mov  cx, bx
+SHIFT_MACRO shl cx 2   ; 4 words, 8 bytes per handle name
+rep  movsw
+
+mov   si, di  ; new end of driver in si
+
+mov  word ptr ds:[SELFMODIFY_HANLDESTACK_LIST_LOCATION_01+3], ax
+mov  word ptr ds:[SELFMODIFY_HANLDESTACK_LIST_LOCATION_02+2], ax
+mov  word ptr ds:[SELFMODIFY_HANLDESTACK_LIST_LOCATION_03+2], ax
+
+
+skip_move_handle_list:
+std
+mov   ax, si   ; si currently holds end of driver 
+mov   bx, 10
+mov   di, OFFSET STRING_resident_driver_size_EDIT_OFFSET + 3
+
+print_next_size_digit:
+  cwd
+  div       bx
+  xchg      ax, dx  ; get   remainder in ax
+  add       al, '0' ; ASCIIfy
+  stosb             ; print remainder from ax
+  xchg      ax, dx  ; get   quotient back in ax
+  test      ax, ax
+  jnz       print_next_size_digit
+
+cld
+
+; hijack this to use do_print_driver_param_hex as function now
+mov        byte ptr ds:[done_editing_string], RET_OPCODE
+
+mov        ax, cs
+mov        di, OFFSET STRING_resident_driver_location_EDIT_OFFSET
+
+call       do_print_driver_param_hex
+inc        di   ; skip colon
+mov        ax, OFFSET MAIN_EMS_INTERRUPT_VECTOR
+call       do_print_driver_param_hex
+
+mov        dx, OFFSET STRING_resident_driver_size
+mov        ah, 9  ; PRINT_STRING
+int        021h
+
+here:
+public  here
+
+mov   ah, "X" ; force failure
+call  parse_driver_params
+jnc   finish_driver_setup
+
+force_driver_failure:
+mov  dx, OFFSET string_forced_failure
+jmp  DRIVER_NOT_INSTALLED
+
+finish_driver_setup:
+
 
 
 ; todo variableize, remap pointers etc.
@@ -4023,7 +4134,7 @@ parse_driver_params_get_int:
    ret
 
 print_driver_param_4_char_int:
-  mov      cx, 3
+  mov   cx, 3
 print_driver_param_int:
   clc
 
