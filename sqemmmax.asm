@@ -3683,7 +3683,7 @@ int   021h
 skip_tests:
 
 
-mov   ah, "r" ; skip umb resident
+mov   ah, "R" ; skip umb resident
 call  parse_driver_params
 
 mov   si, 0
