@@ -244,6 +244,57 @@ EMS_FUNCTION_050h:
 ;             (Physical page number mode)                    5000h     
 ;             (Segment address mode)                         5001h     
 
+; this part is the same for all chipsets as we loop thru and cycle thru the handle
+
+PUSHA_MACRO   ; includes ax
+
+  mov   bp, dx
+  SHIFT_MACRO shl bp 2  ;  SIZE HANDLE_INFO
+SELFMODIFY_HANDLE_LOCATION_33:
+  mov   di, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bp + HANDLE_INFO.handle_num_pages]
+  test  di, di
+  js    func_1700_handle_not_found
+SELFMODIFY_HANDLE_LOCATION_34:
+  mov   bp, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bp + HANDLE_INFO.handle_first_page]
+
+; bp has first page ptr.
+; di has num logical pages
+
+func_1700_loop_next_page:
+  ; next page in ax....
+
+  lodsw   ; load logical page
+  mov        bx, ax  ; in case its unmap, bx goes forward as -1
+  inc        ax
+  jz         func_1700_skip_logical_check
+  cmp        bx, di
+  ja         func_1700_logical_page_too_high
+
+  ; get actual page bx for handle dx
+
+  ; ax is plus one
+
+  mov   bx, bp  ; first page
+  dec   ax
+
+  jz  func_1700_done_looping
+
+func_1700_loop_next_logical_page:
+  mov   bx, word ptr cs:[bx + PAGE_INFO.page_info_next_page]
+  dec   ax
+  jnz   func_1700_loop_next_logical_page
+  
+func_1700_done_looping:
+
+  ; bx is now ptr to the actual page...
+  sub   bx, OFFSET _RESIDENT_VARIABLE_page_list
+  shr   bx, 1  ; board physical page number
+
+
+;  func_1700_skip_logical_check:  ; this label goes in the include, in case its necessary to insert code before the label.
+
+
+
 
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
    INCLUDE max/func17-0\scamp.asm
@@ -321,13 +372,16 @@ push  cx
 mov   cx, bx
 mov   bx, dx
 SHIFT_MACRO shl bx 2  ;  SIZE HANDLE_INFO
+SELFMODIFY_HANDLE_LOCATION_01:
 cmp   word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page], -1
 je    func_05_handle_not_found
 inc   cx
 jz    func_05_skip_page_lookup
 dec   cx
+SELFMODIFY_HANDLE_LOCATION_02:
 cmp   cx, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages]
 ja    func_05_logical_page_too_high
+SELFMODIFY_HANDLE_LOCATION_03:
 mov   bx, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page]
 
 jcxz  func_05_done_looping
@@ -735,6 +789,7 @@ je         func_06_no_emm_handle_found_skip_pop_bx ; zero handle illegal
 push       bx
 mov        bx, dx ; handle
 SHIFT_MACRO shl bx 2
+SELFMODIFY_HANDLE_LOCATION_04:
 cmp        word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages], -1
 
 je         func_06_no_emm_handle_found
@@ -812,6 +867,7 @@ EMS_FUNCTION_04Ch:
 ; ax has bx...
 mov        bx, dx ; handle
 SHIFT_MACRO shl bx 2
+SELFMODIFY_HANDLE_LOCATION_05:
 mov        bx, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages]
 cmp        bx, -1
 je         func_13_no_emm_handle_found
@@ -976,6 +1032,7 @@ xchg       ax, bx ; todo juggle less
 test  dx, dx
 jne   func_18_done_with_os_hanlde_stuff ; zero handle illegal
 func_18_handle_os_handle:
+SELFMODIFY_HANDLE_LOCATION_06:
 mov   ax, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages]
 cmp   bx, DEFAULT_CONVENTIONAL_PAGE_COUNT
 jb    func_18_done_with_os_hanlde_stuff
@@ -987,6 +1044,7 @@ mov   cx, bx ; reallocation count
 mov   bx, dx ; handle
 SHIFT_MACRO shl bx 2
 
+SELFMODIFY_HANDLE_LOCATION_07:
 mov   ax, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages]
 cmp   ax, -1
 je    func_18_no_emm_handle_found_popbx
@@ -999,9 +1057,11 @@ add   ax, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count]
 cmp   cx, ax
 ja    func_18_allocated_too_many_pages_above_available
 mov   ax, cx
+SELFMODIFY_HANDLE_LOCATION_08:
 xchg  ax, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages]    ; new num pages.
 add   word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count], ax
 sub   word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count], cx
+SELFMODIFY_HANDLE_LOCATION_09:
 mov   ax, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page]  ; bx is page 0.
 
 ; bx may be a bad pointer to start; 
@@ -1013,6 +1073,7 @@ test  ax, ax
 jne   loop_func_18_add_page
 inc   dx
 mov   ax, word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_head]  ; allocate from head.
+SELFMODIFY_HANDLE_LOCATION_10:
 mov   word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page], ax
 loop_func_18_add_page:
 cmp   ax, -1
@@ -1093,12 +1154,14 @@ func_18_set_0_page_case:
 ; todo remove all pages and set a null first page.
 push  cx        ; zero to pop into numpages/bx later.
 
+SELFMODIFY_HANDLE_LOCATION_11:
 mov   word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages], cx  ; zero
 add   word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count], ax ; was num pages...
 
 mov   ax, cx ; known zero.
 dec   cx ; -1
 
+SELFMODIFY_HANDLE_LOCATION_12:
 xchg  word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page], ax; zero
 mov   bx, ax
 xchg  word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_head], ax
@@ -1811,6 +1874,7 @@ cant_dec_esdi:
  ; backwards page
   mov   cx, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_current_page]
   mov   si, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_handle]
+SELFMODIFY_HANDLE_LOCATION_13:
   mov   si, word ptr cs:[_RESIDENT_VARIABLE_handle_list + si + HANDLE_INFO.handle_first_page]
 
   try_next_page_backwards_loop_source:
@@ -1844,6 +1908,7 @@ cant_dec_esdi:
  ; backwards page
   mov   cx, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_current_page]
   mov   di, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_handle]
+SELFMODIFY_HANDLE_LOCATION_14:
   mov   di, word ptr cs:[_RESIDENT_VARIABLE_handle_list + di + HANDLE_INFO.handle_first_page]
 
   try_next_page_backwards_loop_dest:
@@ -1923,6 +1988,7 @@ func_24_prep_source_logical:
  ; look up logical page 
  push  bx
  mov   bx, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_handle] ; preshifted 2
+SELFMODIFY_HANDLE_LOCATION_15:
  mov   bx, word ptr cs:[_RESIDENT_VARIABLE_handle_list + BX + HANDLE_INFO.handle_first_page]
  
  mov   ax, dx   ; dx has logical page number. 
@@ -1960,6 +2026,7 @@ func_24_prep_dest_logical:
 ; look up logical page 
  push  bx
  mov   bx, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_handle] ; preshifted 2
+SELFMODIFY_HANDLE_LOCATION_16:
  mov   bx, word ptr cs:[_RESIDENT_VARIABLE_handle_list + BX + HANDLE_INFO.handle_first_page]
   
  mov   dx, ax   ; ax already has logical page number. backup in dx
@@ -2034,6 +2101,7 @@ func_24_do_bounds_checks:
   func_24_source_dont_add_extra_page:
   add    bp, dx  ; source logical page numbero
   mov    bx, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_source_handle] ; preshifted 2
+SELFMODIFY_HANDLE_LOCATION_17:
   cmp    bp, word ptr cs:[_RESIDENT_VARIABLE_handle_list + BX + HANDLE_INFO.handle_num_pages]
   pop    bx
   pop    cx
@@ -2054,6 +2122,7 @@ func_24_skip_si_check:
   func_24_dest_dont_add_extra_page:
   add    bp, ax  ; dest logical page numbero
   mov    bx, word ptr cs:[_RESIDENT_VARIABLE_FUNC_24_dest_handle] ; preshifted 2
+SELFMODIFY_HANDLE_LOCATION_18:
   cmp    bp, word ptr cs:[_RESIDENT_VARIABLE_handle_list + BX + HANDLE_INFO.handle_num_pages]
   pop    bx
   ja     func_24_out_of_logical_range
@@ -2322,6 +2391,7 @@ xor   ax, ax ; count
 push  cx
 mov   cx, MAX_HANDLE_COUNT
 
+SELFMODIFY_HANDLE_LOCATION_19:
 mov   bx, OFFSET _RESIDENT_VARIABLE_handle_list
   
   func_14_check_next_handle:
@@ -2480,6 +2550,64 @@ ENDIF
 EMS_FUNCTION_05001h:
 
 
+; this part is the same for all chipsets as we loop thru and cycle thru the handle
+
+
+xchg   ax, bx
+pop    ax
+PUSHA_MACRO
+
+  ; segment mode
+
+
+
+  mov   bp, dx
+  SHIFT_MACRO shl bp 2  ;  SIZE HANDLE_INFO
+SELFMODIFY_HANDLE_LOCATION_35:
+  mov   di, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bp + HANDLE_INFO.handle_num_pages]
+  test  di, di
+  js    func_1701_handle_not_found
+SELFMODIFY_HANDLE_LOCATION_36:
+  mov   bp, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bp + HANDLE_INFO.handle_first_page]
+
+; bp has first page ptr.
+; di has num logical pages
+
+func_1701_loop_next_page:
+  ; next page in ax....
+
+  lodsw   ; load logical page
+  mov        bx, ax  ; in case its unmap, bx goes forward as -1
+  inc        ax
+  jz         func_1701_skip_logical_check
+  cmp        bx, di   ; bx is the same 
+  ja         func_1701_logical_page_too_high
+
+  ; get actual page bx for handle dx
+
+  ; ax is plus one.
+
+  mov   bx, bp  ; first page
+  dec   ax
+
+  jz  func_1701_done_looping
+
+func_1701_loop_next_logical_page:
+  mov   bx, word ptr cs:[bx + PAGE_INFO.page_info_next_page]
+  dec   ax
+  jnz   func_1701_loop_next_logical_page
+  
+func_1701_done_looping:
+
+  ; bx is now ptr to the actual page...
+  sub   bx, OFFSET _RESIDENT_VARIABLE_page_list
+  shr   bx, 1  ; board physical page number
+
+
+;  func_1701_skip_logical_check:  ; this label goes in the include, in case its necessary to insert code before the label.
+
+
+
 IF COMPILE_CHIPSET EQ SCAMP_CHIPSET 
    INCLUDE max/func17-1\scamp.asm
 ELSEIF COMPILE_CHIPSET EQ FANTASY_EMS
@@ -2617,6 +2745,7 @@ push  ax
 push  si
 mov   si, dx ; handle
 SHIFT_MACRO shl si 2
+SELFMODIFY_HANDLE_LOCATION_20:
 mov   ax, word ptr cs:[_RESIDENT_VARIABLE_handle_list + si + HANDLE_INFO.handle_num_pages]
 cmp   ax, -1
 je    func_20_bad_handle
@@ -2792,6 +2921,7 @@ mov   cx, MAX_HANDLE_COUNT
 xor   ax, ax
 cwd
 dec   dx  ; dx = -1
+SELFMODIFY_HANDLE_LOCATION_21:
 mov   bx, OFFSET _RESIDENT_VARIABLE_handle_list
 mov   si, OFFSET _RESIDENT_VARIABLE_handlename_list
 mov   bp, 8
@@ -2891,6 +3021,7 @@ COMMON_check_valid_handle:
  je        ret_bad_handle
  xchg      ax, bx
  SHIFT_MACRO  shl bx 2
+SELFMODIFY_HANDLE_LOCATION_22:
  cmp       word ptr cs: [_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages], -1
  xchg      ax, bx
  je        ret_bad_handle  ; the one handle is unalloced..
@@ -2911,11 +3042,13 @@ COMMON_allocate_pages:
    
    SHIFT_MACRO shl  dx 2
    xchg bx, dx
+SELFMODIFY_HANDLE_LOCATION_23:
    mov  word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages], ax
    test ax, ax
    je   COMMON_allocate_zero_pages
    sub  word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count], ax
 
+SELFMODIFY_HANDLE_LOCATION_24:
    mov  word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page], dx
    mov  bx, dx
    dec  ax ; owns the 'first page' already.
@@ -2939,6 +3072,7 @@ COMMON_allocate_pages:
    ret
 
 COMMON_allocate_zero_pages:
+SELFMODIFY_HANDLE_LOCATION_25:
    mov  word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page], ax
 
    pop  dx
@@ -2956,12 +3090,14 @@ COMMON_deallocate_pages:
    SHIFT_MACRO shl  bx 2
 
    mov  ax, -1   
+SELFMODIFY_HANDLE_LOCATION_26:
    xchg ax, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_num_pages] ; set -1 and get page count
    add  word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_count], ax
 
    test ax, ax
    jz   handle_zero_page_deallocation
 
+SELFMODIFY_HANDLE_LOCATION_27:
    mov  ax, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page] ; get first unallocated page
    xchg ax, bx   ; ax stores original pointer. bx gets first page
 
@@ -2986,6 +3122,7 @@ COMMON_deallocate_pages:
    ; 2. global/free linked list points to old handle first page
    ; 3. handle last page poinst to old global/free first page
 
+SELFMODIFY_HANDLE_LOCATION_28:
    xchg word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page], ax  ; -1
    mov  bx, dx  ; bx gets ptr
    xchg word ptr cs:[_RESIDENT_VARIABLE_unallocated_page_head], ax  ; point to first page 
@@ -2999,6 +3136,7 @@ COMMON_deallocate_pages:
 
    handle_zero_page_deallocation:
    dec  ax  ; -1
+SELFMODIFY_HANDLE_LOCATION_29:
    mov  word ptr cs:[_RESIDENT_VARIABLE_handle_list + bx + HANDLE_INFO.handle_first_page], ax ; write -1
    jmp  deallocate_return
 
@@ -3006,6 +3144,7 @@ COMMON_deallocate_pages:
 COMMON_get_next_free_handle:
    ; return next free handle in dx
    push  bx
+SELFMODIFY_HANDLE_LOCATION_30:
    mov   bx, OFFSET _RESIDENT_VARIABLE_handle_list + (SIZE HANDLE_INFO) ; start at index 1
    mov   dx, -1
    
@@ -3013,13 +3152,15 @@ COMMON_get_next_free_handle:
    cmp   word ptr cs:[bx], dx
    je    found_free_handle
    add   bx, SIZE HANDLE_INFO
-   cmp   bx, offset _RESIDENT_VARIABLE_handle_list_END
+SELFMODIFY_HANDLE_LOCATION_31:
+   cmp   bx, OFFSET _RESIDENT_VARIABLE_handle_list_END
    jb    check_next_handle
    ; dx = -1
    pop   bx
    ret
 
   found_free_handle:
+SELFMODIFY_HANDLE_LOCATION_32:
    sub   bx, OFFSET _RESIDENT_VARIABLE_handle_list 
    mov   dx, bx
    SHIFT_MACRO shr dx 2
@@ -3602,9 +3743,62 @@ public  here
 
 mov   ah, "X" ; force failure
 call  parse_driver_params
-jc    force_driver_failure
+jnc   finish_driver_setup
 
+force_driver_failure:
+mov  dx, OFFSET string_forced_failure
+jmp  DRIVER_NOT_INSTALLED
 
+finish_driver_setup:
+
+; remap handles
+mov  ax, OFFSET _RESIDENT_VARIABLE_handle_list
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_02+3], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_04+3], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_05+3], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_06+3], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_07+3], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_08+3], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_11+3], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_17+3], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_18+3], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_19+1], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_20+3], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_21+1], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_22+3], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_23+3], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_26+3], ax
+
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_32+2], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_33+3], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_35+3], ax
+
+inc  ax  ; HANDLE_INFO.handle_first_page
+inc  ax
+
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_01+3], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_03+3], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_09+3], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_10+3], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_12+3], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_13+3], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_14+3], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_15+3], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_16+3], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_24+3], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_25+3], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_27+3], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_28+3], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_29+3], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_34+3], ax
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_36+3], ax
+
+inc  ax
+inc  ax  ; SIZE HANDLE_INFO)
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_30+1], ax  
+
+mov  ax, OFFSET _RESIDENT_VARIABLE_handle_list_END
+mov  word ptr ds:[SELFMODIFY_HANDLE_LOCATION_31+2], ax
 
 
 ; todo variableize, remap pointers etc.
@@ -3652,9 +3846,6 @@ mov   word ptr ds:[bx + 010h], cs
 ;mov   word ptr ds:[bx + 017h], 00
 ret
 
-force_driver_failure:
-mov  dx, OFFSET string_forced_failure
-jmp  DRIVER_NOT_INSTALLED
 
 print_kb_ems_fourchar:
 

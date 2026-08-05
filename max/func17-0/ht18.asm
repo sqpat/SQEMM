@@ -1,49 +1,6 @@
-  PUSHA_MACRO  ; includes ax
-
-
-  ; physical page number mode
-  mov   bp, dx
-  SHIFT_MACRO shl bp 2  ;  SIZE HANDLE_INFO
-  mov   di, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bp + HANDLE_INFO.handle_num_pages]
-  test  di, di
-  js    func_1700_handle_not_found
-  mov   bp, word ptr cs:[_RESIDENT_VARIABLE_handle_list + bp + HANDLE_INFO.handle_first_page]
-
-; bp has first page ptr.
-; di has num logical pages
-
-func_1700_loop_next_page:
-  ; next page in ax....
-  lodsw   ; load logical page
-
-  mov        bx, ax  ; in case its unmap, bx goes forward as -1
-  inc        ax
-  jz         func_1700_skip_logical_check
-  cmp        bx, di
-  ja         func_1700_logical_page_too_high
-
-  ; get actual page bx for handle dx
-
-  ; ax is plus one
-
-  mov   bx, bp  ; first page
-  dec   ax
-
-  jz  func_1700_done_looping
-
-func_1700_loop_next_logical_page:
-  mov   bx, word ptr cs:[bx + PAGE_INFO.page_info_next_page]
-  dec   ax
-  jnz   func_1700_loop_next_logical_page
-  
-func_1700_done_looping:
-
-  ; bx is now ptr to the actual page...
-  sub   bx, OFFSET _RESIDENT_VARIABLE_page_list
-  shr   bx, 1  ; board physical page number
-
 
 func_1700_skip_logical_check:
+
   lodsw   ; grab physical page
 
   mov   dx, HT18_PAGE_SELECT_REGISTER
